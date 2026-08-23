@@ -3,8 +3,8 @@ using FireURQ.Porter.Lexer;
 
 namespace FireURQ.Porter.Parser;
 
-    public sealed class DelphiParser
-    {
+public sealed class DelphiParser
+{
     private readonly IReadOnlyList<LexerToken> _tokens;
     private int _position;
 
@@ -128,11 +128,11 @@ namespace FireURQ.Porter.Parser;
 
             if (MatchSymbol(":"))
             {
-            type = ReadTypeExpression();
+                type = ReadTypeExpression();
             }
 
             if (!MatchSymbol("="))
-            continue;
+                continue;
 
             string value =
             ReadUntil(";");
@@ -154,295 +154,324 @@ namespace FireURQ.Porter.Parser;
     private void ParseTypeSection(
     List<DelphiNode> declarations)
     {
-    while (!IsEnd())
-    {
-        if (PeekKeyword("const") ||
-            PeekKeyword("var") ||
-            PeekKeyword("function") ||
-            PeekKeyword("procedure") ||
-            PeekKeyword("implementation"))
+        while (!IsEnd())
         {
-            return;
-        }
-
-        if (!IsIdentifier())
-        {
-            Advance();
-            continue;
-        }
-
-        string name =
-            ExpectIdentifier();
-
-        if (!MatchSymbol("="))
-            continue;
-
-        // ------------------------------------------------
-        // ENUM
-        // ------------------------------------------------
-
-        if (MatchSymbol("("))
-        {
-            var values =
-                new List<string>();
-
-            while (!IsEnd() &&
-                   !PeekSymbol(")"))
+            if (PeekKeyword("const") ||
+                PeekKeyword("var") ||
+                PeekKeyword("function") ||
+                PeekKeyword("procedure") ||
+                PeekKeyword("implementation"))
             {
-                if (IsIdentifier())
-                {
-                    values.Add(
-                        ExpectIdentifier());
-                }
-                else
-                {
-                    Advance();
-                }
-
-                MatchSymbol(",");
+                return;
             }
 
-            ExpectSymbol(")");
-            MatchSymbol(";");
-
-            declarations.Add(
-                new DelphiType(
-                    name,
-                    DelphiTypeKind.Enum,
-                    "enum"));
-
-            declarations.Add(
-                new DelphiEnum(
-                    name,
-                    values));
-
-            continue;
-        }
-
-        // ------------------------------------------------
-        // POINTER
-        // ------------------------------------------------
-
-        if (MatchSymbol("^"))
-        {
-        string targetType = ExpectTypeName();
-
-        MatchSymbol(";");
-
-        declarations.Add(
-        new DelphiType(
-            name,
-            DelphiTypeKind.Pointer,
-            $"^{targetType}"));
-
-        continue;
-        }
-
-        // ------------------------------------------------
-        // ARRAY
-        // ------------------------------------------------
-
-        if (MatchKeyword("array"))
-        {
-        var definition = new List<string>
-        {
-        "array"
-        };
-
-        if (MatchSymbol("["))
-        {
-        definition.Add("[");
-
-        while (!IsEnd() && !PeekSymbol("]"))
-        {
-            definition.Add(Current().Text);
-            Advance();
-        }
-
-        ExpectSymbol("]");
-
-        definition.Add("]");
-        }
-
-        if (MatchKeyword("of"))
-        {
-        definition.Add("of");
-        definition.Add(ExpectTypeName());
-        }
-
-        MatchSymbol(";");
-
-        declarations.Add(
-        new DelphiType(
-            name,
-            DelphiTypeKind.Array,
-            string.Join(" ", definition)));
-
-        continue;
-        }
-
-        // ------------------------------------------------
-        // SET
-        // ------------------------------------------------
-
-        if (MatchKeyword("set"))
-        {
-            MatchKeyword("of");
-
-            string elementType =
-                ExpectTypeName();
-
-            MatchSymbol(";");
-
-            declarations.Add(
-                new DelphiType(
-                    name,
-                    DelphiTypeKind.Set,
-                    $"set of {elementType}"));
-
-            continue;
-        }
-
-        // ------------------------------------------------
-        // CLASS / OBJECT
-        // ------------------------------------------------
-
-        if (MatchKeyword("class") ||
-        MatchKeyword("object"))
-        {
-        var definition =
-        new List<string>();
-
-        definition.Add("class");
-
-        // ------------------------------------------------
-        // Optional ancestor list
-        // ------------------------------------------------
-
-        if (MatchSymbol("("))
-        {
-        definition.Add("(");
-
-        while (!IsEnd() &&
-               !PeekSymbol(")"))
-        {
-            definition.Add(
-                Current().Text);
-
-            Advance();
-        }
-
-        ExpectSymbol(")");
-
-        definition.Add(")");
-    }
-
-    // ------------------------------------------------
-    // Skip class body until its matching "end;"
-    //
-    // We do not parse class members yet.
-    // We only need to keep the outer TYPE section
-    // synchronized.
-    // ------------------------------------------------
-
-    int beginDepth = 0;
-
-    while (!IsEnd())
-    {
-        // BEGIN ... END belongs to a method body.
-        if (PeekKeyword("begin"))
-        {
-            beginDepth++;
-            Advance();
-            continue;
-        }
-
-        if (PeekKeyword("end"))
-        {
-            // If we are inside a begin/end block,
-            // this END closes the block.
-            if (beginDepth > 0)
+            if (!IsIdentifier())
             {
-                beginDepth--;
                 Advance();
                 continue;
             }
 
-            // Otherwise this END closes the class.
-            Advance();
+            string name =
+                ExpectIdentifier();
 
-            MatchSymbol(";");
+            if (!MatchSymbol("="))
+                continue;
 
-            break;
-        }
+            // ------------------------------------------------
+            // ENUM
+            // ------------------------------------------------
 
-        Advance();
-    }
+            if (MatchSymbol("("))
+            {
+                var values =
+                    new List<string>();
 
-    declarations.Add(
-        new DelphiType(
-            name,
-            DelphiTypeKind.Class,
-            string.Join(
-                " ",
-                definition)));
+                while (!IsEnd() &&
+                       !PeekSymbol(")"))
+                {
+                    if (IsIdentifier())
+                    {
+                        values.Add(
+                            ExpectIdentifier());
+                    }
+                    else
+                    {
+                        Advance();
+                    }
 
-    continue;
-    }
+                    MatchSymbol(",");
+                }
 
-        // ------------------------------------------------
-        // RECORD
-        // ------------------------------------------------
+                ExpectSymbol(")");
+                MatchSymbol(";");
 
-        if (MatchKeyword("record"))
+                declarations.Add(
+                    new DelphiType(
+                        name,
+                        DelphiTypeKind.Enum,
+                        "enum"));
+
+                declarations.Add(
+                    new DelphiEnum(
+                        name,
+                        values));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // POINTER
+            // ------------------------------------------------
+
+            if (MatchSymbol("^"))
+            {
+                string targetType = ExpectTypeName();
+
+                MatchSymbol(";");
+
+                declarations.Add(
+                new DelphiType(
+                    name,
+                    DelphiTypeKind.Pointer,
+                    $"^{targetType}"));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // ARRAY
+            // ------------------------------------------------
+
+            if (MatchKeyword("array"))
+            {
+                var definition = new List<string>
         {
+        "array"
+        };
+
+                if (MatchSymbol("["))
+                {
+                    definition.Add("[");
+
+                    while (!IsEnd() && !PeekSymbol("]"))
+                    {
+                        definition.Add(Current().Text);
+                        Advance();
+                    }
+
+                    ExpectSymbol("]");
+
+                    definition.Add("]");
+                }
+
+                if (MatchKeyword("of"))
+                {
+                    definition.Add("of");
+                    definition.Add(ExpectTypeName());
+                }
+
+                MatchSymbol(";");
+
+                declarations.Add(
+                new DelphiType(
+                    name,
+                    DelphiTypeKind.Array,
+                    string.Join(" ", definition)));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // SET
+            // ------------------------------------------------
+
+            if (MatchKeyword("set"))
+            {
+                MatchKeyword("of");
+
+                string elementType =
+                    ExpectTypeName();
+
+                MatchSymbol(";");
+
+                declarations.Add(
+                    new DelphiType(
+                        name,
+                        DelphiTypeKind.Set,
+                        $"set of {elementType}"));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // CLASS / OBJECT
+            // ------------------------------------------------
+
+            if (MatchKeyword("class") ||
+            MatchKeyword("object"))
+            {
+                var definition =
+                new List<string>();
+
+                definition.Add("class");
+
+                // ------------------------------------------------
+                // Optional ancestor list
+                // ------------------------------------------------
+
+                if (MatchSymbol("("))
+                {
+                    definition.Add("(");
+
+                    while (!IsEnd() &&
+                           !PeekSymbol(")"))
+                    {
+                        definition.Add(
+                            Current().Text);
+
+                        Advance();
+                    }
+
+                    ExpectSymbol(")");
+
+                    definition.Add(")");
+                }
+
+                // ------------------------------------------------
+                // Skip class body until its matching "end;"
+                //
+                // We do not parse class members yet.
+                // We only need to keep the outer TYPE section
+                // synchronized.
+                // ------------------------------------------------
+
+                int beginDepth = 0;
+
+                while (!IsEnd())
+                {
+                    // BEGIN ... END belongs to a method body.
+                    if (PeekKeyword("begin"))
+                    {
+                        beginDepth++;
+                        Advance();
+                        continue;
+                    }
+
+                    if (PeekKeyword("end"))
+                    {
+                        // If we are inside a begin/end block,
+                        // this END closes the block.
+                        if (beginDepth > 0)
+                        {
+                            beginDepth--;
+                            Advance();
+                            continue;
+                        }
+
+                        // Otherwise this END closes the class.
+                        Advance();
+
+                        MatchSymbol(";");
+
+                        break;
+                    }
+
+                    Advance();
+                }
+
+                declarations.Add(
+                    new DelphiType(
+                        name,
+                        DelphiTypeKind.Class,
+                        string.Join(
+                            " ",
+                            definition)));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // RECORD
+            // ------------------------------------------------
+
+            if (MatchKeyword("record"))
+            {
+                while (!IsEnd() &&
+                       !PeekSymbol(";"))
+                {
+                    Advance();
+                }
+
+                MatchSymbol(";");
+
+                declarations.Add(
+                    new DelphiType(
+                        name,
+                        DelphiTypeKind.Record,
+                        "record"));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // PROCEDURE TYPE
+            // ------------------------------------------------
+
+            if (MatchKeyword("procedure") ||
+                MatchKeyword("function"))
+            {
+                var definition =
+                    new List<string>();
+
+                definition.Add(
+                    "procedure");
+
+                int depth = 0;
+
+                while (!IsEnd())
+                {
+                    if (PeekSymbol(";") &&
+                        depth == 0)
+                    {
+                        break;
+                    }
+
+                    if (PeekSymbol("("))
+                        depth++;
+
+                    if (PeekSymbol(")"))
+                        depth--;
+
+                    definition.Add(
+                        Current().Text);
+
+                    Advance();
+                }
+
+                MatchSymbol(";");
+
+                declarations.Add(
+                    new DelphiType(
+                        name,
+                        DelphiTypeKind.Procedure,
+                        string.Join(
+                            " ",
+                            definition)));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // SIMPLE / UNKNOWN TYPE
+            // ------------------------------------------------
+
+            var parts =
+                new List<string>();
+
             while (!IsEnd() &&
                    !PeekSymbol(";"))
             {
-                Advance();
-            }
-
-            MatchSymbol(";");
-
-            declarations.Add(
-                new DelphiType(
-                    name,
-                    DelphiTypeKind.Record,
-                    "record"));
-
-            continue;
-        }
-
-        // ------------------------------------------------
-        // PROCEDURE TYPE
-        // ------------------------------------------------
-
-        if (MatchKeyword("procedure") ||
-            MatchKeyword("function"))
-        {
-            var definition =
-                new List<string>();
-
-            definition.Add(
-                "procedure");
-
-            int depth = 0;
-
-            while (!IsEnd())
-            {
-                if (PeekSymbol(";") &&
-                    depth == 0)
-                {
-                    break;
-                }
-
-                if (PeekSymbol("("))
-                    depth++;
-
-                if (PeekSymbol(")"))
-                    depth--;
-
-                definition.Add(
+                parts.Add(
                     Current().Text);
 
                 Advance();
@@ -453,40 +482,11 @@ namespace FireURQ.Porter.Parser;
             declarations.Add(
                 new DelphiType(
                     name,
-                    DelphiTypeKind.Procedure,
+                    DelphiTypeKind.Unknown,
                     string.Join(
                         " ",
-                        definition)));
-
-            continue;
+                        parts)));
         }
-
-        // ------------------------------------------------
-        // SIMPLE / UNKNOWN TYPE
-        // ------------------------------------------------
-
-        var parts =
-            new List<string>();
-
-        while (!IsEnd() &&
-               !PeekSymbol(";"))
-        {
-            parts.Add(
-                Current().Text);
-
-            Advance();
-        }
-
-        MatchSymbol(";");
-
-        declarations.Add(
-            new DelphiType(
-                name,
-                DelphiTypeKind.Unknown,
-                string.Join(
-                    " ",
-                    parts)));
-    }
     }
 
     // ========================================================
@@ -503,65 +503,65 @@ namespace FireURQ.Porter.Parser;
             new List<DelphiParameter>();
 
         if (MatchSymbol("("))
-    {
-        while (!IsEnd() &&
-           !PeekSymbol(")"))
-    {
-        var parameterKind =
-            DelphiParameterKind.Value;
-
-        if (MatchKeyword("const"))
         {
-            parameterKind = DelphiParameterKind.Const;
+            while (!IsEnd() &&
+               !PeekSymbol(")"))
+            {
+                var parameterKind =
+                    DelphiParameterKind.Value;
+
+                if (MatchKeyword("const"))
+                {
+                    parameterKind = DelphiParameterKind.Const;
+                }
+                else if (MatchKeyword("var"))
+                {
+                    parameterKind = DelphiParameterKind.Var;
+                }
+                else if (MatchKeyword("out"))
+                {
+                    parameterKind = DelphiParameterKind.Out;
+                }
+
+                var parameterNames = new List<string>();
+
+                // Первое имя
+                parameterNames.Add(
+                    ExpectIdentifier());
+
+                // Дополнительные имена:
+                //
+                // const A, B, C: Integer
+                //
+                while (MatchSymbol(","))
+                {
+                    parameterNames.Add(
+                        ExpectIdentifier());
+                }
+
+                string type = "";
+
+                if (MatchSymbol(":"))
+                {
+                    type = ReadParameterType();
+                }
+
+                // Если тип указан после группы,
+                // применяем его ко всем именам.
+                foreach (string parameterName in parameterNames)
+                {
+                    parameters.Add(
+                        new DelphiParameter(
+                            parameterName,
+                            type,
+                            parameterKind));
+                }
+
+                MatchSymbol(";");
+            }
+
+            ExpectSymbol(")");
         }
-        else if (MatchKeyword("var"))
-        {
-            parameterKind = DelphiParameterKind.Var;
-        }
-        else if (MatchKeyword("out"))
-        {
-            parameterKind = DelphiParameterKind.Out;
-        }
-
-        var parameterNames = new List<string>();
-
-        // Первое имя
-        parameterNames.Add(
-            ExpectIdentifier());
-
-        // Дополнительные имена:
-        //
-        // const A, B, C: Integer
-        //
-        while (MatchSymbol(","))
-        {
-            parameterNames.Add(
-                ExpectIdentifier());
-        }
-
-        string type = "";
-
-        if (MatchSymbol(":"))
-        {
-            type = ReadParameterType();
-        }
-
-        // Если тип указан после группы,
-        // применяем его ко всем именам.
-        foreach (string parameterName in parameterNames)
-        {
-            parameters.Add(
-                new DelphiParameter(
-                    parameterName,
-                    type,
-                    parameterKind));
-        }
-
-        MatchSymbol(";");
-    }
-
-    ExpectSymbol(")");
-    }
 
         string returnType = "";
 
@@ -588,51 +588,51 @@ namespace FireURQ.Porter.Parser;
 
     private Exception ParserError(string message)
     {
-    string current =
-        IsEnd()
-            ? "<EOF>"
-            : $"{Current().Kind} '{Current().Text}'";
+        string current =
+            IsEnd()
+                ? "<EOF>"
+                : $"{Current().Kind} '{Current().Text}'";
 
-    string previous = "<none>";
+        string previous = "<none>";
 
-    if (_position > 0)
-    {
-        var token = _tokens[_position - 1];
+        if (_position > 0)
+        {
+            var token = _tokens[_position - 1];
 
-        previous =
-            $"{token.Kind} '{token.Text}'";
-    }
+            previous =
+                $"{token.Kind} '{token.Text}'";
+        }
 
-    string next = "<none>";
+        string next = "<none>";
 
-    if (_position + 1 < _tokens.Count)
-    {
-        var token = _tokens[_position + 1];
+        if (_position + 1 < _tokens.Count)
+        {
+            var token = _tokens[_position + 1];
 
-        next =
-            $"{token.Kind} '{token.Text}'";
-    }
+            next =
+                $"{token.Kind} '{token.Text}'";
+        }
 
-    return new Exception(
-        $"{message}\n" +
-        $"  Position: {_position}\n" +
-        $"  Previous: {previous}\n" +
-        $"  Current:  {current}\n" +
-        $"  Next:     {next}");
+        return new Exception(
+            $"{message}\n" +
+            $"  Position: {_position}\n" +
+            $"  Previous: {previous}\n" +
+            $"  Current:  {current}\n" +
+            $"  Next:     {next}");
     }
 
     private string ReadQualifiedIdentifier()
     {
-    string name = ExpectIdentifier();
+        string name = ExpectIdentifier();
 
-    while (MatchSymbol("."))
-    {
-        name += ".";
-        name += ExpectIdentifier();
+        while (MatchSymbol("."))
+        {
+            name += ".";
+            name += ExpectIdentifier();
+        }
+
+        return name;
     }
-
-    return name;
-   }
 
     private string ReadUntil(string symbol)
     {
@@ -743,100 +743,100 @@ namespace FireURQ.Porter.Parser;
 
     private string ExpectTypeName()
     {
-    if (IsEnd())
-        throw ParserError(
-              $"Expected type name, got '{Current().Text}'");
+        if (IsEnd())
+            throw ParserError(
+                  $"Expected type name, got '{Current().Text}'");
 
-    if (Current().Kind == TokenKind.Identifier ||
-        Current().Kind == TokenKind.Keyword)
+        if (Current().Kind == TokenKind.Identifier ||
+            Current().Kind == TokenKind.Keyword)
+        {
+            string value = Current().Text;
+
+            Advance();
+
+            return value;
+        }
+
+        throw new Exception(
+            $"Expected type name, got '{Current().Text}'");
+    }
+
+    private string ReadParameterType()
     {
+        var parts = new List<string>();
+
+        int squareDepth = 0;
+        int parenDepth = 0;
+
+        while (!IsEnd())
+        {
+            if (PeekSymbol("["))
+            {
+                squareDepth++;
+            }
+            else if (PeekSymbol("]"))
+            {
+                squareDepth--;
+            }
+            else if (PeekSymbol("("))
+            {
+                parenDepth++;
+            }
+            else if (PeekSymbol(")"))
+            {
+                if (squareDepth == 0 &&
+                    parenDepth == 0)
+                {
+                    break;
+                }
+
+                parenDepth--;
+            }
+
+            if (squareDepth == 0 &&
+                parenDepth == 0 &&
+                (PeekSymbol(";") ||
+                 PeekSymbol(",") ||
+                 PeekSymbol(")")))
+            {
+                break;
+            }
+
+            parts.Add(Current().Text);
+            Advance();
+        }
+
+        return string.Join(" ", parts);
+    }
+
+    private string ReadTypeExpression()
+    {
+        var parts = new List<string>();
+
+        while (!IsEnd() &&
+               !PeekSymbol("="))
+        {
+            parts.Add(Current().Text);
+            Advance();
+        }
+
+        return string.Join(" ", parts);
+    }
+
+    private string ExpectIdentifier()
+    {
+        if (!IsIdentifier())
+        {
+            throw ParserError(
+                  $"Expected type name, got '{Current().Text}'");
+        }
+
         string value = Current().Text;
 
         Advance();
 
         return value;
+
+
     }
-
-    throw new Exception(
-        $"Expected type name, got '{Current().Text}'");
-    }
-
-    private string ReadParameterType()
-    {
-    var parts = new List<string>();
-
-    int squareDepth = 0;
-    int parenDepth = 0;
-
-    while (!IsEnd())
-    {
-        if (PeekSymbol("["))
-        {
-            squareDepth++;
-        }
-        else if (PeekSymbol("]"))
-        {
-            squareDepth--;
-        }
-        else if (PeekSymbol("("))
-        {
-            parenDepth++;
-        }
-        else if (PeekSymbol(")"))
-        {
-            if (squareDepth == 0 &&
-                parenDepth == 0)
-            {
-                break;
-            }
-
-            parenDepth--;
-        }
-
-        if (squareDepth == 0 &&
-            parenDepth == 0 &&
-            (PeekSymbol(";") ||
-             PeekSymbol(",") ||
-             PeekSymbol(")")))
-        {
-            break;
-        }
-
-        parts.Add(Current().Text);
-        Advance();
-    }
-
-    return string.Join(" ", parts);
-    }
-
-    private string ReadTypeExpression()
-    {
-    var parts = new List<string>();
-
-    while (!IsEnd() &&
-           !PeekSymbol("="))
-    {
-        parts.Add(Current().Text);
-        Advance();
-    }
-
-    return string.Join(" ", parts);
-    }
-
-    private string ExpectIdentifier()
-    {
-    if (!IsIdentifier())
-    {
-        throw ParserError(
-              $"Expected type name, got '{Current().Text}'");
-    }
-
-    string value = Current().Text;
-
-    Advance();
-
-    return value;
-
-    
-    }
-    }
+}

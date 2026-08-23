@@ -26,6 +26,33 @@ public sealed record DelphiField(
     string Type
 ) : DelphiNode;
 
+public enum DelphiClassMemberKind
+{
+    Field,
+    Method,
+    Property
+}
+
+public sealed record DelphiClassMember(
+    DelphiClassMemberKind Kind,
+    DelphiNode Node
+) : DelphiNode;
+
+public sealed record DelphiClass(
+    string Name,
+    string? BaseType,
+    IReadOnlyList<DelphiClassMember> Members
+) : DelphiNode;
+
+public enum DelphiVisibility
+{
+    Private,
+    Protected,
+    Public,
+    Published,
+    Automated
+}
+
 public sealed record DelphiType(
     string Name,
     DelphiTypeKind Kind,
