@@ -16,13 +16,21 @@ public enum DelphiTypeKind
     Class,
     Record,
     Procedure,
+    Array,
+    Pointer,
     Unknown
 }
+
+public sealed record DelphiField(
+    string Name,
+    string Type
+) : DelphiNode;
 
 public sealed record DelphiType(
     string Name,
     DelphiTypeKind Kind,
-    string Definition
+    string Definition,
+    IReadOnlyList<DelphiField>? Fields = null
 ) : DelphiNode;
 
 public sealed record DelphiEnum(
@@ -36,10 +44,18 @@ public sealed record DelphiConst(
     string Value
 ) : DelphiNode;
 
+public enum DelphiParameterKind
+{
+    Value,
+    Const,
+    Var,
+    Out
+}
+
 public sealed record DelphiParameter(
     string Name,
     string Type,
-    bool IsConst
+    DelphiParameterKind Kind
 ) : DelphiNode;
 
 public sealed record DelphiFunction(

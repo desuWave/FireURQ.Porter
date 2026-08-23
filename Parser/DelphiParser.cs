@@ -220,6 +220,68 @@ namespace FireURQ.Porter.Parser;
         }
 
         // ------------------------------------------------
+        // POINTER
+        // ------------------------------------------------
+
+        if (MatchSymbol("^"))
+        {
+        string targetType = ExpectTypeName();
+
+        MatchSymbol(";");
+
+        declarations.Add(
+        new DelphiType(
+            name,
+            DelphiTypeKind.Pointer,
+            $"^{targetType}"));
+
+        continue;
+        }
+
+        // ------------------------------------------------
+        // ARRAY
+        // ------------------------------------------------
+
+        if (MatchKeyword("array"))
+        {
+        var definition = new List<string>
+        {
+        "array"
+        };
+
+        if (MatchSymbol("["))
+        {
+        definition.Add("[");
+
+        while (!IsEnd() && !PeekSymbol("]"))
+        {
+            definition.Add(Current().Text);
+            Advance();
+        }
+
+        ExpectSymbol("]");
+
+        definition.Add("]");
+        }
+
+        if (MatchKeyword("of"))
+        {
+        definition.Add("of");
+        definition.Add(ExpectTypeName());
+        }
+
+        MatchSymbol(";");
+
+        declarations.Add(
+        new DelphiType(
+            name,
+            DelphiTypeKind.Array,
+            string.Join(" ", definition)));
+
+        continue;
+        }
+
+        // ------------------------------------------------
         // SET
         // ------------------------------------------------
 
@@ -403,33 +465,65 @@ namespace FireURQ.Porter.Parser;
             new List<DelphiParameter>();
 
         if (MatchSymbol("("))
+    {
+        while (!IsEnd() &&
+           !PeekSymbol(")"))
+    {
+        var parameterKind =
+            DelphiParameterKind.Value;
+
+        if (MatchKeyword("const"))
         {
-            while (!IsEnd() &&
-                   !PeekSymbol(")"))
-            {
-                bool isConst =
-                    MatchKeyword("const");
-
-                string parameterName =
-                    ExpectIdentifier();
-
-                ExpectSymbol(":");
-
-                string type =
-                    ExpectTypeName();
-
-                parameters.Add(
-                    new DelphiParameter(
-                        parameterName,
-                        type,
-                        isConst));
-
-                MatchSymbol(";");
-                MatchSymbol(",");
-            }
-
-            ExpectSymbol(")");
+            parameterKind = DelphiParameterKind.Const;
         }
+        else if (MatchKeyword("var"))
+        {
+            parameterKind = DelphiParameterKind.Var;
+        }
+        else if (MatchKeyword("out"))
+        {
+            parameterKind = DelphiParameterKind.Out;
+        }
+
+        var parameterNames = new List<string>();
+
+        // Первое имя
+        parameterNames.Add(
+            ExpectIdentifier());
+
+        // Дополнительные имена:
+        //
+        // const A, B, C: Integer
+        //
+        while (MatchSymbol(","))
+        {
+            parameterNames.Add(
+                ExpectIdentifier());
+        }
+
+        string type = "";
+
+        if (MatchSymbol(":"))
+        {
+            type = ReadParameterType();
+        }
+
+        // Если тип указан после группы,
+        // применяем его ко всем именам.
+        foreach (string parameterName in parameterNames)
+        {
+            parameters.Add(
+                new DelphiParameter(
+                    parameterName,
+                    type,
+                    parameterKind));
+        }
+
+        MatchSymbol(";");
+    }
+
+    ExpectSymbol(")");
+    }
 
         string returnType = "";
 
@@ -579,6 +673,54 @@ namespace FireURQ.Porter.Parser;
 
     throw new Exception(
         $"Expected type name, got '{Current().Text}'");
+    }
+
+    private string ReadParameterType()
+    {
+    var parts = new List<string>();
+
+    int squareDepth = 0;
+    int parenDepth = 0;
+
+    while (!IsEnd())
+    {
+        if (PeekSymbol("["))
+        {
+            squareDepth++;
+        }
+        else if (PeekSymbol("]"))
+        {
+            squareDepth--;
+        }
+        else if (PeekSymbol("("))
+        {
+            parenDepth++;
+        }
+        else if (PeekSymbol(")"))
+        {
+            if (squareDepth == 0 &&
+                parenDepth == 0)
+            {
+                break;
+            }
+
+            parenDepth--;
+        }
+
+        if (squareDepth == 0 &&
+            parenDepth == 0 &&
+            (PeekSymbol(";") ||
+             PeekSymbol(",") ||
+             PeekSymbol(")")))
+        {
+            break;
+        }
+
+        parts.Add(Current().Text);
+        Advance();
+    }
+
+    return string.Join(" ", parts);
     }
 
     private string ReadTypeExpression()

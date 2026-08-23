@@ -104,6 +104,7 @@ public sealed class DelphiLexer
             "not",
 
             "in",
+            "out",
 
             "private",
             "protected",
@@ -147,21 +148,21 @@ public sealed class DelphiLexer
 
             if (c == '/' && Peek(1) == '/')
             {
-                tokens.Add(ReadLineComment());
-                continue;
+            ReadLineComment();
+            continue;
             }
 
             if (c == '{')
             {
-                tokens.Add(ReadBraceComment());
-                continue;
+            ReadBraceComment();
+            continue;
             }
 
             if (c == '(' && Peek(1) == '*')
             {
-                tokens.Add(ReadBlockComment());
-                continue;
-            }
+            ReadBlockComment();
+            continue;
+           }
 
             // -------------------------------------------------
             // String / character literal
