@@ -8,6 +8,117 @@ public sealed class DelphiParser
     private readonly IReadOnlyList<LexerToken> _tokens;
     private int _position;
 
+    private DelphiProperty ParseProperty()
+    {
+        string name =
+            ExpectIdentifier();
+
+        var parameters =
+            new List<DelphiParameter>();
+
+        if (MatchSymbol("["))
+        {
+            while (!IsEnd() &&
+                   !PeekSymbol("]"))
+            {
+                var parameterKind =
+                    DelphiParameterKind.Value;
+
+                if (MatchKeyword("const"))
+                    parameterKind = DelphiParameterKind.Const;
+                else if (MatchKeyword("var"))
+                    parameterKind = DelphiParameterKind.Var;
+                else if (MatchKeyword("out"))
+                    parameterKind = DelphiParameterKind.Out;
+
+                var parameterNames =
+                    new List<string>();
+
+                parameterNames.Add(
+                    ExpectIdentifier());
+
+                while (MatchSymbol(","))
+                {
+                    parameterNames.Add(
+                        ExpectIdentifier());
+                }
+
+                string parameterType = "";
+
+                if (MatchSymbol(":"))
+                {
+                    parameterType =
+                        ReadParameterType();
+                }
+
+                foreach (var parameterName in parameterNames)
+                {
+                    parameters.Add(
+                        new DelphiParameter(
+                            parameterName,
+                            parameterType,
+                            parameterKind));
+                }
+
+                MatchSymbol(";");
+            }
+
+            ExpectSymbol("]");
+        }
+
+        string type = "";
+
+        if (MatchSymbol(":"))
+        {
+            type =
+                ReadParameterType();
+        }
+
+        string? readAccessor = null;
+        string? writeAccessor = null;
+
+        bool isDefault = false;
+
+        while (!IsEnd() &&
+               !PeekSymbol(";"))
+        {
+            if (MatchKeyword("read"))
+            {
+                readAccessor =
+                    ReadQualifiedIdentifier();
+
+                continue;
+            }
+
+            if (MatchKeyword("write"))
+            {
+                writeAccessor =
+                    ReadQualifiedIdentifier();
+
+                continue;
+            }
+
+            if (MatchKeyword("default"))
+            {
+                isDefault = true;
+
+                continue;
+            }
+
+            Advance();
+        }
+
+        MatchSymbol(";");
+
+        return new DelphiProperty(
+            name,
+            type,
+            parameters,
+            readAccessor,
+            writeAccessor,
+            isDefault);
+    }
+
     public DelphiParser(IReadOnlyList<LexerToken> tokens)
     {
         _tokens = tokens;
@@ -308,84 +419,326 @@ public sealed class DelphiParser
             // ------------------------------------------------
 
             if (MatchKeyword("class") ||
-            MatchKeyword("object"))
+                MatchKeyword("object"))
             {
-                var definition =
-                new List<string>();
-
-                definition.Add("class");
+                string? baseType = null;
 
                 // ------------------------------------------------
-                // Optional ancestor list
+                // Optional ancestor
+                // ------------------------------------------------
+
+                // ------------------------------------------------
+                // Optional ancestor
                 // ------------------------------------------------
 
                 if (MatchSymbol("("))
                 {
-                    definition.Add("(");
+                    baseType = ReadQualifiedIdentifier();
 
-                    while (!IsEnd() &&
-                           !PeekSymbol(")"))
+                    // Пока поддерживаем первого предка.
+                    // Остальные типы после ',' пропускаем.
+                    while (MatchSymbol(","))
                     {
-                        definition.Add(
-                            Current().Text);
-
                         Advance();
                     }
 
                     ExpectSymbol(")");
-
-                    definition.Add(")");
                 }
 
                 // ------------------------------------------------
-                // Skip class body until its matching "end;"
-                //
-                // We do not parse class members yet.
-                // We only need to keep the outer TYPE section
-                // synchronized.
+                // Empty / forward-style class declaration
                 // ------------------------------------------------
 
-                int beginDepth = 0;
+                if (MatchSymbol(";"))
+                {
+                    declarations.Add(
+                        new DelphiClass(
+                            name,
+                            baseType,
+                            new List<DelphiClassMember>()));
+
+                    continue;
+                }
+
+                var members =
+                    new List<DelphiClassMember>();
+
+                var visibility =
+                    DelphiVisibility.Public;
+
+                // ------------------------------------------------
+                // CLASS BODY
+                // ------------------------------------------------
 
                 while (!IsEnd())
                 {
-                    // BEGIN ... END belongs to a method body.
-                    if (PeekKeyword("begin"))
-                    {
-                        beginDepth++;
-                        Advance();
-                        continue;
-                    }
+                    // --------------------------------------------
+                    // End of class
+                    // --------------------------------------------
 
                     if (PeekKeyword("end"))
                     {
-                        // If we are inside a begin/end block,
-                        // this END closes the block.
-                        if (beginDepth > 0)
+                        Advance();
+                        MatchSymbol(";");
+                        break;
+                    }
+
+                    // --------------------------------------------
+                    // Visibility
+                    // --------------------------------------------
+
+                    if (MatchKeyword("private"))
+                    {
+                        visibility =
+                            DelphiVisibility.Private;
+
+                        continue;
+                    }
+
+                    if (MatchKeyword("protected"))
+                    {
+                        visibility =
+                            DelphiVisibility.Protected;
+
+                        continue;
+                    }
+
+                    if (MatchKeyword("public"))
+                    {
+                        visibility =
+                            DelphiVisibility.Public;
+
+                        continue;
+                    }
+
+                    if (MatchKeyword("published"))
+                    {
+                        visibility =
+                            DelphiVisibility.Published;
+
+                        continue;
+                    }
+
+                    if (MatchKeyword("automated"))
+                    {
+                        visibility =
+                            DelphiVisibility.Automated;
+
+                        continue;
+                    }
+
+                    // --------------------------------------------
+                    // Property
+                    //
+                    // property Name: Type read Getter write Setter;
+                    // --------------------------------------------
+
+                    if (MatchKeyword("property"))
+                    {
+                        var property =
+                            ParseProperty();
+
+                        members.Add(
+                            new DelphiClassMember(
+                                visibility,
+                                DelphiClassMemberKind.Property,
+                                property));
+
+                        continue;
+                    }
+
+                    // --------------------------------------------
+                    // Method declaration
+                    // --------------------------------------------
+
+                    if (MatchKeyword("procedure"))
+                    {
+                        var function =
+                            ParseFunction(true);
+
+                        members.Add(
+                            new DelphiClassMember(
+                                visibility,
+                                DelphiClassMemberKind.Method,
+                                function));
+
+                        continue;
+                    }
+
+                    if (MatchKeyword("function"))
+                    {
+                        var function =
+                            ParseFunction(false);
+
+                        members.Add(
+                            new DelphiClassMember(
+                                visibility,
+                                DelphiClassMemberKind.Method,
+                                function));
+
+                        continue;
+                    }
+
+                    if (MatchKeyword("constructor"))
+                    {
+                        var function =
+                            ParseFunction(true);
+
+                        members.Add(
+                            new DelphiClassMember(
+                                visibility,
+                                DelphiClassMemberKind.Method,
+                                function));
+
+                        continue;
+                    }
+
+
+
+                    if (MatchKeyword("destructor"))
+                    {
+                        var function =
+                            ParseFunction(true);
+
+                        members.Add(
+                            new DelphiClassMember(
+                                visibility,
+                                DelphiClassMemberKind.Method,
+                                function));
+
+                        continue;
+                    }
+
+                    // --------------------------------------------
+                    // Field
+                    //
+                    // name: Type;
+                    // --------------------------------------------
+
+                    if (IsIdentifier())
+                    {
+                        string fieldName =
+                            ExpectIdentifier();
+
+                        if (MatchSymbol(":"))
                         {
-                            beginDepth--;
-                            Advance();
+                            string fieldType =
+                                ReadParameterType();
+
+                            MatchSymbol(";");
+
+                            members.Add(
+                                new DelphiClassMember(
+                                    visibility,
+                                    DelphiClassMemberKind.Field,
+                                    new DelphiField(
+                                        fieldName,
+                                        fieldType)));
+
                             continue;
                         }
 
-                        // Otherwise this END closes the class.
-                        Advance();
+                        // Unknown class declaration.
+                        // Skip until ';' so the parser stays synchronized.
+                        while (!IsEnd() &&
+                               !PeekSymbol(";"))
+                        {
+                            Advance();
+                        }
 
                         MatchSymbol(";");
 
-                        break;
+                        continue;
                     }
+
+                    // --------------------------------------------
+                    // Unknown class member
+                    // --------------------------------------------
 
                     Advance();
                 }
 
                 declarations.Add(
-                    new DelphiType(
+                    new DelphiClass(
                         name,
-                        DelphiTypeKind.Class,
-                        string.Join(
-                            " ",
-                            definition)));
+                        baseType,
+                        members));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // INTERFACE
+            // ------------------------------------------------
+
+            if (MatchKeyword("interface"))
+            {
+                var members =
+                    new List<DelphiClassMember>();
+
+                while (!IsEnd() &&
+                       !PeekKeyword("end"))
+                {
+                    // ------------------------------------------------
+                    // Method
+                    // ------------------------------------------------
+
+                    if (MatchKeyword("procedure"))
+                    {
+                        var function =
+                            ParseFunction(true);
+
+                        members.Add(
+                            new DelphiClassMember(
+                                DelphiVisibility.Public,
+                                DelphiClassMemberKind.Method,
+                                function));
+
+                        continue;
+                    }
+
+                    if (MatchKeyword("function"))
+                    {
+                        var function =
+                            ParseFunction(false);
+
+                        members.Add(
+                            new DelphiClassMember(
+                                DelphiVisibility.Public,
+                                DelphiClassMemberKind.Method,
+                                function));
+
+                        continue;
+                    }
+
+                    // ------------------------------------------------
+                    // Property
+                    // ------------------------------------------------
+
+                    if (MatchKeyword("property"))
+                    {
+                        // Пока сохраняем property как неизвестный
+                        // член интерфейса. Полноценный property parser
+                        // сделаем отдельным шагом.
+
+                        ReadUntil(";");
+
+                        MatchSymbol(";");
+
+                        continue;
+                    }
+
+                    Advance();
+                }
+
+                ExpectKeyword("end");
+                MatchSymbol(";");
+
+                declarations.Add(
+                    new DelphiInterface(
+                        name,
+                        null,
+                        members));
 
                 continue;
             }
@@ -488,6 +841,8 @@ public sealed class DelphiParser
                         parts)));
         }
     }
+
+
 
     // ========================================================
     // FUNCTION / PROCEDURE

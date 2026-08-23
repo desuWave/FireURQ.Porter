@@ -15,6 +15,7 @@ public enum DelphiTypeKind
     Set,
     Class,
     Record,
+    Interface,
     Procedure,
     Array,
     Pointer,
@@ -26,6 +27,15 @@ public sealed record DelphiField(
     string Type
 ) : DelphiNode;
 
+public sealed record DelphiProperty(
+    string Name,
+    string Type,
+    IReadOnlyList<DelphiParameter> Parameters,
+    string? ReadAccessor,
+    string? WriteAccessor,
+    bool IsDefault
+) : DelphiNode;
+
 public enum DelphiClassMemberKind
 {
     Field,
@@ -34,11 +44,18 @@ public enum DelphiClassMemberKind
 }
 
 public sealed record DelphiClassMember(
+    DelphiVisibility Visibility,
     DelphiClassMemberKind Kind,
     DelphiNode Node
 ) : DelphiNode;
 
 public sealed record DelphiClass(
+    string Name,
+    string? BaseType,
+    IReadOnlyList<DelphiClassMember> Members
+) : DelphiNode;
+
+public sealed record DelphiInterface(
     string Name,
     string? BaseType,
     IReadOnlyList<DelphiClassMember> Members

@@ -38,6 +38,116 @@ public static class DelphiAstPrinter
     {
         switch (node)
         {
+            case DelphiClass c:
+                Console.WriteLine(
+                    $"{indent}CLASS {c.Name}");
+
+                if (!string.IsNullOrWhiteSpace(c.BaseType))
+                {
+                    Console.WriteLine(
+                        $"{indent}  BASE: {c.BaseType}");
+                }
+
+                DelphiVisibility? currentVisibility = null;
+
+                foreach (var member in c.Members)
+                {
+                    if (currentVisibility != member.Visibility)
+                    {
+                        currentVisibility = member.Visibility;
+
+                        Console.WriteLine();
+                        Console.WriteLine(
+                            $"{indent}  {member.Visibility.ToString().ToUpperInvariant()}");
+                    }
+
+                    switch (member.Node)
+                    {
+                        case DelphiField field:
+                            Console.WriteLine(
+                                $"{indent}    FIELD {field.Name}: {field.Type}");
+                            break;
+
+                        case DelphiFunction function:
+                            Console.WriteLine(
+                                $"{indent}    {(function.IsProcedure ? "PROCEDURE" : "FUNCTION")} {function.Name}");
+
+                            foreach (var parameter in function.Parameters)
+                            {
+                                Console.WriteLine(
+                                    $"{indent}      PARAM {parameter.Name}: {parameter.Type}");
+                            }
+
+                            if (!function.IsProcedure &&
+                                !string.IsNullOrWhiteSpace(function.ReturnType))
+                            {
+                                Console.WriteLine(
+                                    $"{indent}      RETURN: {function.ReturnType}");
+                            }
+
+                            break;
+
+                        case DelphiProperty property:
+                            Console.WriteLine(
+                                $"{indent}    PROPERTY {property.Name}: {property.Type}");
+
+                            if (!string.IsNullOrWhiteSpace(property.ReadAccessor))
+                            {
+                                Console.WriteLine(
+                                    $"{indent}      READ: {property.ReadAccessor}");
+                            }
+
+                            if (!string.IsNullOrWhiteSpace(property.WriteAccessor))
+                            {
+                                Console.WriteLine(
+                                    $"{indent}      WRITE: {property.WriteAccessor}");
+                            }
+
+                            if (property.IsDefault)
+                            {
+                                Console.WriteLine(
+                                    $"{indent}      DEFAULT");
+                            }
+
+                            break;
+
+                        default:
+                            Console.WriteLine(
+                                $"{indent}    [{member.Kind}] {member.Node.GetType().Name}");
+                            break;
+                    }
+                }
+
+                break;
+
+            case DelphiInterface value:
+                Console.WriteLine(
+                    $"{indent}INTERFACE {value.Name}");
+
+                if (!string.IsNullOrEmpty(value.BaseType))
+                {
+                    Console.WriteLine(
+                        $"{indent}  BASE: {value.BaseType}");
+                }
+
+                foreach (var member in value.Members)
+                {
+                    PrintInterfaceMember(member);
+                }
+
+                Console.WriteLine();
+
+                break;
+
+            case DelphiConst value:
+                Console.WriteLine(
+                    $"{indent}CONST {value.Name}");
+
+                Console.WriteLine(
+                    $"{indent}  VALUE: {value.Value}");
+
+                break;
+
             case DelphiType t:
                 Console.WriteLine(
                     $"{indent}TYPE {t.Name}");
@@ -54,25 +164,17 @@ public static class DelphiAstPrinter
                 Console.WriteLine(
                     $"{indent}ENUM {e.Name}");
 
-                foreach (var value in e.Values)
+                foreach (var enumValue in e.Values)
                 {
                     Console.WriteLine(
-                        $"{indent}  {value}");
+                        $"{indent}  {enumValue}");
                 }
 
                 break;
 
-            case DelphiConst c:
-                if (string.IsNullOrWhiteSpace(c.Type))
-                {
-                    Console.WriteLine(
-                        $"{indent}CONST {c.Name} = {c.Value}");
-                }
-                else
-                {
-                    Console.WriteLine(
-                        $"{indent}CONST {c.Name}: {c.Type} = {c.Value}");
-                }
+            case DelphiField f:
+                Console.WriteLine(
+                    $"{indent}FIELD {f.Name}: {f.Type}");
 
                 break;
 
@@ -94,9 +196,88 @@ public static class DelphiAstPrinter
 
                 break;
 
+            case DelphiProperty p:
+                Console.WriteLine(
+                    $"{indent}PROPERTY {p.Name}: {p.Type}");
+
+                if (!string.IsNullOrWhiteSpace(p.ReadAccessor))
+                {
+                    Console.WriteLine(
+                        $"{indent}  READ: {p.ReadAccessor}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(p.WriteAccessor))
+                {
+                    Console.WriteLine(
+                        $"{indent}  WRITE: {p.WriteAccessor}");
+                }
+
+                if (p.IsDefault)
+                {
+                    Console.WriteLine(
+                        $"{indent}  DEFAULT");
+                }
+
+                break;
+
             default:
                 Console.WriteLine(
                     $"{indent}[UNKNOWN NODE] {node.GetType().Name}");
+
+                break;
+        }
+    }
+
+    private static void PrintInterfaceMember(
+        DelphiClassMember member)
+    {
+        switch (member.Node)
+        {
+            case DelphiFunction function:
+                Console.WriteLine(
+                    $"    {(function.IsProcedure ? "PROCEDURE" : "FUNCTION")} {function.Name}");
+
+                foreach (var parameter in function.Parameters)
+                {
+                    Console.WriteLine(
+                        $"      PARAM {parameter.Name}: {parameter.Type}");
+                }
+
+                if (!function.IsProcedure)
+                {
+                    Console.WriteLine(
+                        $"      RETURN: {function.ReturnType}");
+                }
+
+                break;
+
+            case DelphiProperty property:
+                Console.WriteLine(
+                    $"    PROPERTY {property.Name}: {property.Type}");
+
+                if (!string.IsNullOrWhiteSpace(property.ReadAccessor))
+                {
+                    Console.WriteLine(
+                        $"      READ: {property.ReadAccessor}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(property.WriteAccessor))
+                {
+                    Console.WriteLine(
+                        $"      WRITE: {property.WriteAccessor}");
+                }
+
+                if (property.IsDefault)
+                {
+                    Console.WriteLine(
+                        $"      DEFAULT");
+                }
+
+                break;
+
+            default:
+                Console.WriteLine(
+                    $"    [{member.Kind}] {member.Node.GetType().Name}");
 
                 break;
         }
