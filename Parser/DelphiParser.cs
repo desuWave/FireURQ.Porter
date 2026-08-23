@@ -308,49 +308,87 @@ namespace FireURQ.Porter.Parser;
         // ------------------------------------------------
 
         if (MatchKeyword("class") ||
-            MatchKeyword("object"))
+        MatchKeyword("object"))
         {
-            var definition =
-                new List<string>();
+        var definition =
+        new List<string>();
 
-            definition.Add("class");
+        definition.Add("class");
 
-            if (MatchSymbol("("))
+        // ------------------------------------------------
+        // Optional ancestor list
+        // ------------------------------------------------
+
+        if (MatchSymbol("("))
+        {
+        definition.Add("(");
+
+        while (!IsEnd() &&
+               !PeekSymbol(")"))
+        {
+            definition.Add(
+                Current().Text);
+
+            Advance();
+        }
+
+        ExpectSymbol(")");
+
+        definition.Add(")");
+    }
+
+    // ------------------------------------------------
+    // Skip class body until its matching "end;"
+    //
+    // We do not parse class members yet.
+    // We only need to keep the outer TYPE section
+    // synchronized.
+    // ------------------------------------------------
+
+    int beginDepth = 0;
+
+    while (!IsEnd())
+    {
+        // BEGIN ... END belongs to a method body.
+        if (PeekKeyword("begin"))
+        {
+            beginDepth++;
+            Advance();
+            continue;
+        }
+
+        if (PeekKeyword("end"))
+        {
+            // If we are inside a begin/end block,
+            // this END closes the block.
+            if (beginDepth > 0)
             {
-                definition.Add("(");
-
-                while (!IsEnd() &&
-                       !PeekSymbol(")"))
-                {
-                    definition.Add(
-                        Current().Text);
-
-                    Advance();
-                }
-
-                ExpectSymbol(")");
-
-                definition.Add(")");
-            }
-
-            // Пока не разбираем тело класса.
-            // Просто пропускаем его до ';'.
-            while (!IsEnd() &&
-                   !PeekSymbol(";"))
-            {
+                beginDepth--;
                 Advance();
+                continue;
             }
+
+            // Otherwise this END closes the class.
+            Advance();
 
             MatchSymbol(";");
 
-            declarations.Add(
-                new DelphiType(
-                    name,
-                    DelphiTypeKind.Class,
-                    string.Join(" ", definition)));
-
-            continue;
+            break;
         }
+
+        Advance();
+    }
+
+    declarations.Add(
+        new DelphiType(
+            name,
+            DelphiTypeKind.Class,
+            string.Join(
+                " ",
+                definition)));
+
+    continue;
+    }
 
         // ------------------------------------------------
         // RECORD
@@ -459,7 +497,7 @@ namespace FireURQ.Porter.Parser;
         bool isProcedure)
     {
         string name =
-            ExpectIdentifier();
+               ReadQualifiedIdentifier();
 
         var parameters =
             new List<DelphiParameter>();
@@ -547,6 +585,54 @@ namespace FireURQ.Porter.Parser;
     // ========================================================
     // HELPERS
     // ========================================================
+
+    private Exception ParserError(string message)
+    {
+    string current =
+        IsEnd()
+            ? "<EOF>"
+            : $"{Current().Kind} '{Current().Text}'";
+
+    string previous = "<none>";
+
+    if (_position > 0)
+    {
+        var token = _tokens[_position - 1];
+
+        previous =
+            $"{token.Kind} '{token.Text}'";
+    }
+
+    string next = "<none>";
+
+    if (_position + 1 < _tokens.Count)
+    {
+        var token = _tokens[_position + 1];
+
+        next =
+            $"{token.Kind} '{token.Text}'";
+    }
+
+    return new Exception(
+        $"{message}\n" +
+        $"  Position: {_position}\n" +
+        $"  Previous: {previous}\n" +
+        $"  Current:  {current}\n" +
+        $"  Next:     {next}");
+    }
+
+    private string ReadQualifiedIdentifier()
+    {
+    string name = ExpectIdentifier();
+
+    while (MatchSymbol("."))
+    {
+        name += ".";
+        name += ExpectIdentifier();
+    }
+
+    return name;
+   }
 
     private string ReadUntil(string symbol)
     {
@@ -650,16 +736,16 @@ namespace FireURQ.Porter.Parser;
     {
         if (!MatchSymbol(value))
         {
-            throw new Exception(
-                $"Expected symbol '{value}'");
+            throw ParserError(
+                  $"Expected symbol '{value}'");
         }
     }
 
     private string ExpectTypeName()
     {
     if (IsEnd())
-        throw new Exception(
-            "Expected type name, got EOF");
+        throw ParserError(
+              $"Expected type name, got '{Current().Text}'");
 
     if (Current().Kind == TokenKind.Identifier ||
         Current().Kind == TokenKind.Keyword)
@@ -741,8 +827,8 @@ namespace FireURQ.Porter.Parser;
     {
     if (!IsIdentifier())
     {
-        throw new Exception(
-            $"Expected identifier, got '{Current().Text}'");
+        throw ParserError(
+              $"Expected type name, got '{Current().Text}'");
     }
 
     string value = Current().Text;
