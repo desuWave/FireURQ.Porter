@@ -40,7 +40,8 @@ public enum DelphiClassMemberKind
 {
     Field,
     Method,
-    Property
+    Property,
+    MethodResolution
 }
 
 public sealed record DelphiClassMember(
@@ -107,4 +108,9 @@ public sealed record DelphiFunction(
     IReadOnlyList<DelphiParameter> Parameters,
     string ReturnType,
     bool IsProcedure
+) : DelphiNode;
+
+public sealed record DelphiMethodResolution(
+    string InterfaceMethod,
+    string ImplementationMethod
 ) : DelphiNode;

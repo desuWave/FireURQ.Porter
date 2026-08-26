@@ -1,4 +1,5 @@
 using System.Text;
+using FireURQ.Porter.AST;
 using FireURQ.Porter.Lexer;
 using FireURQ.Porter.Parser;
 
@@ -19,6 +20,8 @@ public static class BatchAnalyzer
         {
             Console.WriteLine("ERROR: Directory not found:");
             Console.WriteLine(rootPath);
+            Console.WriteLine();
+
             return;
         }
 
@@ -42,6 +45,15 @@ public static class BatchAnalyzer
         int success = 0;
         int failed = 0;
 
+        int totalTokens = 0;
+        int totalClasses = 0;
+        int totalInterfaces = 0;
+        int totalTypes = 0;
+        int totalConstants = 0;
+        int totalFunctions = 0;
+        int totalGraphNodes = 0;
+        int totalGraphEdges = 0;
+
         var errors =
             new Dictionary<string, int>();
 
@@ -52,8 +64,9 @@ public static class BatchAnalyzer
                     rootPath,
                     file);
 
-            Console.Write(
-                $"{relativePath,-55}");
+            Console.WriteLine("--------------------------------");
+            Console.WriteLine(relativePath);
+            Console.WriteLine("--------------------------------");
 
             try
             {
@@ -71,17 +84,101 @@ public static class BatchAnalyzer
                 var parser =
                     new DelphiParser(tokens);
 
-                parser.ParseUnit();
+                DelphiUnit unit =
+                    parser.ParseUnit();
+
+                var semanticModel =
+                    SemanticModelBuilder.Build(
+                        unit);
+
+                var dependencyGraph =
+                    DependencyGraphBuilder.Build(
+                        semanticModel);
+
+                int classes =
+                    semanticModel.Classes.Count;
+
+                int interfaces =
+                    semanticModel.Interfaces.Count;
+
+                int types =
+                    semanticModel.Types.Count;
+
+                int constants =
+                    semanticModel.Constants.Count;
+
+                int functions =
+                    semanticModel.Functions.Count;
+
+                int graphNodes =
+                    dependencyGraph.Nodes.Count;
+
+                int graphEdges =
+                    dependencyGraph.Edges.Count;
 
                 Console.WriteLine(
-                    $" OK   tokens={tokens.Count}");
+                    $"  Unit:       {unit.Name}");
+
+                Console.WriteLine(
+                    $"  Tokens:     {tokens.Count}");
+
+                Console.WriteLine(
+                    $"  Classes:    {classes}");
+
+                Console.WriteLine(
+                    $"  Interfaces: {interfaces}");
+
+                Console.WriteLine(
+                    $"  Types:      {types}");
+
+                Console.WriteLine(
+                    $"  Constants:  {constants}");
+
+                Console.WriteLine(
+                    $"  Functions:  {functions}");
+
+                Console.WriteLine(
+                    $"  Graph nodes:{graphNodes}");
+
+                Console.WriteLine(
+                    $"  Graph edges:{graphEdges}");
+
+                Console.WriteLine(
+                    "  Status:     OK");
+
+                totalTokens +=
+                    tokens.Count;
+
+                totalClasses +=
+                    classes;
+
+                totalInterfaces +=
+                    interfaces;
+
+                totalTypes +=
+                    types;
+
+                totalConstants +=
+                    constants;
+
+                totalFunctions +=
+                    functions;
+
+                totalGraphNodes +=
+                    graphNodes;
+
+                totalGraphEdges +=
+                    graphEdges;
 
                 success++;
             }
             catch (Exception ex)
             {
                 Console.WriteLine(
-                    $" FAIL {ex.Message}");
+                    $"  Status:     FAIL");
+
+                Console.WriteLine(
+                    $"  Error:      {ex.Message}");
 
                 failed++;
 
@@ -89,32 +186,65 @@ public static class BatchAnalyzer
                     ex.Message;
 
                 if (errors.ContainsKey(error))
+                {
                     errors[error]++;
+                }
                 else
+                {
                     errors[error] = 1;
+                }
             }
+
+            Console.WriteLine();
         }
 
-        Console.WriteLine();
         Console.WriteLine("================================");
-        Console.WriteLine(" Summary");
+        Console.WriteLine(" FireURQ Project Summary");
         Console.WriteLine("================================");
 
         Console.WriteLine(
-            $"Files:  {files.Count}");
+            $"Files found:      {files.Count}");
 
         Console.WriteLine(
-            $"Parsed: {success}");
+            $"Parsed:           {success}");
 
         Console.WriteLine(
-            $"Failed: {failed}");
+            $"Failed:           {failed}");
 
         Console.WriteLine();
+
+        Console.WriteLine(
+            $"Total tokens:     {totalTokens}");
+
+        Console.WriteLine(
+            $"Total classes:    {totalClasses}");
+
+        Console.WriteLine(
+            $"Total interfaces: {totalInterfaces}");
+
+        Console.WriteLine(
+            $"Total types:      {totalTypes}");
+
+        Console.WriteLine(
+            $"Total constants:  {totalConstants}");
+
+        Console.WriteLine(
+            $"Total functions:  {totalFunctions}");
+
+        Console.WriteLine();
+
+        Console.WriteLine(
+            $"Graph nodes:      {totalGraphNodes}");
+
+        Console.WriteLine(
+            $"Graph edges:      {totalGraphEdges}");
 
         if (errors.Count > 0)
         {
-            Console.WriteLine(
-                "Failure Categories:");
+            Console.WriteLine();
+            Console.WriteLine("================================");
+            Console.WriteLine(" Failure Categories");
+            Console.WriteLine("================================");
 
             foreach (var item in
                      errors
@@ -127,6 +257,10 @@ public static class BatchAnalyzer
             }
         }
 
+        Console.WriteLine();
+        Console.WriteLine("================================");
+        Console.WriteLine(" Batch Analysis Complete");
+        Console.WriteLine("================================");
         Console.WriteLine();
     }
 }

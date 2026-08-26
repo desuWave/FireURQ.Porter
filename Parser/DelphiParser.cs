@@ -547,6 +547,42 @@ public sealed class DelphiParser
                         continue;
                     }
 
+                    // ------------------------------------------------
+                    // Interface method resolution
+                    //
+                    // function Interface.Method = ImplementationMethod;
+                    // ------------------------------------------------
+
+                    if (PeekKeyword("function"))
+                    {
+                        int savedPosition = _position;
+
+                        Advance(); // function
+
+                        string firstName =
+                            ReadQualifiedIdentifier();
+
+                        if (MatchSymbol("="))
+                        {
+                            string implementationMethod =
+                                ReadQualifiedIdentifier();
+
+                            MatchSymbol(";");
+
+                            members.Add(
+                                new DelphiClassMember(
+                                    visibility,
+                                    DelphiClassMemberKind.MethodResolution,
+                                    new DelphiMethodResolution(
+                                        firstName,
+                                        implementationMethod)));
+
+                            continue;
+                        }
+
+                        _position = savedPosition;
+                    }
+
                     // --------------------------------------------
                     // Method declaration
                     // --------------------------------------------

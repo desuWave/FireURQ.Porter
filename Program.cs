@@ -91,3 +91,16 @@ DelphiUnit unit =
     parser.ParseUnit();
 
 DelphiAstPrinter.Print(unit);
+
+var semanticModel =
+    SemanticModelBuilder.Build(unit);
+
+SemanticPrinter.Print(
+    semanticModel);
+
+var dependencyGraph =
+    DependencyGraphBuilder.Build(
+        semanticModel);
+
+DependencyGraphPrinter.Print(
+    dependencyGraph);    

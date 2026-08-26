@@ -111,6 +111,11 @@ public static class DelphiAstPrinter
 
                             break;
 
+                        case DelphiMethodResolution resolution:
+                            Console.WriteLine(
+                                $"{indent}    METHOD RESOLUTION {resolution.InterfaceMethod} = {resolution.ImplementationMethod}");
+                            break;
+
                         default:
                             Console.WriteLine(
                                 $"{indent}    [{member.Kind}] {member.Node.GetType().Name}");
@@ -220,6 +225,12 @@ public static class DelphiAstPrinter
 
                 break;
 
+            case DelphiMethodResolution resolution:
+                Console.WriteLine(
+                    $"{indent}METHOD RESOLUTION {resolution.InterfaceMethod} = {resolution.ImplementationMethod}");
+
+                break;
+
             default:
                 Console.WriteLine(
                     $"{indent}[UNKNOWN NODE] {node.GetType().Name}");
@@ -272,6 +283,12 @@ public static class DelphiAstPrinter
                     Console.WriteLine(
                         $"      DEFAULT");
                 }
+
+                break;
+
+            case DelphiMethodResolution resolution:
+                Console.WriteLine(
+                    $"    METHOD RESOLUTION {resolution.InterfaceMethod} = {resolution.ImplementationMethod}");
 
                 break;
 
