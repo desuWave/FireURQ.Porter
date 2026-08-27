@@ -35,7 +35,8 @@ public sealed record SemanticMember(
     SemanticMemberKind Kind,
     string Type,
     string? Visibility,
-    IReadOnlyList<SemanticParameter> Parameters
+    IReadOnlyList<SemanticParameter> Parameters,
+    bool IsDefault
 );
 
 public sealed record SemanticType(

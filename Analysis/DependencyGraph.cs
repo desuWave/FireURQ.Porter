@@ -5,14 +5,15 @@ public enum DependencyKind
     Inherits,
     UsesType,
     UsesInterface,
-    MethodResolution,
     UsesUnit,
     ResolvesMethod
 }
 
 public sealed record DependencyNode(
+    string Id,
     string Name,
-    string Kind
+    string Kind,
+    string UnitName
 );
 
 public sealed record DependencyEdge(

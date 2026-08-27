@@ -96,7 +96,8 @@ public static class SemanticAnalyzer
                     SemanticMemberKind.Field,
                     field.Type,
                     member.Visibility.ToString(),
-                    Array.Empty<SemanticParameter>()),
+                    Array.Empty<SemanticParameter>(),
+                    false),
 
             DelphiFunction function =>
                 new SemanticMember(
@@ -112,7 +113,8 @@ public static class SemanticAnalyzer
                                 parameter.Name,
                                 parameter.Type,
                                 parameter.Kind.ToString()))
-                        .ToList()),
+                        .ToList(),
+                        false),
 
             DelphiProperty property =>
                 new SemanticMember(
@@ -126,7 +128,9 @@ public static class SemanticAnalyzer
                                 parameter.Name,
                                 parameter.Type,
                                 parameter.Kind.ToString()))
-                        .ToList()),
+                        .ToList(),
+                        property.IsDefault),
+                        
 
             DelphiMethodResolution resolution =>
                 new SemanticMember(
@@ -134,7 +138,8 @@ public static class SemanticAnalyzer
                     SemanticMemberKind.MethodResolution,
                     resolution.ImplementationMethod,
                     member.Visibility.ToString(),
-                    Array.Empty<SemanticParameter>()),
+                    Array.Empty<SemanticParameter>(),
+                    false),
 
             _ =>
                 throw new InvalidOperationException(

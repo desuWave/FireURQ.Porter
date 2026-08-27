@@ -118,7 +118,8 @@ public sealed class DelphiLexer
             "constructor",
             "destructor",
 
-            "interface"
+            "interface",
+            "property"
         };
 
     public DelphiLexer(string source)

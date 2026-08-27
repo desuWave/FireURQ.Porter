@@ -1,0 +1,1394 @@
+{
+  "Units": [
+    {
+      "Name": "f2Application",
+      "FilePath": "f2\\f2Application.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 17,
+      "Functions": 1
+    },
+    {
+      "Name": "f2Context",
+      "FilePath": "f2\\f2Context.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 38,
+      "Functions": 1
+    },
+    {
+      "Name": "f2FontLoad",
+      "FilePath": "f2\\f2FontLoad.pas",
+      "Classes": 0,
+      "Interfaces": 0,
+      "Types": 1,
+      "Constants": 7,
+      "Functions": 1
+    },
+    {
+      "Name": "f2FontPool",
+      "FilePath": "f2\\f2FontPool.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 1,
+      "Functions": 0
+    },
+    {
+      "Name": "f2Interpreter",
+      "FilePath": "f2\\f2Interpreter.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 2,
+      "Constants": 11,
+      "Functions": 1
+    },
+    {
+      "Name": "f2LinkParser",
+      "FilePath": "f2\\f2LinkParser.pas",
+      "Classes": 0,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 1,
+      "Functions": 2
+    },
+    {
+      "Name": "f2PicturePool",
+      "FilePath": "f2\\f2PicturePool.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 0,
+      "Functions": 1
+    },
+    {
+      "Name": "f2Scene",
+      "FilePath": "f2\\f2Scene.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 0,
+      "Functions": 1
+    },
+    {
+      "Name": "f2ScnMain",
+      "FilePath": "f2\\f2ScnMain.pas",
+      "Classes": 2,
+      "Interfaces": 0,
+      "Types": 2,
+      "Constants": 21,
+      "Functions": 1
+    },
+    {
+      "Name": "f2ScnSplash",
+      "FilePath": "f2\\f2ScnSplash.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 0,
+      "Functions": 1
+    },
+    {
+      "Name": "f2Types",
+      "FilePath": "f2\\f2Types.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 2,
+      "Constants": 44,
+      "Functions": 5
+    },
+    {
+      "Name": "f2Utils",
+      "FilePath": "f2\\f2Utils.pas",
+      "Classes": 0,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 1,
+      "Functions": 4
+    },
+    {
+      "Name": "furqAbout",
+      "FilePath": "furqAbout.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 0,
+      "Functions": 1
+    },
+    {
+      "Name": "furqBase",
+      "FilePath": "furqBase.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 13,
+      "Functions": 3
+    },
+    {
+      "Name": "furqDecoders",
+      "FilePath": "furqDecoders.pas",
+      "Classes": 0,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 1,
+      "Functions": 5
+    },
+    {
+      "Name": "furqExprEval",
+      "FilePath": "furqExprEval.pas",
+      "Classes": 22,
+      "Interfaces": 1,
+      "Types": 3,
+      "Constants": 13,
+      "Functions": 2
+    },
+    {
+      "Name": "furqFiler",
+      "FilePath": "furqFiler.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 2,
+      "Functions": 1
+    },
+    {
+      "Name": "furqLoader",
+      "FilePath": "furqLoader.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 1,
+      "Constants": 2,
+      "Functions": 4
+    },
+    {
+      "Name": "furqTypes",
+      "FilePath": "furqTypes.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 7,
+      "Constants": 24,
+      "Functions": 3
+    },
+    {
+      "Name": "furqUtils",
+      "FilePath": "furqUtils.pas",
+      "Classes": 0,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 0,
+      "Functions": 2
+    },
+    {
+      "Name": "furqWinMain",
+      "FilePath": "furqWinMain.pas",
+      "Classes": 1,
+      "Interfaces": 0,
+      "Types": 0,
+      "Constants": 0,
+      "Functions": 1
+    },
+    {
+      "Name": "md5",
+      "FilePath": "MD5.pas",
+      "Classes": 0,
+      "Interfaces": 0,
+      "Types": 17,
+      "Constants": 16,
+      "Functions": 10
+    }
+  ],
+  "Edges": [
+    {
+      "From": "f2Application",
+      "To": "d2dTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "d2dInterfaces",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "d2dApplication",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "d2dGUIButtons",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "f2Skins",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "f2SettingsStorage",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "Windows",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "ShlObj",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "Classes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "MD5",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "d2dCore",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "d2dGUITypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "d2dUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "f2ScnSplash",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "f2ScnMain",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "f2Utils",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "f2FontLoad",
+      "Kind": 3
+    },
+    {
+      "From": "f2Application",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "Classes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "jclStringLists",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "d2dTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "d2dInterfaces",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "d2dGUITypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "d2dFormattedText",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "d2dGUIButtons",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "f2Types",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "furqContext",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "furqFiler",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "f2SettingsStorage",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "f2TextPane",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "f2Decorators",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "f2FontPool",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "f2PicturePool",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "f2Skins",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "Types",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "StrUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "Variants",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "Math",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "d2dCore",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "d2dGUI",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "d2dGUIUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "furqTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "furqBase",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "furqUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "f2DecorScript",
+      "Kind": 3
+    },
+    {
+      "From": "f2Context",
+      "To": "f2LinkParser",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontLoad",
+      "To": "d2dInterfaces",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontLoad",
+      "To": "Classes",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontLoad",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontLoad",
+      "To": "Windows",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontLoad",
+      "To": "SHFolder",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontLoad",
+      "To": "SimpleXML",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontLoad",
+      "To": "d2dCore",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontLoad",
+      "To": "d2dTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontLoad",
+      "To": "d2dFont",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontLoad",
+      "To": "f2Types",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontLoad",
+      "To": "f2FontGen",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontPool",
+      "To": "d2dClasses",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontPool",
+      "To": "d2dInterfaces",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontPool",
+      "To": "JclStringLists",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontPool",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontPool",
+      "To": "f2Types",
+      "Kind": 3
+    },
+    {
+      "From": "f2FontPool",
+      "To": "f2FontLoad",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "furqBase",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "furqExprEval",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "f2Context",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "f2Decorators",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "Variants",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "Classes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "d2dTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "furqTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "f2Types",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "f2DecorScript",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "JclStrings",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "Math",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "JclStringLists",
+      "Kind": 3
+    },
+    {
+      "From": "f2Interpreter",
+      "To": "furqContext",
+      "Kind": 3
+    },
+    {
+      "From": "f2LinkParser",
+      "To": "jclStringLists",
+      "Kind": 3
+    },
+    {
+      "From": "f2LinkParser",
+      "To": "RegExpr",
+      "Kind": 3
+    },
+    {
+      "From": "f2LinkParser",
+      "To": "d2dTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2LinkParser",
+      "To": "d2dFont",
+      "Kind": 3
+    },
+    {
+      "From": "f2LinkParser",
+      "To": "d2dFormattedText",
+      "Kind": 3
+    },
+    {
+      "From": "f2LinkParser",
+      "To": "furqContext",
+      "Kind": 3
+    },
+    {
+      "From": "f2LinkParser",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2LinkParser",
+      "To": "furqTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2LinkParser",
+      "To": "furqBase",
+      "Kind": 3
+    },
+    {
+      "From": "f2PicturePool",
+      "To": "d2dInterfaces",
+      "Kind": 3
+    },
+    {
+      "From": "f2PicturePool",
+      "To": "d2dClasses",
+      "Kind": 3
+    },
+    {
+      "From": "f2PicturePool",
+      "To": "Types",
+      "Kind": 3
+    },
+    {
+      "From": "f2PicturePool",
+      "To": "JclStringLists",
+      "Kind": 3
+    },
+    {
+      "From": "f2PicturePool",
+      "To": "StrUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2PicturePool",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2PicturePool",
+      "To": "d2dTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2PicturePool",
+      "To": "d2dCore",
+      "Kind": 3
+    },
+    {
+      "From": "f2PicturePool",
+      "To": "d2dSimplePicture",
+      "Kind": 3
+    },
+    {
+      "From": "f2Scene",
+      "To": "SimpleXML",
+      "Kind": 3
+    },
+    {
+      "From": "f2Scene",
+      "To": "d2dTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Scene",
+      "To": "d2dInterfaces",
+      "Kind": 3
+    },
+    {
+      "From": "f2Scene",
+      "To": "d2dApplication",
+      "Kind": 3
+    },
+    {
+      "From": "f2Scene",
+      "To": "d2dGUI",
+      "Kind": 3
+    },
+    {
+      "From": "f2Scene",
+      "To": "d2dGUIButtons",
+      "Kind": 3
+    },
+    {
+      "From": "f2Scene",
+      "To": "d2dUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2Scene",
+      "To": "d2dFont",
+      "Kind": 3
+    },
+    {
+      "From": "f2Scene",
+      "To": "f2Application",
+      "Kind": 3
+    },
+    {
+      "From": "f2Scene",
+      "To": "f2Context",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "Clipbrd",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "Contnrs",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "d2dTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "d2dInterfaces",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "d2dApplication",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "d2dSprite",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "d2dGUI",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "d2dGUITypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "d2dGUIButtons",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "d2dGUIMenus",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2Application",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2TextPane",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2Context",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2Scene",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2ScnSaveLoad",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2Interpreter",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "furqContext",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "furqBase",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2SaveLoadManager",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "Windows",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "ShlObj",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "Classes",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "StrUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "JclStringLists",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "SimpleXML",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "MD5",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "d2dCore",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "d2dUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "d2dGUIUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "furqTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "furqLoader",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2Types",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2FontLoad",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2Utils",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2Skins",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnMain",
+      "To": "f2Decorators",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "d2dTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "d2dInterfaces",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "d2dSprite",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "d2dApplication",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "f2Application",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "f2Scene",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "JclFileUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "SimpleXML",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "d2dCore",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "f2Skins",
+      "Kind": 3
+    },
+    {
+      "From": "f2ScnSplash",
+      "To": "f2FontLoad",
+      "Kind": 3
+    },
+    {
+      "From": "f2Types",
+      "To": "d2dTypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Types",
+      "To": "d2dInterfaces",
+      "Kind": 3
+    },
+    {
+      "From": "f2Types",
+      "To": "d2dClasses",
+      "Kind": 3
+    },
+    {
+      "From": "f2Types",
+      "To": "d2dSprite",
+      "Kind": 3
+    },
+    {
+      "From": "f2Types",
+      "To": "d2dFont",
+      "Kind": 3
+    },
+    {
+      "From": "f2Types",
+      "To": "d2dGUITypes",
+      "Kind": 3
+    },
+    {
+      "From": "f2Types",
+      "To": "JclStringLists",
+      "Kind": 3
+    },
+    {
+      "From": "f2Types",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2Types",
+      "To": "d2dCore",
+      "Kind": 3
+    },
+    {
+      "From": "f2Types",
+      "To": "f2FontLoad",
+      "Kind": 3
+    },
+    {
+      "From": "f2Utils",
+      "To": "Windows",
+      "Kind": 3
+    },
+    {
+      "From": "f2Utils",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "f2Utils",
+      "To": "CommDlg",
+      "Kind": 3
+    },
+    {
+      "From": "furqAbout",
+      "To": "Windows",
+      "Kind": 3
+    },
+    {
+      "From": "furqAbout",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqAbout",
+      "To": "Classes",
+      "Kind": 3
+    },
+    {
+      "From": "furqAbout",
+      "To": "Graphics",
+      "Kind": 3
+    },
+    {
+      "From": "furqAbout",
+      "To": "Forms",
+      "Kind": 3
+    },
+    {
+      "From": "furqAbout",
+      "To": "Controls",
+      "Kind": 3
+    },
+    {
+      "From": "furqAbout",
+      "To": "StdCtrls",
+      "Kind": 3
+    },
+    {
+      "From": "furqAbout",
+      "To": "Buttons",
+      "Kind": 3
+    },
+    {
+      "From": "furqAbout",
+      "To": "ExtCtrls",
+      "Kind": 3
+    },
+    {
+      "From": "furqAbout",
+      "To": "JclFileUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqBase",
+      "To": "Windows",
+      "Kind": 3
+    },
+    {
+      "From": "furqBase",
+      "To": "Classes",
+      "Kind": 3
+    },
+    {
+      "From": "furqBase",
+      "To": "JclStringLists",
+      "Kind": 3
+    },
+    {
+      "From": "furqBase",
+      "To": "furqTypes",
+      "Kind": 3
+    },
+    {
+      "From": "furqBase",
+      "To": "furqContext",
+      "Kind": 3
+    },
+    {
+      "From": "furqBase",
+      "To": "Variants",
+      "Kind": 3
+    },
+    {
+      "From": "furqBase",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqBase",
+      "To": "StrUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqBase",
+      "To": "JclStrings",
+      "Kind": 3
+    },
+    {
+      "From": "furqBase",
+      "To": "furqExprEval",
+      "Kind": 3
+    },
+    {
+      "From": "furqDecoders",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqExprEval",
+      "To": "Variants",
+      "Kind": 3
+    },
+    {
+      "From": "furqExprEval",
+      "To": "furqTypes",
+      "Kind": 3
+    },
+    {
+      "From": "furqExprEval",
+      "To": "furqContext",
+      "Kind": 3
+    },
+    {
+      "From": "furqExprEval",
+      "To": "JclStringLists",
+      "Kind": 3
+    },
+    {
+      "From": "furqExprEval",
+      "To": "Windows",
+      "Kind": 3
+    },
+    {
+      "From": "furqExprEval",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqExprEval",
+      "To": "StrUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqExprEval",
+      "To": "JclStrings",
+      "Kind": 3
+    },
+    {
+      "From": "furqFiler",
+      "To": "d2dUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqFiler",
+      "To": "Variants",
+      "Kind": 3
+    },
+    {
+      "From": "furqLoader",
+      "To": "Classes",
+      "Kind": 3
+    },
+    {
+      "From": "furqLoader",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqLoader",
+      "To": "furqDecoders",
+      "Kind": 3
+    },
+    {
+      "From": "furqTypes",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqTypes",
+      "To": "Variants",
+      "Kind": 3
+    },
+    {
+      "From": "furqUtils",
+      "To": "Windows",
+      "Kind": 3
+    },
+    {
+      "From": "furqUtils",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "Windows",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "Messages",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "Variants",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "Classes",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "Graphics",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "Controls",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "Forms",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "Dialogs",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "StdCtrls",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "JvSplit",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "JvMemo",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "JvExStdCtrls",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "JvExExtCtrls",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "JvExtComponent",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "ExtCtrls",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "XPMan",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "Menus",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "StdActns",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "ActnList",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "furqBase",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "furqContext",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "Buttons",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "JclStringLists",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "MMSystem",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "furqTypes",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "furqAbout",
+      "Kind": 3
+    },
+    {
+      "From": "furqWinMain",
+      "To": "furqLoader",
+      "Kind": 3
+    },
+    {
+      "From": "md5",
+      "To": "Windows",
+      "Kind": 3
+    },
+    {
+      "From": "md5",
+      "To": "SysUtils",
+      "Kind": 3
+    },
+    {
+      "From": "md5",
+      "To": "Classes",
+      "Kind": 3
+    }
+  ]
+}

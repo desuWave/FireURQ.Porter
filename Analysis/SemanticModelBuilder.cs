@@ -95,7 +95,8 @@ public static class SemanticModelBuilder
                     SemanticMemberKind.Field,
                     field.Type,
                     member.Visibility.ToString(),
-                    Array.Empty<SemanticParameter>()),
+                    Array.Empty<SemanticParameter>(),
+                    false),
 
             DelphiFunction function =>
                 new SemanticMember(
@@ -107,7 +108,8 @@ public static class SemanticModelBuilder
                     member.Visibility.ToString(),
                     function.Parameters
                         .Select(BuildParameter)
-                        .ToList()),
+                        .ToList(),
+                        false),
 
             DelphiProperty property =>
                 new SemanticMember(
@@ -117,7 +119,8 @@ public static class SemanticModelBuilder
                     member.Visibility.ToString(),
                     property.Parameters
                         .Select(BuildParameter)
-                        .ToList()),
+                        .ToList(),
+                    property.IsDefault),
 
             DelphiMethodResolution resolution =>
                 new SemanticMember(
@@ -125,7 +128,8 @@ public static class SemanticModelBuilder
                     SemanticMemberKind.MethodResolution,
                     resolution.ImplementationMethod,
                     member.Visibility.ToString(),
-                    Array.Empty<SemanticParameter>()),
+                    Array.Empty<SemanticParameter>(),
+                    false),
 
             _ =>
                 throw new InvalidOperationException(

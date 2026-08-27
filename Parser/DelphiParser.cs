@@ -67,11 +67,10 @@ public sealed class DelphiParser
         }
 
         string type = "";
-
         if (MatchSymbol(":"))
         {
             type =
-                ReadParameterType();
+                ReadPropertyType();
         }
 
         string? readAccessor = null;
@@ -132,49 +131,177 @@ public sealed class DelphiParser
     {
         ExpectKeyword("unit");
 
-        string name = ExpectIdentifier();
+        string name =
+            ExpectIdentifier();
 
         ExpectSymbol(";");
 
-        var uses = ParseUses();
+        // Delphi unit structure:
+        //
+        // unit Name;
+        //
+        // interface
+        //
+        // uses
+        //   ...
+        //
+        // type / const / function / procedure ...
+        //
+        // implementation
+        //
+        // uses
+        //   ...
+        //
+        // implementation ...
+        //
+        // end.
+
+        var uses =
+            new List<string>();
 
         var declarations =
             new List<DelphiNode>();
 
-        while (!IsEnd())
+        // --------------------------------------------------------
+        // INTERFACE SECTION
+        // --------------------------------------------------------
+
+        if (MatchKeyword("interface"))
         {
-            if (MatchKeyword("const"))
+            uses.AddRange(ParseUses());
+
+            while (!IsEnd())
             {
-                ParseConstSection(declarations);
-                continue;
-            }
+                if (PeekKeyword("implementation"))
+                    break;
 
-            if (MatchKeyword("type"))
+                if (MatchKeyword("const"))
+                {
+                    ParseConstSection(declarations);
+                    continue;
+                }
+
+                if (MatchKeyword("type"))
+                {
+                    ParseTypeSection(declarations);
+                    continue;
+                }
+
+                if (MatchKeyword("function"))
+                {
+                    declarations.Add(
+                        ParseFunction(false));
+
+                    continue;
+                }
+
+                if (MatchKeyword("procedure"))
+                {
+                    declarations.Add(
+                        ParseFunction(true));
+
+                    continue;
+                }
+
+                Advance();
+            }
+        }
+        else
+        {
+            // Fallback for simplified/non-standard input
+            // where "interface" is absent.
+
+            uses.AddRange(ParseUses());
+
+            while (!IsEnd())
             {
-                ParseTypeSection(declarations);
-                continue;
-            }
+                if (PeekKeyword("implementation"))
+                    break;
 
-            if (MatchKeyword("function"))
+                if (MatchKeyword("const"))
+                {
+                    ParseConstSection(declarations);
+                    continue;
+                }
+
+                if (MatchKeyword("type"))
+                {
+                    ParseTypeSection(declarations);
+                    continue;
+                }
+
+                if (MatchKeyword("function"))
+                {
+                    declarations.Add(
+                        ParseFunction(false));
+
+                    continue;
+                }
+
+                if (MatchKeyword("procedure"))
+                {
+                    declarations.Add(
+                        ParseFunction(true));
+
+                    continue;
+                }
+
+                Advance();
+            }
+        }
+
+        // --------------------------------------------------------
+        // IMPLEMENTATION SECTION
+        // --------------------------------------------------------
+
+        if (MatchKeyword("implementation"))
+        {
+            // Implementation-level uses.
+            //
+            // We currently merge them into the same Uses collection.
+            // Later we can distinguish InterfaceUses and
+            // ImplementationUses in the AST.
+
+            uses.AddRange(ParseUses());
+
+            while (!IsEnd())
             {
-                declarations.Add(
-                    ParseFunction(false));
+                if (MatchKeyword("const"))
+                {
+                    ParseConstSection(declarations);
+                    continue;
+                }
 
-                continue;
+                if (MatchKeyword("type"))
+                {
+                    ParseTypeSection(declarations);
+                    continue;
+                }
+
+                if (MatchKeyword("function"))
+                {
+                    declarations.Add(
+                        ParseFunction(false));
+
+                    continue;
+                }
+
+                if (MatchKeyword("procedure"))
+                {
+                    declarations.Add(
+                        ParseFunction(true));
+
+                    continue;
+                }
+
+                if (MatchKeyword("end"))
+                {
+                    MatchSymbol(".");
+                    break;
+                }
+
+                Advance();
             }
-
-            if (MatchKeyword("procedure"))
-            {
-                declarations.Add(
-                    ParseFunction(true));
-
-                continue;
-            }
-
-            if (MatchKeyword("implementation"))
-                break;
-
-            Advance();
         }
 
         return new DelphiUnit(
@@ -183,13 +310,15 @@ public sealed class DelphiParser
             declarations);
     }
 
+
     // ========================================================
     // USES
     // ========================================================
 
     private List<string> ParseUses()
     {
-        var result = new List<string>();
+        var result =
+            new List<string>();
 
         if (!MatchKeyword("uses"))
             return result;
@@ -976,6 +1105,27 @@ public sealed class DelphiParser
     // ========================================================
     // HELPERS
     // ========================================================
+
+    private string ReadPropertyType()
+    {
+        var parts = new List<string>();
+
+        while (!IsEnd())
+        {
+            if (PeekKeyword("read") ||
+                PeekKeyword("write") ||
+                PeekKeyword("default") ||
+                PeekSymbol(";"))
+            {
+                break;
+            }
+
+            parts.Add(Current().Text);
+            Advance();
+        }
+
+        return string.Join(" ", parts);
+    }
 
     private Exception ParserError(string message)
     {

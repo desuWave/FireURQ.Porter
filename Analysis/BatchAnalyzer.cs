@@ -7,7 +7,8 @@ namespace FireURQ.Porter.Analysis;
 
 public static class BatchAnalyzer
 {
-    public static void Analyze(string rootPath)
+    public static ProjectDependencyGraph? Analyze(
+    string rootPath)
     {
         Console.WriteLine();
         Console.WriteLine("================================");
@@ -22,7 +23,7 @@ public static class BatchAnalyzer
             Console.WriteLine(rootPath);
             Console.WriteLine();
 
-            return;
+            return null;
         }
 
         Encoding.RegisterProvider(
@@ -57,6 +58,9 @@ public static class BatchAnalyzer
         var errors =
             new Dictionary<string, int>();
 
+        var analyses =
+            new List<ProjectAnalysisResult>();
+
         foreach (var file in files)
         {
             string relativePath =
@@ -87,6 +91,15 @@ public static class BatchAnalyzer
                 DelphiUnit unit =
                     parser.ParseUnit();
 
+                Console.WriteLine(
+                    $"  Uses:       {unit.Uses.Count}");
+
+                foreach (var usedUnit in unit.Uses)
+                {
+                    Console.WriteLine(
+                        $"    -> {usedUnit}");
+                }
+
                 var semanticModel =
                     SemanticModelBuilder.Build(
                         unit);
@@ -94,6 +107,13 @@ public static class BatchAnalyzer
                 var dependencyGraph =
                     DependencyGraphBuilder.Build(
                         semanticModel);
+
+                analyses.Add(
+                    new ProjectAnalysisResult(
+                        relativePath,
+                        semanticModel,
+                        dependencyGraph,
+                        tokens.Count));
 
                 int classes =
                     semanticModel.Classes.Count;
@@ -175,7 +195,7 @@ public static class BatchAnalyzer
             catch (Exception ex)
             {
                 Console.WriteLine(
-                    $"  Status:     FAIL");
+                    "  Status:     FAIL");
 
                 Console.WriteLine(
                     $"  Error:      {ex.Message}");
@@ -258,9 +278,51 @@ public static class BatchAnalyzer
         }
 
         Console.WriteLine();
+
+        // ====================================================
+        // PROJECT DEPENDENCY GRAPH
+        // ====================================================
+
+        var projectGraph =
+            ProjectDependencyGraphBuilder.Build(
+                analyses);
+
+        Console.WriteLine("================================");
+        Console.WriteLine(" Project Dependency Graph");
+        Console.WriteLine("================================");
+
+        Console.WriteLine();
+
+        Console.WriteLine(
+            $"Units: {projectGraph.Units.Count}");
+
+        Console.WriteLine(
+            $"Unit edges: {projectGraph.Edges.Count}");
+
+        Console.WriteLine();
+
+        Console.WriteLine(
+            "Exporting project graph...");
+
+        string projectGraphPath =
+            Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "fireurq.project.graph.json");
+
+        DependencyGraphJsonExporter.Export(
+            projectGraph,
+            projectGraphPath);
+
+        Console.WriteLine(
+            $"Project graph: {projectGraphPath}");
+
+        Console.WriteLine();
+
         Console.WriteLine("================================");
         Console.WriteLine(" Batch Analysis Complete");
         Console.WriteLine("================================");
         Console.WriteLine();
+
+        return projectGraph;
     }
 }

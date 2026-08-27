@@ -14,14 +14,18 @@ public static class DependencyGraphBuilder
         AddNode(
             nodes,
             unit.Name,
-            "Unit");
+            unit.Name,
+            "Unit",
+            unit.Name);
 
         foreach (var type in unit.Types)
         {
             AddNode(
                 nodes,
                 type.Name,
-                $"Type:{type.Kind}");
+                type.Name,
+                $"Type:{type.Kind}",
+                unit.Name);
         }
 
         foreach (var value in unit.Classes)
@@ -29,7 +33,9 @@ public static class DependencyGraphBuilder
             AddNode(
                 nodes,
                 value.Name,
-                "Class");
+                value.Name,
+                "Class",
+                unit.Name);
         }
 
         foreach (var value in unit.Interfaces)
@@ -37,7 +43,9 @@ public static class DependencyGraphBuilder
             AddNode(
                 nodes,
                 value.Name,
-                "Interface");
+                value.Name,
+                "Interface",
+                unit.Name);
         }
 
         foreach (var value in unit.Constants)
@@ -45,7 +53,9 @@ public static class DependencyGraphBuilder
             AddNode(
                 nodes,
                 value.Name,
-                "Constant");
+                value.Name,
+                "Constant",
+                unit.Name);
         }
 
         foreach (var value in unit.Functions)
@@ -53,9 +63,11 @@ public static class DependencyGraphBuilder
             AddNode(
                 nodes,
                 value.Name,
+                value.Name,
                 value.IsProcedure
                     ? "Procedure"
-                    : "Function");
+                    : "Function",
+                unit.Name);
         }
 
         foreach (var value in unit.Classes)
@@ -76,7 +88,8 @@ public static class DependencyGraphBuilder
                     nodes,
                     edges,
                     value.Name,
-                    member);
+                    member,
+                    unit.Name);
             }
         }
 
@@ -98,19 +111,13 @@ public static class DependencyGraphBuilder
                     nodes,
                     edges,
                     value.Name,
-                    member);
+                    member,
+                    unit.Name);
             }
         }
 
         foreach (var function in unit.Functions)
         {
-            AddNode(
-                nodes,
-                function.Name,
-                function.IsProcedure
-                    ? "Procedure"
-                    : "Function");
-
             foreach (var parameter in function.Parameters)
             {
                 if (!string.IsNullOrWhiteSpace(
@@ -137,6 +144,12 @@ public static class DependencyGraphBuilder
 
         foreach (var usedUnit in unit.Uses)
         {
+            if (string.IsNullOrWhiteSpace(
+                    usedUnit))
+            {
+                continue;
+            }
+
             edges.Add(
                 new DependencyEdge(
                     unit.Name,
@@ -153,7 +166,8 @@ public static class DependencyGraphBuilder
         List<DependencyNode> nodes,
         List<DependencyEdge> edges,
         string owner,
-        SemanticMember member)
+        SemanticMember member,
+        string unitName)
     {
         switch (member.Kind)
         {
@@ -162,12 +176,16 @@ public static class DependencyGraphBuilder
                 AddNode(
                     nodes,
                     member.Name,
-                    "InterfaceMethod");
+                    member.Name,
+                    "InterfaceMethod",
+                    unitName);
 
                 AddNode(
                     nodes,
                     member.Type,
-                    "ImplementationMethod");
+                    member.Type,
+                    "ImplementationMethod",
+                    unitName);
 
                 if (!string.IsNullOrWhiteSpace(
                         member.Type))
@@ -205,15 +223,19 @@ public static class DependencyGraphBuilder
 
     private static void AddNode(
         List<DependencyNode> nodes,
+        string id,
         string name,
-        string kind)
+        string kind,
+        string unitName)
     {
         if (string.IsNullOrWhiteSpace(name))
+        {
             return;
+        }
 
         if (nodes.Any(
-                node => node.Name.Equals(
-                    name,
+                node => node.Id.Equals(
+                    id,
                     StringComparison.OrdinalIgnoreCase)))
         {
             return;
@@ -221,7 +243,9 @@ public static class DependencyGraphBuilder
 
         nodes.Add(
             new DependencyNode(
+                id,
                 name,
-                kind));
+                kind,
+                unitName));
     }
 }

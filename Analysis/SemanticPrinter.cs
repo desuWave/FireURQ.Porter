@@ -114,13 +114,29 @@ public static class SemanticPrinter
                 $"{member.Kind.ToString().ToUpperInvariant()} " +
                 $"{member.Name}");
 
+            if (member.Kind == SemanticMemberKind.Property &&
+                    member.IsDefault)
+            {
+                Console.WriteLine(
+                    "    DEFAULT: true");
+            }
+
             if (!string.IsNullOrWhiteSpace(member.Type))
             {
                 Console.WriteLine(
                     $"    TYPE: {member.Type}");
             }
+
+            foreach (var parameter in member.Parameters)
+            {
+                Console.WriteLine(
+                    $"    PARAM " +
+                    $"{parameter.Kind.ToUpperInvariant()} " +
+                    $"{parameter.Name}: {parameter.Type}");
+            }
         }
     }
+
 
     private static void PrintFunction(
         SemanticFunction function,

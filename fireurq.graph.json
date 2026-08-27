@@ -1,0 +1,3337 @@
+{
+  "Nodes": [
+    {
+      "Name": "f2Application",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2Application",
+      "Kind": "Class"
+    },
+    {
+      "Name": "f2Context",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2Context",
+      "Kind": "Class"
+    },
+    {
+      "Name": "f2Decorators",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2SpriteInitDataRec",
+      "Kind": "Type:Record"
+    },
+    {
+      "Name": "Tf2DecoratorList",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2SingleTargetProcessor",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2BaseDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2ColoredDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2TextDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2GraphicDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2BasicSpriteDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2RectangleDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2SpriteDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2AnimationDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2GIFDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2ClickAreaDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2CustomButtonDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2ImageButtonDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2TextButtonDecorator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "If2ActionDecorator",
+      "Kind": "Interface"
+    },
+    {
+      "Name": "If2TargetProvider",
+      "Kind": "Interface"
+    },
+    {
+      "Name": "If2ActionDecorator.pm_GetEnabled",
+      "Kind": "InterfaceMethod"
+    },
+    {
+      "Name": "pm_GetLinksEnabled",
+      "Kind": "ImplementationMethod"
+    },
+    {
+      "Name": "f2DecorScript",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2DSOperatorType",
+      "Kind": "Type:Enum"
+    },
+    {
+      "Name": "Tf2DSParamPrim",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2SimpleParam",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2RandomParam",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2DSOperator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "If2DSParameter",
+      "Kind": "Interface"
+    },
+    {
+      "Name": "If2DSOperator",
+      "Kind": "Interface"
+    },
+    {
+      "Name": "CompileDSOperators",
+      "Kind": "Function"
+    },
+    {
+      "Name": "SaveDSOperators",
+      "Kind": "Procedure"
+    },
+    {
+      "Name": "LoadDSOperators",
+      "Kind": "Function"
+    },
+    {
+      "Name": "f2FontGen",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "TfgLetter",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfgFont",
+      "Kind": "Class"
+    },
+    {
+      "Name": "IfgLetter",
+      "Kind": "Interface"
+    },
+    {
+      "Name": "f2FontLoad",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "f2LoadFont",
+      "Kind": "Function"
+    },
+    {
+      "Name": "f2FontPool",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2FontPool",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Id2dFontProvider.GetByID",
+      "Kind": "InterfaceMethod"
+    },
+    {
+      "Name": "GetFont",
+      "Kind": "ImplementationMethod"
+    },
+    {
+      "Name": "f2Interpreter",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2DecorParams",
+      "Kind": "Type:Record"
+    },
+    {
+      "Name": "Tf2DecorHandleProc",
+      "Kind": "Type:Procedure"
+    },
+    {
+      "Name": "Tf2Interpreter",
+      "Kind": "Class"
+    },
+    {
+      "Name": "cMaxDecorParams",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "f2LinkParser",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "OutTextWithLinks",
+      "Kind": "Function"
+    },
+    {
+      "Name": "f2PicturePool",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2PicturePool",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Id2dPictureProvider.GetByID",
+      "Kind": "InterfaceMethod"
+    },
+    {
+      "Name": "GetPicture",
+      "Kind": "ImplementationMethod"
+    },
+    {
+      "Name": "f2SaveLoadManager",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2SaveLoadManager",
+      "Kind": "Class"
+    },
+    {
+      "Name": "cMaxSlotsNum",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "f2Scene",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2Scene",
+      "Kind": "Class"
+    },
+    {
+      "Name": "f2ScnMain",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2WaitState",
+      "Kind": "Type:Enum"
+    },
+    {
+      "Name": "Tf2MenuActionCallerID",
+      "Kind": "Type:Enum"
+    },
+    {
+      "Name": "Tf2Clipboard",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2MainScene",
+      "Kind": "Class"
+    },
+    {
+      "Name": "f2ScnSaveLoad",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2SaveLoadMode",
+      "Kind": "Type:Enum"
+    },
+    {
+      "Name": "Tf2SaveLoadScene",
+      "Kind": "Class"
+    },
+    {
+      "Name": "f2ScnSplash",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2SplashScene",
+      "Kind": "Class"
+    },
+    {
+      "Name": "f2SettingsStorage",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2SettingsStorage",
+      "Kind": "Class"
+    },
+    {
+      "Name": "f2Skins",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2Skin",
+      "Kind": "Class"
+    },
+    {
+      "Name": "f2TextPane",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2ButtonActionEvent",
+      "Kind": "Type:Procedure"
+    },
+    {
+      "Name": "Tf2ButtonSlice",
+      "Kind": "Class"
+    },
+    {
+      "Name": "Tf2TextPane",
+      "Kind": "Class"
+    },
+    {
+      "Name": "f2Types",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "Tf2DecorType",
+      "Kind": "Type:Enum"
+    },
+    {
+      "Name": "Tf2OnActionProc",
+      "Kind": "Type:Procedure"
+    },
+    {
+      "Name": "Tf2DecorationSprite",
+      "Kind": "Class"
+    },
+    {
+      "Name": "c_Gametitle",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_StyleDosTextcolor",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_Textalign",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MusicLooped",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_Textfont",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_Sysfont",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_SysMenuFont",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_Textcolor",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_EchoColor",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_LinkColor",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_LinkHColor",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MusicVolume",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_VoiceVolume",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_TextPaneLeft",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_TextPaneTop",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_TextPaneWidth",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_TextPaneHeight",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MouseX",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MouseY",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_fp_filename",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_HideSaveEchoVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_HideBtnEchoVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_HideInvEchoVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_HideLinkEchoVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_HideLocalActionEchoVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MenuFontVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MenuBGColorVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MenuBorderColorVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MenuTextColorVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MenuHIndentVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MenuVIndentVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MenuSelectionColorVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MenuSelectedColorVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_MenuDisabledColorVar",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_BtnAlign",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_BtnTxtAlign",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_LineSpacing",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_ParaSpacing",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_NumButtons",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_BMenuAlign",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_LMenuAlign",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_FullScreen",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_IsMusic",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "c_SaveNameBase",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "CorrectColor",
+      "Kind": "Function"
+    },
+    {
+      "Name": "Hex2ColorDef",
+      "Kind": "Function"
+    },
+    {
+      "Name": "IntToAlign",
+      "Kind": "Function"
+    },
+    {
+      "Name": "AlignToInt",
+      "Kind": "Function"
+    },
+    {
+      "Name": "f2Utils",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "OpenFileDlg",
+      "Kind": "Function"
+    },
+    {
+      "Name": "SaveFileDlg",
+      "Kind": "Function"
+    },
+    {
+      "Name": "IsDirWritable",
+      "Kind": "Function"
+    },
+    {
+      "Name": "furqAbout",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "TAboutBox",
+      "Kind": "Class"
+    },
+    {
+      "Name": "furqBase",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "TFURQInterpreter",
+      "Kind": "Class"
+    },
+    {
+      "Name": "ParseLocAndParams",
+      "Kind": "Function"
+    },
+    {
+      "Name": "furqContext",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "TFURQCodeLoadProc",
+      "Kind": "Type:Procedure"
+    },
+    {
+      "Name": "TFURQCodePoint",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TFURQCode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TFURQOperator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TFURQExecutionPoint",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TFURQActionData",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TFURQContext",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TFURQCondition",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TFURQWinContext",
+      "Kind": "Class"
+    },
+    {
+      "Name": "IFURQCodePoint",
+      "Kind": "Interface"
+    },
+    {
+      "Name": "IFURQActionData",
+      "Kind": "Interface"
+    },
+    {
+      "Name": "cMaxStateParams",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "sDefaultActName",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "sDefaultActTag",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "sVarSaveSuccess",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "FURQReadSaveInfo",
+      "Kind": "Function"
+    },
+    {
+      "Name": "ActionDataHash",
+      "Kind": "Function"
+    },
+    {
+      "Name": "furqDecoders",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "QS2Decode",
+      "Kind": "Procedure"
+    },
+    {
+      "Name": "QS1Decode",
+      "Kind": "Procedure"
+    },
+    {
+      "Name": "BFDecode",
+      "Kind": "Procedure"
+    },
+    {
+      "Name": "Crc32",
+      "Kind": "Function"
+    },
+    {
+      "Name": "furqExprEval",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "TfurqToken",
+      "Kind": "Type:Enum"
+    },
+    {
+      "Name": "TEvalSet",
+      "Kind": "Type:Set"
+    },
+    {
+      "Name": "TfurqLexer",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqUnaryEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqBinaryEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqConstEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqNegateEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqNotEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqSummaEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqSubtractEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqMultiplyEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqDivideEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqOrEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqAndEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqExprEvaluator",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqEqualEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqLesserEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqLesserOrEqualEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqGreaterEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqGreaterOrEqualEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqNotEqualEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "EFURQExpressionError",
+      "Kind": "Class"
+    },
+    {
+      "Name": "TfurqSimularEvalNode",
+      "Kind": "Class"
+    },
+    {
+      "Name": "IfurqEvalNode",
+      "Kind": "Interface"
+    },
+    {
+      "Name": "ParseAndEvalToArray",
+      "Kind": "Function"
+    },
+    {
+      "Name": "furqFiler",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "TFURQFiler",
+      "Kind": "Class"
+    },
+    {
+      "Name": "furqLoader",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "EFURQLoadError",
+      "Kind": "Class"
+    },
+    {
+      "Name": "FURQLoadQS1",
+      "Kind": "Function"
+    },
+    {
+      "Name": "FURQLoadQS2",
+      "Kind": "Function"
+    },
+    {
+      "Name": "FURQLoadQST",
+      "Kind": "Function"
+    },
+    {
+      "Name": "furqTypes",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "TCharSet",
+      "Kind": "Type:Set"
+    },
+    {
+      "Name": "TFURQContextState",
+      "Kind": "Type:Enum"
+    },
+    {
+      "Name": "TFURQContextExecutionMode",
+      "Kind": "Type:Enum"
+    },
+    {
+      "Name": "TFURQClsType",
+      "Kind": "Type:Enum"
+    },
+    {
+      "Name": "TFURQClsTypeSet",
+      "Kind": "Type:Set"
+    },
+    {
+      "Name": "TFURQActionModifier",
+      "Kind": "Type:Enum"
+    },
+    {
+      "Name": "TfurqOnErrorHandler",
+      "Kind": "Type:Procedure"
+    },
+    {
+      "Name": "EFURQRunTimeError",
+      "Kind": "Class"
+    },
+    {
+      "Name": "chTAB",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cWhiteSpaces",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cWordSeparators",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cIdentStartSet",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cIdentMidSet",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cCaretReturn",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "kwdPln",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "kwdPrintLn",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "kwdPrint",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "kwdP",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cDefaultPrecision",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cDefaultInvName",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cVarHidePhantoms",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cVarCurrentLoc",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cVarPreviousLoc",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cVarCommon",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cVarPrecision",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cVarTokenDelim",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cVarPi",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cVarInventoryEnabled",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cLocCommonPrefix",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cLocCommon",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cSaveFileSignature",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "cBufSize",
+      "Kind": "Constant"
+    },
+    {
+      "Name": "EnsureReal",
+      "Kind": "Function"
+    },
+    {
+      "Name": "EnsureString",
+      "Kind": "Function"
+    },
+    {
+      "Name": "furqUtils",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "NewFUID",
+      "Kind": "Function"
+    },
+    {
+      "Name": "furqWinMain",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "TMainForm",
+      "Kind": "Class"
+    },
+    {
+      "Name": "md5",
+      "Kind": "Unit"
+    },
+    {
+      "Name": "UINT4",
+      "Kind": "Type:Unknown"
+    },
+    {
+      "Name": "PArray4UINT4",
+      "Kind": "Type:Pointer"
+    },
+    {
+      "Name": "TArray4UINT4",
+      "Kind": "Type:Array"
+    },
+    {
+      "Name": "PArray2UINT4",
+      "Kind": "Type:Pointer"
+    },
+    {
+      "Name": "TArray2UINT4",
+      "Kind": "Type:Array"
+    },
+    {
+      "Name": "PArray16Byte",
+      "Kind": "Type:Pointer"
+    },
+    {
+      "Name": "TArray16Byte",
+      "Kind": "Type:Array"
+    },
+    {
+      "Name": "PArray64Byte",
+      "Kind": "Type:Pointer"
+    },
+    {
+      "Name": "TArray64Byte",
+      "Kind": "Type:Array"
+    },
+    {
+      "Name": "PByteArray",
+      "Kind": "Type:Pointer"
+    },
+    {
+      "Name": "TByteArray",
+      "Kind": "Type:Array"
+    },
+    {
+      "Name": "PUINT4Array",
+      "Kind": "Type:Pointer"
+    },
+    {
+      "Name": "TUINT4Array",
+      "Kind": "Type:Array"
+    },
+    {
+      "Name": "PMD5Context",
+      "Kind": "Type:Pointer"
+    },
+    {
+      "Name": "TMD5Context",
+      "Kind": "Type:Record"
+    },
+    {
+      "Name": "PMD5Digest",
+      "Kind": "Type:Pointer"
+    },
+    {
+      "Name": "TMD5Digest",
+      "Kind": "Type:Record"
+    },
+    {
+      "Name": "MD5String",
+      "Kind": "Function"
+    },
+    {
+      "Name": "MD5File",
+      "Kind": "Function"
+    },
+    {
+      "Name": "MD5Stream",
+      "Kind": "Function"
+    },
+    {
+      "Name": "MD5Buffer",
+      "Kind": "Function"
+    },
+    {
+      "Name": "MD5DigestToStr",
+      "Kind": "Function"
+    },
+    {
+      "Name": "MD5DigestCompare",
+      "Kind": "Function"
+    },
+    {
+      "Name": "MD5Init",
+      "Kind": "Procedure"
+    },
+    {
+      "Name": "MD5Update",
+      "Kind": "Procedure"
+    },
+    {
+      "Name": "MD5Final",
+      "Kind": "Procedure"
+    }
+  ],
+  "Edges": [
+    {
+      "From": "Tf2Application",
+      "To": "Td2dApplication",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2Application",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Application",
+      "To": "Id2dFramedButtonView",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Application",
+      "To": "Id2dFont",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Application",
+      "To": "Id2dTexture",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Application",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Application",
+      "To": "AnsiString",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Application",
+      "To": "Tf2SettingsStorage",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Application",
+      "To": "Tf2Skin",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "TFURQContext",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Td2dAlign",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "AnsiString",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Tf2DecoratorList",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Td2dTextAlignType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Id2dFramedButtonView",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Td2dMenuVisualStyle",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Td2dColor",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Id2dFont",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Tf2TextPane",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Tf2FontPool",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Tf2OnActionProc",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Id2dPictureProvider",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Tf2Skin",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Tf2SettingsStorage",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "IFURQActionData",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Context",
+      "To": "Tf2BaseDecorator",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SingleTargetProcessor",
+      "To": "Td2dProtoObject",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2SingleTargetProcessor",
+      "To": "IFURQActionData",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SingleTargetProcessor",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SingleTargetProcessor",
+      "To": "TFURQContext",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SingleTargetProcessor",
+      "To": "Tf2OnActionProc",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2BaseDecorator",
+      "To": "Td2dProtoObject",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2BaseDecorator",
+      "To": "Td2dPositionBlender",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2BaseDecorator",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2BaseDecorator",
+      "To": "IInterfaceList",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2BaseDecorator",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2BaseDecorator",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2BaseDecorator",
+      "To": "Tf2DecoratorList",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2BaseDecorator",
+      "To": "Tf2DecorType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2BaseDecorator",
+      "To": "If2ActionDecorator",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2DecoratorList",
+      "To": "TStringList",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2DecoratorList",
+      "To": "Tf2BaseDecorator",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ColoredDecorator",
+      "To": "Tf2BaseDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2ColoredDecorator",
+      "To": "Td2dColor",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ColoredDecorator",
+      "To": "Td2dColorBlender",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "Tf2ColoredDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "IJclStringList",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "TFURQContext",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "Td2dColorBlender",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "Td2dAlign",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "Tf2OnActionProc",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "Td2dStaticText",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "Td2dTextAlignType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "Id2dFont",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "Td2dColor",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "IFURQActionData",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "If2ActionDecorator.pm_GetEnabled",
+      "Kind": 4
+    },
+    {
+      "From": "If2ActionDecorator.pm_GetEnabled",
+      "To": "pm_GetLinksEnabled",
+      "Kind": 4
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "Tf2DecorType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextDecorator",
+      "To": "If2ActionDecorator",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2GraphicDecorator",
+      "To": "Tf2ColoredDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2GraphicDecorator",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2GraphicDecorator",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2GraphicDecorator",
+      "To": "Td2dSimpleBlender",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2BasicSpriteDecorator",
+      "To": "Tf2GraphicDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2BasicSpriteDecorator",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2BasicSpriteDecorator",
+      "To": "Td2dSprite",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2BasicSpriteDecorator",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2RectangleDecorator",
+      "To": "Tf2BasicSpriteDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2RectangleDecorator",
+      "To": "Tf2DecorType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SpriteDecorator",
+      "To": "Tf2BasicSpriteDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2SpriteDecorator",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SpriteDecorator",
+      "To": "Tf2SpriteInitDataRec",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SpriteDecorator",
+      "To": "Tf2DecorType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2AnimationDecorator",
+      "To": "Tf2BasicSpriteDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2AnimationDecorator",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2AnimationDecorator",
+      "To": "Tf2SpriteInitDataRec",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2AnimationDecorator",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2AnimationDecorator",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2AnimationDecorator",
+      "To": "Tf2DecorType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2GIFDecorator",
+      "To": "Tf2BasicSpriteDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2GIFDecorator",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2GIFDecorator",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2GIFDecorator",
+      "To": "Tf2DecorType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ClickAreaDecorator",
+      "To": "Tf2BaseDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2ClickAreaDecorator",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ClickAreaDecorator",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ClickAreaDecorator",
+      "To": "Td2dAlign",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ClickAreaDecorator",
+      "To": "Td2dRect",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ClickAreaDecorator",
+      "To": "Tf2SingleTargetProcessor",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ClickAreaDecorator",
+      "To": "Tf2DecorType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ClickAreaDecorator",
+      "To": "IFURQActionData",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ClickAreaDecorator",
+      "To": "If2ActionDecorator",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2CustomButtonDecorator",
+      "To": "Tf2BaseDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2CustomButtonDecorator",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2CustomButtonDecorator",
+      "To": "Td2dAlign",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2CustomButtonDecorator",
+      "To": "Tf2SingleTargetProcessor",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2CustomButtonDecorator",
+      "To": "Td2dCustomButton",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2CustomButtonDecorator",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2CustomButtonDecorator",
+      "To": "IFURQActionData",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2CustomButtonDecorator",
+      "To": "If2ActionDecorator",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ImageButtonDecorator",
+      "To": "Tf2CustomButtonDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2ImageButtonDecorator",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ImageButtonDecorator",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ImageButtonDecorator",
+      "To": "Tf2DecorType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextButtonDecorator",
+      "To": "Tf2CustomButtonDecorator",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2TextButtonDecorator",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextButtonDecorator",
+      "To": "Td2dTextAlignType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextButtonDecorator",
+      "To": "Tf2DecorType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextButtonDecorator",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "If2ActionDecorator",
+      "To": "IFURQActionData",
+      "Kind": 1
+    },
+    {
+      "From": "If2ActionDecorator",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "If2ActionDecorator",
+      "To": "Td2dAlign",
+      "Kind": 1
+    },
+    {
+      "From": "If2TargetProvider",
+      "To": "Tf2SingleTargetProcessor",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2DSParamPrim",
+      "To": "TInterfacedObject",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2DSParamPrim",
+      "To": "Double",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SimpleParam",
+      "To": "Tf2DSParamPrim",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2SimpleParam",
+      "To": "Double",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2RandomParam",
+      "To": "Tf2DSParamPrim",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2RandomParam",
+      "To": "Double",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2DSOperator",
+      "To": "TInterfacedObject",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2DSOperator",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2DSOperator",
+      "To": "Tf2DSOperatorType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2DSOperator",
+      "To": "IInterfaceList",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2DSOperator",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2DSOperator",
+      "To": "If2DSParameter",
+      "Kind": 1
+    },
+    {
+      "From": "If2DSParameter",
+      "To": "Double",
+      "Kind": 1
+    },
+    {
+      "From": "If2DSOperator",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "If2DSOperator",
+      "To": "Tf2DSOperatorType",
+      "Kind": 1
+    },
+    {
+      "From": "If2DSOperator",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "If2DSOperator",
+      "To": "If2DSParameter",
+      "Kind": 1
+    },
+    {
+      "From": "CompileDSOperators",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "CompileDSOperators",
+      "To": "IInterfaceList",
+      "Kind": 1
+    },
+    {
+      "From": "SaveDSOperators",
+      "To": "IInterfaceList",
+      "Kind": 1
+    },
+    {
+      "From": "SaveDSOperators",
+      "To": "Td2dFiler",
+      "Kind": 1
+    },
+    {
+      "From": "LoadDSOperators",
+      "To": "Td2dFiler",
+      "Kind": 1
+    },
+    {
+      "From": "LoadDSOperators",
+      "To": "IInterfaceList",
+      "Kind": 1
+    },
+    {
+      "From": "TfgLetter",
+      "To": "TInterfacedObject",
+      "Kind": 0
+    },
+    {
+      "From": "TfgLetter",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "TfgLetter",
+      "To": "TGPBitmap",
+      "Kind": 1
+    },
+    {
+      "From": "TfgLetter",
+      "To": "Byte",
+      "Kind": 1
+    },
+    {
+      "From": "TfgFont",
+      "To": "IJclIntfCollection",
+      "Kind": 1
+    },
+    {
+      "From": "TfgFont",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "TfgFont",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "TfgFont",
+      "To": "TGPBitmap",
+      "Kind": 1
+    },
+    {
+      "From": "TfgFont",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "TfgFont",
+      "To": "IXmlDocument",
+      "Kind": 1
+    },
+    {
+      "From": "IfgLetter",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "IfgLetter",
+      "To": "TGPBitmap",
+      "Kind": 1
+    },
+    {
+      "From": "IfgLetter",
+      "To": "Byte",
+      "Kind": 1
+    },
+    {
+      "From": "f2LoadFont",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "f2LoadFont",
+      "To": "Boolean = False",
+      "Kind": 1
+    },
+    {
+      "From": "f2LoadFont",
+      "To": "Id2dFont",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2FontPool",
+      "To": "Td2dProtoObject",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2FontPool",
+      "To": "IJclStringList",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2FontPool",
+      "To": "Id2dFont",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2FontPool",
+      "To": "Id2dFontProvider.GetByID",
+      "Kind": 4
+    },
+    {
+      "From": "Id2dFontProvider.GetByID",
+      "To": "GetFont",
+      "Kind": 4
+    },
+    {
+      "From": "Tf2Interpreter",
+      "To": "TFURQInterpreter",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2Interpreter",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Interpreter",
+      "To": "Tf2Context",
+      "Kind": 1
+    },
+    {
+      "From": "OutTextWithLinks",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "OutTextWithLinks",
+      "To": "Id2dTextAddingTool",
+      "Kind": 1
+    },
+    {
+      "From": "OutTextWithLinks",
+      "To": "TFURQContext",
+      "Kind": 1
+    },
+    {
+      "From": "OutTextWithLinks",
+      "To": "IJclStringList = nil",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2PicturePool",
+      "To": "Td2dProtoObject",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2PicturePool",
+      "To": "Id2dPictureProvider.GetByID",
+      "Kind": 4
+    },
+    {
+      "From": "Id2dPictureProvider.GetByID",
+      "To": "GetPicture",
+      "Kind": 4
+    },
+    {
+      "From": "Tf2PicturePool",
+      "To": "Id2dPicture",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2PicturePool",
+      "To": "Id2dPictureProvider",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadManager",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadManager",
+      "To": "array [ 0 .. cMaxSlotsNum ] of string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadManager",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Scene",
+      "To": "Td2dScene",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2Scene",
+      "To": "Tf2Application",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Scene",
+      "To": "Tf2Context",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Scene",
+      "To": "Td2dBitButton",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Clipboard",
+      "To": "TClipboard",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Tf2Scene",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Id2dFramedButtonView",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Td2dColor",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Tf2Clipboard",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "TFURQCode",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Tf2Interpreter",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Td2dGUI",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Td2dBitButton",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Td2dMenu",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Id2dFont",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Td2dMenuItem",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Double",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Td2dAlign",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "TObjectList",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Tf2SaveLoadManager",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Tf2SaveLoadScene",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Tf2TextPane",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "array [ Tf2WaitState ] of Td2dSprite",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Tf2WaitState",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2MainScene",
+      "To": "Tf2MenuActionCallerID",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadScene",
+      "To": "Tf2Scene",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2SaveLoadScene",
+      "To": "Td2dColor",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadScene",
+      "To": "Id2dFont",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadScene",
+      "To": "Td2dGUI",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadScene",
+      "To": "array [ 0 .. cMaxSlotsNum ] of string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadScene",
+      "To": "array [ 0 .. cMaxSlotsNum ] of TDateTime",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadScene",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadScene",
+      "To": "Tf2SaveLoadMode",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadScene",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SaveLoadScene",
+      "To": "TDateTime",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SplashScene",
+      "To": "Tf2Scene",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2SplashScene",
+      "To": "Td2dSprite",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SplashScene",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SplashScene",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SplashScene",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SplashScene",
+      "To": "Id2dFont",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SplashScene",
+      "To": "Td2dColor",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SettingsStorage",
+      "To": "Td2dProtoObject",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2SettingsStorage",
+      "To": "IJclStringList",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SettingsStorage",
+      "To": "AnsiString",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SettingsStorage",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2SettingsStorage",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Skin",
+      "To": "TObject",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2Skin",
+      "To": "IXmlDocument",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Skin",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Skin",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Skin",
+      "To": "IJclStringList",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Skin",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Skin",
+      "To": "Id2dTexture",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Skin",
+      "To": "Id2dFont",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2Skin",
+      "To": "Id2dFramedButtonView",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ButtonSlice",
+      "To": "Td2dCustomSlice",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2ButtonSlice",
+      "To": "Td2dTextAlignType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ButtonSlice",
+      "To": "Id2dFramedButtonView",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ButtonSlice",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ButtonSlice",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ButtonSlice",
+      "To": "Td2dButtonState",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ButtonSlice",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ButtonSlice",
+      "To": "Td2dRect",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2ButtonSlice",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextPane",
+      "To": "Td2dTextPane",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2TextPane",
+      "To": "Td2dTextAlignType",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextPane",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextPane",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextPane",
+      "To": "Id2dFramedButtonView",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextPane",
+      "To": "Tf2ButtonActionEvent",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextPane",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextPane",
+      "To": "Td2dRect",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2TextPane",
+      "To": "Tf2ButtonSlice",
+      "Kind": 1
+    },
+    {
+      "From": "Tf2DecorationSprite",
+      "To": "Td2dSprite",
+      "Kind": 0
+    },
+    {
+      "From": "Tf2DecorationSprite",
+      "To": "Single",
+      "Kind": 1
+    },
+    {
+      "From": "CorrectColor",
+      "To": "Td2dColor",
+      "Kind": 1
+    },
+    {
+      "From": "Hex2ColorDef",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "Hex2ColorDef",
+      "To": "Td2dColor",
+      "Kind": 1
+    },
+    {
+      "From": "IntToAlign",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "IntToAlign",
+      "To": "Td2dTextAlignType",
+      "Kind": 1
+    },
+    {
+      "From": "AlignToInt",
+      "To": "Td2dTextAlignType",
+      "Kind": 1
+    },
+    {
+      "From": "AlignToInt",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "OpenFileDlg",
+      "To": "HWND",
+      "Kind": 1
+    },
+    {
+      "From": "OpenFileDlg",
+      "To": "PChar",
+      "Kind": 1
+    },
+    {
+      "From": "OpenFileDlg",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "SaveFileDlg",
+      "To": "HWND",
+      "Kind": 1
+    },
+    {
+      "From": "SaveFileDlg",
+      "To": "PChar",
+      "Kind": 1
+    },
+    {
+      "From": "SaveFileDlg",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "IsDirWritable",
+      "To": "AnsiString",
+      "Kind": 1
+    },
+    {
+      "From": "IsDirWritable",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "TAboutBox",
+      "To": "TForm",
+      "Kind": 0
+    },
+    {
+      "From": "TAboutBox",
+      "To": "TPanel",
+      "Kind": 1
+    },
+    {
+      "From": "TAboutBox",
+      "To": "TButton",
+      "Kind": 1
+    },
+    {
+      "From": "TAboutBox",
+      "To": "TLabel",
+      "Kind": 1
+    },
+    {
+      "From": "TAboutBox",
+      "To": "TImage",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQInterpreter",
+      "To": "TfurqOnErrorHandler",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQInterpreter",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQInterpreter",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQInterpreter",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQInterpreter",
+      "To": "TFURQContext",
+      "Kind": 1
+    },
+    {
+      "From": "ParseLocAndParams",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "ParseLocAndParams",
+      "To": "IJclStringList",
+      "Kind": 1
+    },
+    {
+      "From": "ParseLocAndParams",
+      "To": "TFURQActionModifier",
+      "Kind": 1
+    },
+    {
+      "From": "ParseLocAndParams",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQCodePoint",
+      "To": "TInterfacedObject",
+      "Kind": 0
+    },
+    {
+      "From": "TFURQCodePoint",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQCode",
+      "To": "IJclStringList",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQCode",
+      "To": "TMD5Digest",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQCode",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQOperator",
+      "To": "TFURQOperator",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQOperator",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQOperator",
+      "To": "Byte",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQExecutionPoint",
+      "To": "TFURQOperator",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQExecutionPoint",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQExecutionPoint",
+      "To": "TFURQExecutionPoint",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQActionData",
+      "To": "TInterfacedObject",
+      "Kind": 0
+    },
+    {
+      "From": "TFURQActionData",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQActionData",
+      "To": "IJclStringList",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQActionData",
+      "To": "TFURQActionModifier",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQContext",
+      "To": "Td2dProtoObject",
+      "Kind": 0
+    },
+    {
+      "From": "TFURQContext",
+      "To": "IJclStringList",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQContext",
+      "To": "TFURQCode",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQContext",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQContext",
+      "To": "TFURQExecutionPoint",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQContext",
+      "To": "TFURQContextState",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQContext",
+      "To": "TFURQContextExecutionMode",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQContext",
+      "To": "array [ 1 .. cMaxStateParams ] of string",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQContext",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQContext",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQContext",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQContext",
+      "To": "IFURQActionData",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQCondition",
+      "To": "TFURQOperator",
+      "Kind": 0
+    },
+    {
+      "From": "TFURQCondition",
+      "To": "TFURQOperator",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQWinContext",
+      "To": "TFURQContext",
+      "Kind": 0
+    },
+    {
+      "From": "TFURQWinContext",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "IFURQCodePoint",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "IFURQActionData",
+      "To": "TFURQActionModifier",
+      "Kind": 1
+    },
+    {
+      "From": "IFURQActionData",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "IFURQActionData",
+      "To": "IJclStringList",
+      "Kind": 1
+    },
+    {
+      "From": "FURQReadSaveInfo",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "FURQReadSaveInfo",
+      "To": "TDateTime",
+      "Kind": 1
+    },
+    {
+      "From": "FURQReadSaveInfo",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "ActionDataHash",
+      "To": "IFURQActionData",
+      "Kind": 1
+    },
+    {
+      "From": "ActionDataHash",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "QS2Decode",
+      "To": "PByte",
+      "Kind": 1
+    },
+    {
+      "From": "QS2Decode",
+      "To": "Longword",
+      "Kind": 1
+    },
+    {
+      "From": "QS1Decode",
+      "To": "PByte",
+      "Kind": 1
+    },
+    {
+      "From": "QS1Decode",
+      "To": "Longword",
+      "Kind": 1
+    },
+    {
+      "From": "BFDecode",
+      "To": "Pointer",
+      "Kind": 1
+    },
+    {
+      "From": "BFDecode",
+      "To": "Longword",
+      "Kind": 1
+    },
+    {
+      "From": "Crc32",
+      "To": "PByte",
+      "Kind": 1
+    },
+    {
+      "From": "Crc32",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "Crc32",
+      "To": "Cardinal",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqLexer",
+      "To": "TObject",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqLexer",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqLexer",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqLexer",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqLexer",
+      "To": "TfurqToken",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqLexer",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqLexer",
+      "To": "Char",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqEvalNode",
+      "To": "TInterfacedObject",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqUnaryEvalNode",
+      "To": "TfurqEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqUnaryEvalNode",
+      "To": "IfurqEvalNode",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqBinaryEvalNode",
+      "To": "TfurqEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqBinaryEvalNode",
+      "To": "IfurqEvalNode",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqConstEvalNode",
+      "To": "TfurqEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqConstEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqNegateEvalNode",
+      "To": "TfurqUnaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqNegateEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqNotEvalNode",
+      "To": "TfurqUnaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqNotEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqSummaEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqSummaEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqSubtractEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqSubtractEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqMultiplyEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqMultiplyEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqDivideEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqDivideEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqOrEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqOrEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqAndEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqAndEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqExprEvaluator",
+      "To": "TObject",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqExprEvaluator",
+      "To": "TfurqContext",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqExprEvaluator",
+      "To": "IfurqEvalNode",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqExprEvaluator",
+      "To": "TfurqLexer",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqExprEvaluator",
+      "To": "TfurqEvalNode",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqExprEvaluator",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqExprEvaluator",
+      "To": "Extended",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqExprEvaluator",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqEqualEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqEqualEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqLesserEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqLesserEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqLesserOrEqualEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqLesserOrEqualEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqGreaterEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqGreaterEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqGreaterOrEqualEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqGreaterOrEqualEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "TfurqNotEqualEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqNotEqualEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "EFURQExpressionError",
+      "To": "EFURQRunTimeError",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqSimularEvalNode",
+      "To": "TfurqBinaryEvalNode",
+      "Kind": 0
+    },
+    {
+      "From": "TfurqSimularEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "IfurqEvalNode",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "ParseAndEvalToArray",
+      "To": "TFURQContext",
+      "Kind": 1
+    },
+    {
+      "From": "ParseAndEvalToArray",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "ParseAndEvalToArray",
+      "To": "TEvalSet",
+      "Kind": 1
+    },
+    {
+      "From": "ParseAndEvalToArray",
+      "To": "IJclStringList",
+      "Kind": 1
+    },
+    {
+      "From": "TFURQFiler",
+      "To": "Td2dFiler",
+      "Kind": 0
+    },
+    {
+      "From": "TFURQFiler",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "EFURQLoadError",
+      "To": "Exception",
+      "Kind": 0
+    },
+    {
+      "From": "FURQLoadQS1",
+      "To": "TStream",
+      "Kind": 1
+    },
+    {
+      "From": "FURQLoadQS1",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "FURQLoadQS2",
+      "To": "TStream",
+      "Kind": 1
+    },
+    {
+      "From": "FURQLoadQS2",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "FURQLoadQST",
+      "To": "TStream",
+      "Kind": 1
+    },
+    {
+      "From": "FURQLoadQST",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "EFURQRunTimeError",
+      "To": "Exception",
+      "Kind": 0
+    },
+    {
+      "From": "EnsureReal",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "EnsureReal",
+      "To": "Extended",
+      "Kind": 1
+    },
+    {
+      "From": "EnsureString",
+      "To": "Variant",
+      "Kind": 1
+    },
+    {
+      "From": "EnsureString",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "NewFUID",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TForm",
+      "Kind": 0
+    },
+    {
+      "From": "TMainForm",
+      "To": "TPanel",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TEdit",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TJvxSplitter",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TJvMemo",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TListBox",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TXPManifest",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TOpenDialog",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TActionList",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TAction",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TFileExit",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TMainMenu",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TMenuItem",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TSpeedButton",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TSaveDialog",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TButton",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TTimer",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TFURQCode",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TFURQInterpreter",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TFURQWinContext",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "IJclStringList",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "TMainForm",
+      "To": "TPopupMenu",
+      "Kind": 1
+    },
+    {
+      "From": "MD5String",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "MD5String",
+      "To": "TMD5Digest",
+      "Kind": 1
+    },
+    {
+      "From": "MD5File",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "MD5File",
+      "To": "TMD5Digest",
+      "Kind": 1
+    },
+    {
+      "From": "MD5Stream",
+      "To": "TStream",
+      "Kind": 1
+    },
+    {
+      "From": "MD5Stream",
+      "To": "TMD5Digest",
+      "Kind": 1
+    },
+    {
+      "From": "MD5Buffer",
+      "To": "Integer",
+      "Kind": 1
+    },
+    {
+      "From": "MD5Buffer",
+      "To": "TMD5Digest",
+      "Kind": 1
+    },
+    {
+      "From": "MD5DigestToStr",
+      "To": "TMD5Digest",
+      "Kind": 1
+    },
+    {
+      "From": "MD5DigestToStr",
+      "To": "string",
+      "Kind": 1
+    },
+    {
+      "From": "MD5DigestCompare",
+      "To": "TMD5Digest",
+      "Kind": 1
+    },
+    {
+      "From": "MD5DigestCompare",
+      "To": "Boolean",
+      "Kind": 1
+    },
+    {
+      "From": "MD5Init",
+      "To": "TMD5Context",
+      "Kind": 1
+    },
+    {
+      "From": "MD5Update",
+      "To": "TMD5Context",
+      "Kind": 1
+    },
+    {
+      "From": "MD5Update",
+      "To": "PByteArray",
+      "Kind": 1
+    },
+    {
+      "From": "MD5Update",
+      "To": "LongWord",
+      "Kind": 1
+    },
+    {
+      "From": "MD5Final",
+      "To": "TMD5Digest",
+      "Kind": 1
+    },
+    {
+      "From": "MD5Final",
+      "To": "TMD5Context",
+      "Kind": 1
+    }
+  ]
+}
