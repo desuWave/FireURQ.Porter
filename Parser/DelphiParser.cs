@@ -1317,6 +1317,11 @@ public sealed class DelphiParser
             }
             else if (PeekSymbol("]"))
             {
+                if (squareDepth == 0)
+                {
+                    break;
+                }
+
                 squareDepth--;
             }
             else if (PeekSymbol("("))
