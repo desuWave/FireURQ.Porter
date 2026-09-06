@@ -8,116 +8,6 @@ public sealed class DelphiParser
     private readonly IReadOnlyList<LexerToken> _tokens;
     private int _position;
 
-    private DelphiProperty ParseProperty()
-    {
-        string name =
-            ExpectIdentifier();
-
-        var parameters =
-            new List<DelphiParameter>();
-
-        if (MatchSymbol("["))
-        {
-            while (!IsEnd() &&
-                   !PeekSymbol("]"))
-            {
-                var parameterKind =
-                    DelphiParameterKind.Value;
-
-                if (MatchKeyword("const"))
-                    parameterKind = DelphiParameterKind.Const;
-                else if (MatchKeyword("var"))
-                    parameterKind = DelphiParameterKind.Var;
-                else if (MatchKeyword("out"))
-                    parameterKind = DelphiParameterKind.Out;
-
-                var parameterNames =
-                    new List<string>();
-
-                parameterNames.Add(
-                    ExpectIdentifier());
-
-                while (MatchSymbol(","))
-                {
-                    parameterNames.Add(
-                        ExpectIdentifier());
-                }
-
-                string parameterType = "";
-
-                if (MatchSymbol(":"))
-                {
-                    parameterType =
-                        ReadParameterType();
-                }
-
-                foreach (var parameterName in parameterNames)
-                {
-                    parameters.Add(
-                        new DelphiParameter(
-                            parameterName,
-                            parameterType,
-                            parameterKind));
-                }
-
-                MatchSymbol(";");
-            }
-
-            ExpectSymbol("]");
-        }
-
-        string type = "";
-        if (MatchSymbol(":"))
-        {
-            type =
-                ReadPropertyType();
-        }
-
-        string? readAccessor = null;
-        string? writeAccessor = null;
-
-        bool isDefault = false;
-
-        while (!IsEnd() &&
-               !PeekSymbol(";"))
-        {
-            if (MatchKeyword("read"))
-            {
-                readAccessor =
-                    ReadQualifiedIdentifier();
-
-                continue;
-            }
-
-            if (MatchKeyword("write"))
-            {
-                writeAccessor =
-                    ReadQualifiedIdentifier();
-
-                continue;
-            }
-
-            if (MatchKeyword("default"))
-            {
-                isDefault = true;
-
-                continue;
-            }
-
-            Advance();
-        }
-
-        MatchSymbol(";");
-
-        return new DelphiProperty(
-            name,
-            type,
-            parameters,
-            readAccessor,
-            writeAccessor,
-            isDefault);
-    }
-
     public DelphiParser(IReadOnlyList<LexerToken> tokens)
     {
         _tokens = tokens;
@@ -136,172 +26,48 @@ public sealed class DelphiParser
 
         ExpectSymbol(";");
 
-        // Delphi unit structure:
-        //
-        // unit Name;
-        //
-        // interface
-        //
-        // uses
-        //   ...
-        //
-        // type / const / function / procedure ...
-        //
-        // implementation
-        //
-        // uses
-        //   ...
-        //
-        // implementation ...
-        //
-        // end.
-
         var uses =
             new List<string>();
 
         var declarations =
             new List<DelphiNode>();
 
-        // --------------------------------------------------------
+        // ----------------------------------------------------
         // INTERFACE SECTION
-        // --------------------------------------------------------
+        // ----------------------------------------------------
 
         if (MatchKeyword("interface"))
         {
             uses.AddRange(ParseUses());
 
-            while (!IsEnd())
-            {
-                if (PeekKeyword("implementation"))
-                    break;
-
-                if (MatchKeyword("const"))
-                {
-                    ParseConstSection(declarations);
-                    continue;
-                }
-
-                if (MatchKeyword("type"))
-                {
-                    ParseTypeSection(declarations);
-                    continue;
-                }
-
-                if (MatchKeyword("function"))
-                {
-                    declarations.Add(
-                        ParseFunction(false));
-
-                    continue;
-                }
-
-                if (MatchKeyword("procedure"))
-                {
-                    declarations.Add(
-                        ParseFunction(true));
-
-                    continue;
-                }
-
-                Advance();
-            }
+            ParseDeclarationSection(
+                declarations,
+                readBodies: false,
+                stopAtImplementation: true);
         }
         else
         {
-            // Fallback for simplified/non-standard input
-            // where "interface" is absent.
-
+            // Fallback for simplified/non-standard input.
             uses.AddRange(ParseUses());
 
-            while (!IsEnd())
-            {
-                if (PeekKeyword("implementation"))
-                    break;
-
-                if (MatchKeyword("const"))
-                {
-                    ParseConstSection(declarations);
-                    continue;
-                }
-
-                if (MatchKeyword("type"))
-                {
-                    ParseTypeSection(declarations);
-                    continue;
-                }
-
-                if (MatchKeyword("function"))
-                {
-                    declarations.Add(
-                        ParseFunction(false));
-
-                    continue;
-                }
-
-                if (MatchKeyword("procedure"))
-                {
-                    declarations.Add(
-                        ParseFunction(true));
-
-                    continue;
-                }
-
-                Advance();
-            }
+            ParseDeclarationSection(
+                declarations,
+                readBodies: false,
+                stopAtImplementation: true);
         }
 
-        // --------------------------------------------------------
+        // ----------------------------------------------------
         // IMPLEMENTATION SECTION
-        // --------------------------------------------------------
+        // ----------------------------------------------------
 
         if (MatchKeyword("implementation"))
         {
-            // Implementation-level uses.
-            //
-            // We currently merge them into the same Uses collection.
-            // Later we can distinguish InterfaceUses and
-            // ImplementationUses in the AST.
-
             uses.AddRange(ParseUses());
 
-            while (!IsEnd())
-            {
-                if (MatchKeyword("const"))
-                {
-                    ParseConstSection(declarations);
-                    continue;
-                }
-
-                if (MatchKeyword("type"))
-                {
-                    ParseTypeSection(declarations);
-                    continue;
-                }
-
-                if (MatchKeyword("function"))
-                {
-                    declarations.Add(
-                        ParseFunction(false));
-
-                    continue;
-                }
-
-                if (MatchKeyword("procedure"))
-                {
-                    declarations.Add(
-                        ParseFunction(true));
-
-                    continue;
-                }
-
-                if (MatchKeyword("end"))
-                {
-                    MatchSymbol(".");
-                    break;
-                }
-
-                Advance();
-            }
+            ParseDeclarationSection(
+                declarations,
+                readBodies: true,
+                stopAtImplementation: false);
         }
 
         return new DelphiUnit(
@@ -310,6 +76,169 @@ public sealed class DelphiParser
             declarations);
     }
 
+    // ========================================================
+    // DECLARATION SECTION
+    // ========================================================
+
+    private void ParseDeclarationSection(
+        List<DelphiNode> declarations,
+        bool readBodies,
+        bool stopAtImplementation)
+    {
+        while (!IsEnd())
+        {
+            if (stopAtImplementation &&
+                PeekKeyword("implementation"))
+            {
+                return;
+            }
+
+            if (MatchKeyword("const"))
+            {
+                ParseConstSection(declarations);
+                continue;
+            }
+
+            if (MatchKeyword("type"))
+            {
+                ParseTypeSection(declarations);
+                continue;
+            }
+
+            if (PeekKeyword("function") ||
+                PeekKeyword("procedure"))
+            {
+                DelphiNode callable =
+                    ParseCallableDeclaration(
+                        readBodies);
+
+                declarations.Add(callable);
+
+                continue;
+            }
+
+            if (MatchKeyword("end"))
+            {
+                MatchSymbol(".");
+                break;
+            }
+
+            Advance();
+        }
+    }
+
+    // ========================================================
+    // CALLABLE DECLARATION
+    // ========================================================
+
+    private DelphiNode ParseCallableDeclaration(
+        bool readBody)
+    {
+        bool isProcedure =
+            PeekKeyword("procedure");
+
+        if (!isProcedure &&
+            !PeekKeyword("function"))
+        {
+            throw ParserError(
+                "Expected function or procedure.");
+        }
+
+        // IMPORTANT:
+        //
+        // Delphi method resolutions have the form:
+        //
+        // function A.B = C;
+        // procedure A.B = C;
+        //
+        // They must be recognized before ParseFunction(),
+        // because a function resolution has no return type
+        // and therefore no ':' before '='.
+
+        if (IsMethodResolutionAhead())
+        {
+            Advance();
+
+            string interfaceMethod =
+                ReadQualifiedIdentifier();
+
+            ExpectSymbol("=");
+
+            string implementationMethod =
+                ReadQualifiedIdentifier();
+
+            ExpectSymbol(";");
+
+            return new DelphiMethodResolution(
+                interfaceMethod,
+                implementationMethod);
+        }
+
+        // Ordinary function/procedure.
+
+        Advance(); // consume function/procedure
+
+        return ParseFunction(
+            isProcedure,
+            readBody);
+    }
+
+    // ========================================================
+    // METHOD RESOLUTION LOOKAHEAD
+    // ========================================================
+
+    private bool IsMethodResolutionAhead()
+    {
+        int position =
+            _position + 1;
+
+        if (!IsIdentifierAt(position))
+        {
+            return false;
+        }
+
+        position++;
+
+        while (position + 1 < _tokens.Count &&
+               IsSymbolAt(position, ".") &&
+               IsIdentifierAt(position + 1))
+        {
+            position += 2;
+        }
+
+        return IsSymbolAt(
+            position,
+            "=");
+    }
+
+    private bool IsIdentifierAt(int position)
+    {
+        if (position < 0 ||
+            position >= _tokens.Count)
+        {
+            return false;
+        }
+
+        return _tokens[position].Kind ==
+                   TokenKind.Identifier ||
+               _tokens[position].Kind ==
+                   TokenKind.Keyword;
+    }
+
+    private bool IsSymbolAt(
+        int position,
+        string symbol)
+    {
+        if (position < 0 ||
+            position >= _tokens.Count)
+        {
+            return false;
+        }
+
+        return _tokens[position].Kind ==
+                   TokenKind.Symbol &&
+               _tokens[position].Text == symbol;
+    }
 
     // ========================================================
     // USES
@@ -321,15 +250,19 @@ public sealed class DelphiParser
             new List<string>();
 
         if (!MatchKeyword("uses"))
+        {
             return result;
+        }
 
         while (!IsEnd())
         {
             result.Add(
-                ExpectIdentifier());
+                ReadQualifiedIdentifier());
 
             if (MatchSymbol(";"))
+            {
                 break;
+            }
 
             MatchSymbol(",");
         }
@@ -368,20 +301,23 @@ public sealed class DelphiParser
 
             if (MatchSymbol(":"))
             {
-                type = ReadTypeExpression();
+                type =
+                    ReadTypeExpression();
             }
 
             if (!MatchSymbol("="))
+            {
                 continue;
+            }
 
             string value =
-            ReadUntil(";");
+                ReadUntilStatementTerminator();
 
             declarations.Add(
-            new DelphiConst(
-            name,
-            type,
-            value));
+                new DelphiConst(
+                    name,
+                    type,
+                    value));
 
             MatchSymbol(";");
         }
@@ -392,7 +328,7 @@ public sealed class DelphiParser
     // ========================================================
 
     private void ParseTypeSection(
-    List<DelphiNode> declarations)
+        List<DelphiNode> declarations)
     {
         while (!IsEnd())
         {
@@ -415,7 +351,9 @@ public sealed class DelphiParser
                 ExpectIdentifier();
 
             if (!MatchSymbol("="))
+            {
                 continue;
+            }
 
             // ------------------------------------------------
             // ENUM
@@ -449,12 +387,9 @@ public sealed class DelphiParser
                     new DelphiType(
                         name,
                         DelphiTypeKind.Enum,
-                        "enum"));
-
-                declarations.Add(
-                    new DelphiEnum(
-                        name,
-                        values));
+                        string.Join(
+                            ", ",
+                            values)));
 
                 continue;
             }
@@ -465,15 +400,16 @@ public sealed class DelphiParser
 
             if (MatchSymbol("^"))
             {
-                string targetType = ExpectTypeName();
+                string target =
+                    ExpectTypeName();
 
                 MatchSymbol(";");
 
                 declarations.Add(
-                new DelphiType(
-                    name,
-                    DelphiTypeKind.Pointer,
-                    $"^{targetType}"));
+                    new DelphiType(
+                        name,
+                        DelphiTypeKind.Pointer,
+                        target));
 
                 continue;
             }
@@ -484,18 +420,21 @@ public sealed class DelphiParser
 
             if (MatchKeyword("array"))
             {
-                var definition = new List<string>
-        {
-        "array"
-        };
+                var definition =
+                    new List<string>();
+
+                definition.Add("array");
 
                 if (MatchSymbol("["))
                 {
                     definition.Add("[");
 
-                    while (!IsEnd() && !PeekSymbol("]"))
+                    while (!IsEnd() &&
+                           !PeekSymbol("]"))
                     {
-                        definition.Add(Current().Text);
+                        definition.Add(
+                            Current().Text);
+
                         Advance();
                     }
 
@@ -507,16 +446,20 @@ public sealed class DelphiParser
                 if (MatchKeyword("of"))
                 {
                     definition.Add("of");
-                    definition.Add(ExpectTypeName());
+
+                    definition.Add(
+                        ExpectTypeName());
                 }
 
                 MatchSymbol(";");
 
                 declarations.Add(
-                new DelphiType(
-                    name,
-                    DelphiTypeKind.Array,
-                    string.Join(" ", definition)));
+                    new DelphiType(
+                        name,
+                        DelphiTypeKind.Array,
+                        string.Join(
+                            " ",
+                            definition)));
 
                 continue;
             }
@@ -552,32 +495,23 @@ public sealed class DelphiParser
             {
                 string? baseType = null;
 
-                // ------------------------------------------------
-                // Optional ancestor
-                // ------------------------------------------------
-
-                // ------------------------------------------------
-                // Optional ancestor
-                // ------------------------------------------------
-
                 if (MatchSymbol("("))
                 {
-                    baseType = ReadQualifiedIdentifier();
+                    baseType =
+                        ReadQualifiedIdentifier();
 
-                    // Пока поддерживаем первого предка.
-                    // Остальные типы после ',' пропускаем.
                     while (MatchSymbol(","))
                     {
-                        Advance();
+                        ReadQualifiedIdentifier();
                     }
 
                     ExpectSymbol(")");
                 }
 
-                // ------------------------------------------------
-                // Empty / forward-style class declaration
-                // ------------------------------------------------
-
+                // Forward declaration:
+                //
+                // TFoo = class;
+                //
                 if (MatchSymbol(";"))
                 {
                     declarations.Add(
@@ -595,15 +529,11 @@ public sealed class DelphiParser
                 var visibility =
                     DelphiVisibility.Public;
 
-                // ------------------------------------------------
-                // CLASS BODY
-                // ------------------------------------------------
-
                 while (!IsEnd())
                 {
-                    // --------------------------------------------
-                    // End of class
-                    // --------------------------------------------
+                    // ----------------------------------------
+                    // END OF CLASS
+                    // ----------------------------------------
 
                     if (PeekKeyword("end"))
                     {
@@ -612,9 +542,9 @@ public sealed class DelphiParser
                         break;
                     }
 
-                    // --------------------------------------------
-                    // Visibility
-                    // --------------------------------------------
+                    // ----------------------------------------
+                    // VISIBILITY
+                    // ----------------------------------------
 
                     if (MatchKeyword("private"))
                     {
@@ -656,11 +586,9 @@ public sealed class DelphiParser
                         continue;
                     }
 
-                    // --------------------------------------------
-                    // Property
-                    //
-                    // property Name: Type read Getter write Setter;
-                    // --------------------------------------------
+                    // ----------------------------------------
+                    // PROPERTY
+                    // ----------------------------------------
 
                     if (MatchKeyword("property"))
                     {
@@ -676,109 +604,108 @@ public sealed class DelphiParser
                         continue;
                     }
 
-                    // ------------------------------------------------
-                    // Interface method resolution
-                    //
-                    // function Interface.Method = ImplementationMethod;
-                    // ------------------------------------------------
+                    // ----------------------------------------
+                    // FUNCTION / PROCEDURE
+                    // ----------------------------------------
 
-                    if (PeekKeyword("function"))
+                    if (PeekKeyword("function") ||
+                        PeekKeyword("procedure"))
                     {
-                        int savedPosition = _position;
+                        bool isProcedure =
+                            PeekKeyword("procedure");
 
-                        Advance(); // function
+                        // Class/interface method resolution:
+                        //
+                        // function Foo = Bar;
+                        // procedure Foo = Bar;
+                        //
+                        // Use the same lookahead as the
+                        // top-level parser.
 
-                        string firstName =
-                            ReadQualifiedIdentifier();
-
-                        if (MatchSymbol("="))
+                        if (IsMethodResolutionAhead())
                         {
+                            Advance();
+
+                            string interfaceMethod =
+                                ReadQualifiedIdentifier();
+
+                            ExpectSymbol("=");
+
                             string implementationMethod =
                                 ReadQualifiedIdentifier();
 
-                            MatchSymbol(";");
+                            ExpectSymbol(";");
 
                             members.Add(
                                 new DelphiClassMember(
                                     visibility,
                                     DelphiClassMemberKind.MethodResolution,
                                     new DelphiMethodResolution(
-                                        firstName,
+                                        interfaceMethod,
                                         implementationMethod)));
 
                             continue;
                         }
 
-                        _position = savedPosition;
-                    }
+                        Advance();
 
-                    // --------------------------------------------
-                    // Method declaration
-                    // --------------------------------------------
-
-                    if (MatchKeyword("procedure"))
-                    {
-                        var function =
-                            ParseFunction(true);
+                        var classFunction =
+                            ParseFunction(
+                                isProcedure,
+                                readBody: false);
 
                         members.Add(
                             new DelphiClassMember(
                                 visibility,
                                 DelphiClassMemberKind.Method,
-                                function));
+                                classFunction));
 
                         continue;
                     }
 
-                    if (MatchKeyword("function"))
-                    {
-                        var function =
-                            ParseFunction(false);
-
-                        members.Add(
-                            new DelphiClassMember(
-                                visibility,
-                                DelphiClassMemberKind.Method,
-                                function));
-
-                        continue;
-                    }
+                    // ----------------------------------------
+                    // CONSTRUCTOR
+                    // ----------------------------------------
 
                     if (MatchKeyword("constructor"))
                     {
-                        var function =
-                            ParseFunction(true);
+                        var constructor =
+                            ParseFunction(
+                                isProcedure: true,
+                                readBody: false);
 
                         members.Add(
                             new DelphiClassMember(
                                 visibility,
                                 DelphiClassMemberKind.Method,
-                                function));
+                                constructor));
 
                         continue;
                     }
 
-
+                    // ----------------------------------------
+                    // DESTRUCTOR
+                    // ----------------------------------------
 
                     if (MatchKeyword("destructor"))
                     {
-                        var function =
-                            ParseFunction(true);
+                        var destructor =
+                            ParseFunction(
+                                isProcedure: true,
+                                readBody: false);
 
                         members.Add(
                             new DelphiClassMember(
                                 visibility,
                                 DelphiClassMemberKind.Method,
-                                function));
+                                destructor));
 
                         continue;
                     }
 
-                    // --------------------------------------------
-                    // Field
-                    //
-                    // name: Type;
-                    // --------------------------------------------
+                    // ----------------------------------------
+                    // FIELD
+                    // ----------------------------------------
 
                     if (IsIdentifier())
                     {
@@ -788,7 +715,7 @@ public sealed class DelphiParser
                         if (MatchSymbol(":"))
                         {
                             string fieldType =
-                                ReadParameterType();
+                                ReadTypeExpression();
 
                             MatchSymbol(";");
 
@@ -802,23 +729,7 @@ public sealed class DelphiParser
 
                             continue;
                         }
-
-                        // Unknown class declaration.
-                        // Skip until ';' so the parser stays synchronized.
-                        while (!IsEnd() &&
-                               !PeekSymbol(";"))
-                        {
-                            Advance();
-                        }
-
-                        MatchSymbol(";");
-
-                        continue;
                     }
-
-                    // --------------------------------------------
-                    // Unknown class member
-                    // --------------------------------------------
 
                     Advance();
                 }
@@ -833,91 +744,41 @@ public sealed class DelphiParser
             }
 
             // ------------------------------------------------
-            // INTERFACE
-            // ------------------------------------------------
-
-            if (MatchKeyword("interface"))
-            {
-                var members =
-                    new List<DelphiClassMember>();
-
-                while (!IsEnd() &&
-                       !PeekKeyword("end"))
-                {
-                    // ------------------------------------------------
-                    // Method
-                    // ------------------------------------------------
-
-                    if (MatchKeyword("procedure"))
-                    {
-                        var function =
-                            ParseFunction(true);
-
-                        members.Add(
-                            new DelphiClassMember(
-                                DelphiVisibility.Public,
-                                DelphiClassMemberKind.Method,
-                                function));
-
-                        continue;
-                    }
-
-                    if (MatchKeyword("function"))
-                    {
-                        var function =
-                            ParseFunction(false);
-
-                        members.Add(
-                            new DelphiClassMember(
-                                DelphiVisibility.Public,
-                                DelphiClassMemberKind.Method,
-                                function));
-
-                        continue;
-                    }
-
-                    // ------------------------------------------------
-                    // Property
-                    // ------------------------------------------------
-
-                    if (MatchKeyword("property"))
-                    {
-                        // Пока сохраняем property как неизвестный
-                        // член интерфейса. Полноценный property parser
-                        // сделаем отдельным шагом.
-
-                        ReadUntil(";");
-
-                        MatchSymbol(";");
-
-                        continue;
-                    }
-
-                    Advance();
-                }
-
-                ExpectKeyword("end");
-                MatchSymbol(";");
-
-                declarations.Add(
-                    new DelphiInterface(
-                        name,
-                        null,
-                        members));
-
-                continue;
-            }
-
-            // ------------------------------------------------
             // RECORD
             // ------------------------------------------------
 
             if (MatchKeyword("record"))
             {
+                var definition =
+                    new List<string>();
+
+                int depth = 1;
+
                 while (!IsEnd() &&
-                       !PeekSymbol(";"))
+                       depth > 0)
                 {
-                    Advance();
+                    if (PeekKeyword("record"))
+                    {
+                        depth++;
+                    }
+                    else if (PeekKeyword("end"))
+                    {
+                        depth--;
+
+                        if (depth == 0)
+                        {
+                            Advance();
+                            break;
+                        }
+                    }
+
+                    if (depth > 0)
+                    {
+                        definition.Add(
+                            Current().Text);
+
+                        Advance();
+                    }
                 }
 
                 MatchSymbol(";");
@@ -926,52 +787,6 @@ public sealed class DelphiParser
                     new DelphiType(
                         name,
                         DelphiTypeKind.Record,
-                        "record"));
-
-                continue;
-            }
-
-            // ------------------------------------------------
-            // PROCEDURE TYPE
-            // ------------------------------------------------
-
-            if (MatchKeyword("procedure") ||
-                MatchKeyword("function"))
-            {
-                var definition =
-                    new List<string>();
-
-                definition.Add(
-                    "procedure");
-
-                int depth = 0;
-
-                while (!IsEnd())
-                {
-                    if (PeekSymbol(";") &&
-                        depth == 0)
-                    {
-                        break;
-                    }
-
-                    if (PeekSymbol("("))
-                        depth++;
-
-                    if (PeekSymbol(")"))
-                        depth--;
-
-                    definition.Add(
-                        Current().Text);
-
-                    Advance();
-                }
-
-                MatchSymbol(";");
-
-                declarations.Add(
-                    new DelphiType(
-                        name,
-                        DelphiTypeKind.Procedure,
                         string.Join(
                             " ",
                             definition)));
@@ -980,16 +795,56 @@ public sealed class DelphiParser
             }
 
             // ------------------------------------------------
-            // SIMPLE / UNKNOWN TYPE
+            // PROCEDURE TYPE
             // ------------------------------------------------
 
-            var parts =
+            if (MatchKeyword("procedure"))
+            {
+                string definition =
+                    ReadUntil(";");
+
+                MatchSymbol(";");
+
+                declarations.Add(
+                    new DelphiType(
+                        name,
+                        DelphiTypeKind.Procedure,
+                        $"procedure {definition}"));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // FUNCTION TYPE
+            // ------------------------------------------------
+
+            if (MatchKeyword("function"))
+            {
+                string definition =
+                    ReadUntil(";");
+
+                MatchSymbol(";");
+
+                declarations.Add(
+                    new DelphiType(
+                        name,
+                        DelphiTypeKind.Procedure,
+                        $"function {definition}"));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // UNKNOWN TYPE
+            // ------------------------------------------------
+
+            var unknownDefinition =
                 new List<string>();
 
             while (!IsEnd() &&
                    !PeekSymbol(";"))
             {
-                parts.Add(
+                unknownDefinition.Add(
                     Current().Text);
 
                 Advance();
@@ -1003,21 +858,143 @@ public sealed class DelphiParser
                     DelphiTypeKind.Unknown,
                     string.Join(
                         " ",
-                        parts)));
+                        unknownDefinition)));
         }
     }
 
+    // ========================================================
+    // PROPERTY
+    // ========================================================
 
+    private DelphiProperty ParseProperty()
+    {
+        string name =
+            ExpectIdentifier();
+
+        var parameters =
+            new List<DelphiParameter>();
+
+        if (MatchSymbol("["))
+        {
+            while (!IsEnd() &&
+                   !PeekSymbol("]"))
+            {
+                var parameterKind =
+                    DelphiParameterKind.Value;
+
+                if (MatchKeyword("const"))
+                {
+                    parameterKind =
+                        DelphiParameterKind.Const;
+                }
+                else if (MatchKeyword("var"))
+                {
+                    parameterKind =
+                        DelphiParameterKind.Var;
+                }
+                else if (MatchKeyword("out"))
+                {
+                    parameterKind =
+                        DelphiParameterKind.Out;
+                }
+
+                var parameterNames =
+                    new List<string>();
+
+                parameterNames.Add(
+                    ExpectIdentifier());
+
+                while (MatchSymbol(","))
+                {
+                    parameterNames.Add(
+                        ExpectIdentifier());
+                }
+
+                string parameterType = "";
+
+                if (MatchSymbol(":"))
+                {
+                    parameterType =
+                        ReadParameterType();
+                }
+
+                foreach (var parameterName in parameterNames)
+                {
+                    parameters.Add(
+                        new DelphiParameter(
+                            parameterName,
+                            parameterType,
+                            parameterKind,
+                            null));
+                }
+
+                MatchSymbol(";");
+            }
+
+            ExpectSymbol("]");
+        }
+
+        string type = "";
+
+        if (MatchSymbol(":"))
+        {
+            type =
+                ReadPropertyType();
+        }
+
+        string? readAccessor = null;
+        string? writeAccessor = null;
+        bool isDefault = false;
+
+        while (!IsEnd() &&
+               !PeekSymbol(";"))
+        {
+            if (MatchKeyword("read"))
+            {
+                readAccessor =
+                    ReadQualifiedIdentifier();
+
+                continue;
+            }
+
+            if (MatchKeyword("write"))
+            {
+                writeAccessor =
+                    ReadQualifiedIdentifier();
+
+                continue;
+            }
+
+            if (MatchKeyword("default"))
+            {
+                isDefault = true;
+                continue;
+            }
+
+            Advance();
+        }
+
+        MatchSymbol(";");
+
+        return new DelphiProperty(
+            name,
+            type,
+            parameters,
+            readAccessor,
+            writeAccessor,
+            isDefault);
+    }
 
     // ========================================================
     // FUNCTION / PROCEDURE
     // ========================================================
 
     private DelphiFunction ParseFunction(
-        bool isProcedure)
+        bool isProcedure,
+        bool readBody)
     {
         string name =
-               ReadQualifiedIdentifier();
+            ReadQualifiedIdentifier();
 
         var parameters =
             new List<DelphiParameter>();
@@ -1025,56 +1002,63 @@ public sealed class DelphiParser
         if (MatchSymbol("("))
         {
             while (!IsEnd() &&
-               !PeekSymbol(")"))
+                   !PeekSymbol(")"))
             {
                 var parameterKind =
                     DelphiParameterKind.Value;
 
                 if (MatchKeyword("const"))
                 {
-                    parameterKind = DelphiParameterKind.Const;
+                    parameterKind =
+                        DelphiParameterKind.Const;
                 }
                 else if (MatchKeyword("var"))
                 {
-                    parameterKind = DelphiParameterKind.Var;
+                    parameterKind =
+                        DelphiParameterKind.Var;
                 }
                 else if (MatchKeyword("out"))
                 {
-                    parameterKind = DelphiParameterKind.Out;
+                    parameterKind =
+                        DelphiParameterKind.Out;
                 }
 
-                var parameterNames = new List<string>();
+                var parameterNames =
+                    new List<string>();
 
-                // Первое имя
                 parameterNames.Add(
                     ExpectIdentifier());
 
-                // Дополнительные имена:
-                //
-                // const A, B, C: Integer
-                //
                 while (MatchSymbol(","))
                 {
                     parameterNames.Add(
                         ExpectIdentifier());
                 }
 
-                string type = "";
+                string parameterType = "";
 
                 if (MatchSymbol(":"))
                 {
-                    type = ReadParameterType();
+                    parameterType =
+                        ReadParameterType();
                 }
 
-                // Если тип указан после группы,
-                // применяем его ко всем именам.
-                foreach (string parameterName in parameterNames)
+                string? defaultValue = null;
+
+                if (MatchSymbol("="))
+                {
+                    defaultValue =
+                        ReadParameterDefaultValue();
+                }
+
+                foreach (var parameterName in parameterNames)
                 {
                     parameters.Add(
                         new DelphiParameter(
                             parameterName,
-                            type,
-                            parameterKind));
+                            parameterType,
+                            parameterKind,
+                            defaultValue));
                 }
 
                 MatchSymbol(";");
@@ -1095,20 +1079,123 @@ public sealed class DelphiParser
 
         MatchSymbol(";");
 
+        IReadOnlyList<LexerToken> bodyTokens =
+            Array.Empty<LexerToken>();
+
+        if (readBody)
+        {
+            SkipLocalDeclarations();
+
+            bodyTokens =
+                ReadFunctionBody();
+        }
+
         return new DelphiFunction(
             name,
             parameters,
             returnType,
-            isProcedure);
+            isProcedure,
+            bodyTokens);
     }
 
     // ========================================================
-    // HELPERS
+    // LOCAL DECLARATIONS
+    // ========================================================
+
+    private void SkipLocalDeclarations()
+    {
+        while (!IsEnd())
+        {
+            if (PeekKeyword("var") ||
+                PeekKeyword("const") ||
+                PeekKeyword("type"))
+            {
+                Advance();
+
+                SkipLocalDeclarationSection();
+
+                continue;
+            }
+
+            break;
+        }
+    }
+
+    private void SkipLocalDeclarationSection()
+    {
+        while (!IsEnd() &&
+               !PeekKeyword("begin"))
+        {
+            Advance();
+        }
+    }
+
+    // ========================================================
+    // FUNCTION BODY
+    // ========================================================
+
+    private IReadOnlyList<LexerToken> ReadFunctionBody()
+    {
+        var body =
+            new List<LexerToken>();
+
+        if (!PeekKeyword("begin"))
+        {
+            return body;
+        }
+
+        int depth = 0;
+
+        while (!IsEnd())
+        {
+            if (PeekKeyword("begin"))
+            {
+                depth++;
+
+                body.Add(
+                    Current());
+
+                Advance();
+
+                continue;
+            }
+
+            if (PeekKeyword("end"))
+            {
+                depth--;
+
+                body.Add(
+                    Current());
+
+                Advance();
+
+                if (depth == 0)
+                {
+                    MatchSymbol(";");
+
+                    break;
+                }
+
+                continue;
+            }
+
+            body.Add(
+                Current());
+
+            Advance();
+        }
+
+        return body;
+    }
+
+    // ========================================================
+    // TYPE HELPERS
     // ========================================================
 
     private string ReadPropertyType()
     {
-        var parts = new List<string>();
+        var parts =
+            new List<string>();
 
         while (!IsEnd())
         {
@@ -1120,62 +1207,183 @@ public sealed class DelphiParser
                 break;
             }
 
-            parts.Add(Current().Text);
+            parts.Add(
+                Current().Text);
+
             Advance();
         }
 
-        return string.Join(" ", parts);
+        return string.Join(
+            " ",
+            parts);
     }
 
-    private Exception ParserError(string message)
+    private string ReadParameterType()
     {
-        string current =
-            IsEnd()
-                ? "<EOF>"
-                : $"{Current().Kind} '{Current().Text}'";
+        var parts =
+            new List<string>();
 
-        string previous = "<none>";
-
-        if (_position > 0)
+        while (!IsEnd())
         {
-            var token = _tokens[_position - 1];
+            if (PeekSymbol("=") ||
+                PeekSymbol(";") ||
+                PeekSymbol(")") ||
+                PeekSymbol("]") ||
+                PeekSymbol(","))
+            {
+                break;
+            }
 
-            previous =
-                $"{token.Kind} '{token.Text}'";
+            parts.Add(
+                Current().Text);
+
+            Advance();
         }
 
-        string next = "<none>";
-
-        if (_position + 1 < _tokens.Count)
-        {
-            var token = _tokens[_position + 1];
-
-            next =
-                $"{token.Kind} '{token.Text}'";
-        }
-
-        return new Exception(
-            $"{message}\n" +
-            $"  Position: {_position}\n" +
-            $"  Previous: {previous}\n" +
-            $"  Current:  {current}\n" +
-            $"  Next:     {next}");
+        return string.Join(
+            " ",
+            parts);
     }
+
+    private string ReadTypeExpression()
+    {
+        var parts =
+            new List<string>();
+
+        while (!IsEnd())
+        {
+            if (PeekSymbol("=") ||
+                PeekSymbol(";"))
+            {
+                break;
+            }
+
+            parts.Add(
+                Current().Text);
+
+            Advance();
+        }
+
+        return string.Join(
+            " ",
+            parts);
+    }
+
+    private string ReadParameterDefaultValue()
+    {
+        var parts =
+            new List<string>();
+
+        int roundDepth = 0;
+        int squareDepth = 0;
+        int curlyDepth = 0;
+
+        while (!IsEnd())
+        {
+            if (PeekSymbol("("))
+            {
+                roundDepth++;
+            }
+            else if (PeekSymbol(")"))
+            {
+                if (roundDepth == 0 &&
+                    squareDepth == 0 &&
+                    curlyDepth == 0)
+                {
+                    break;
+                }
+
+                if (roundDepth > 0)
+                {
+                    roundDepth--;
+                }
+            }
+            else if (PeekSymbol("["))
+            {
+                squareDepth++;
+            }
+            else if (PeekSymbol("]"))
+            {
+                if (squareDepth > 0)
+                {
+                    squareDepth--;
+                }
+            }
+            else if (PeekSymbol("{"))
+            {
+                curlyDepth++;
+            }
+            else if (PeekSymbol("}"))
+            {
+                if (curlyDepth > 0)
+                {
+                    curlyDepth--;
+                }
+            }
+            else if (PeekSymbol(";") &&
+                     roundDepth == 0 &&
+                     squareDepth == 0 &&
+                     curlyDepth == 0)
+            {
+                break;
+            }
+
+            parts.Add(
+                Current().Text);
+
+            Advance();
+        }
+
+        return string.Join(
+            " ",
+            parts);
+    }
+
+    private string ExpectTypeName()
+    {
+        return ReadQualifiedIdentifier();
+    }
+
+    // ========================================================
+    // IDENTIFIERS
+    // ========================================================
 
     private string ReadQualifiedIdentifier()
     {
-        string name = ExpectIdentifier();
+        string result =
+            ExpectIdentifier();
 
         while (MatchSymbol("."))
         {
-            name += ".";
-            name += ExpectIdentifier();
+            result += ".";
+            result += ExpectIdentifier();
         }
 
-        return name;
+        return result;
     }
 
-    private string ReadUntil(string symbol)
+    private string ExpectIdentifier()
+    {
+        if (!IsIdentifier())
+        {
+            throw ParserError(
+                "Expected identifier.");
+        }
+
+        string text =
+            Current().Text;
+
+        Advance();
+
+        return text;
+    }
+
+    // ========================================================
+    // TOKEN HELPERS
+    // ========================================================
+
+    private string ReadUntil(
+        string symbol)
     {
         var parts =
             new List<string>();
@@ -1194,195 +1402,215 @@ public sealed class DelphiParser
             parts);
     }
 
-    private bool IsEnd()
+    private string ReadUntilStatementTerminator()
     {
-        return _position >= _tokens.Count ||
-               Current().Kind == TokenKind.EndOfFile;
-    }
+        var parts =
+            new List<string>();
 
-    private LexerToken Current()
-    {
-        return _tokens[_position];
-    }
-
-    private void Advance()
-    {
-        if (!IsEnd())
-            _position++;
-    }
-
-    private bool IsIdentifier()
-    {
-        return !IsEnd() &&
-               Current().Kind ==
-                   TokenKind.Identifier;
-    }
-
-    private bool IsKeyword()
-    {
-        return !IsEnd() &&
-               Current().Kind ==
-                   TokenKind.Keyword;
-    }
-
-    private bool PeekKeyword(string value)
-    {
-        return !IsEnd() &&
-               IsKeyword() &&
-               string.Equals(
-                   Current().Text,
-                   value,
-                   StringComparison.OrdinalIgnoreCase);
-    }
-
-    private bool PeekSymbol(string value)
-    {
-        return !IsEnd() &&
-               Current().Kind ==
-                   TokenKind.Symbol &&
-               Current().Text == value;
-    }
-
-    private bool MatchKeyword(string value)
-    {
-        if (!PeekKeyword(value))
-            return false;
-
-        Advance();
-
-        return true;
-    }
-
-    private bool MatchSymbol(string value)
-    {
-        if (!PeekSymbol(value))
-            return false;
-
-        Advance();
-
-        return true;
-    }
-
-    private void ExpectKeyword(string value)
-    {
-        if (!MatchKeyword(value))
-        {
-            throw new Exception(
-                $"Expected keyword '{value}'");
-        }
-    }
-
-
-    private void ExpectSymbol(string value)
-    {
-        if (!MatchSymbol(value))
-        {
-            throw ParserError(
-                  $"Expected symbol '{value}'");
-        }
-    }
-
-    private string ExpectTypeName()
-    {
-        if (IsEnd())
-            throw ParserError(
-                  $"Expected type name, got '{Current().Text}'");
-
-        if (Current().Kind == TokenKind.Identifier ||
-            Current().Kind == TokenKind.Keyword)
-        {
-            string value = Current().Text;
-
-            Advance();
-
-            return value;
-        }
-
-        throw new Exception(
-            $"Expected type name, got '{Current().Text}'");
-    }
-
-    private string ReadParameterType()
-    {
-        var parts = new List<string>();
-
+        int roundDepth = 0;
         int squareDepth = 0;
-        int parenDepth = 0;
+        int curlyDepth = 0;
 
         while (!IsEnd())
         {
-            if (PeekSymbol("["))
+            if (PeekSymbol("("))
+            {
+                roundDepth++;
+            }
+            else if (PeekSymbol(")"))
+            {
+                if (roundDepth > 0)
+                {
+                    roundDepth--;
+                }
+            }
+            else if (PeekSymbol("["))
             {
                 squareDepth++;
             }
             else if (PeekSymbol("]"))
             {
-                if (squareDepth == 0)
+                if (squareDepth > 0)
                 {
-                    break;
+                    squareDepth--;
                 }
-
-                squareDepth--;
             }
-            else if (PeekSymbol("("))
+            else if (PeekSymbol("{"))
             {
-                parenDepth++;
+                curlyDepth++;
             }
-            else if (PeekSymbol(")"))
+            else if (PeekSymbol("}"))
             {
-                if (squareDepth == 0 &&
-                    parenDepth == 0)
+                if (curlyDepth > 0)
                 {
-                    break;
+                    curlyDepth--;
                 }
-
-                parenDepth--;
             }
-
-            if (squareDepth == 0 &&
-                parenDepth == 0 &&
-                (PeekSymbol(";") ||
-                 PeekSymbol(",") ||
-                 PeekSymbol(")")))
+            else if (PeekSymbol(";") &&
+                     roundDepth == 0 &&
+                     squareDepth == 0 &&
+                     curlyDepth == 0)
             {
                 break;
             }
 
-            parts.Add(Current().Text);
+            parts.Add(
+                Current().Text);
+
             Advance();
         }
 
-        return string.Join(" ", parts);
+        return string.Join(
+            " ",
+            parts);
     }
 
-    private string ReadTypeExpression()
+    private LexerToken Current()
     {
-        var parts = new List<string>();
-
-        while (!IsEnd() &&
-               !PeekSymbol("="))
+        if (_position >= _tokens.Count)
         {
-            parts.Add(Current().Text);
-            Advance();
+            return _tokens[^1];
         }
 
-        return string.Join(" ", parts);
+        return _tokens[_position];
     }
 
-    private string ExpectIdentifier()
+    private bool IsEnd()
     {
-        if (!IsIdentifier())
-        {
-            throw ParserError(
-                  $"Expected type name, got '{Current().Text}'");
-        }
+        return Current().Kind ==
+               TokenKind.EndOfFile;
+    }
 
-        string value = Current().Text;
+    private bool IsIdentifier()
+    {
+        return Current().Kind ==
+                   TokenKind.Identifier ||
+               Current().Kind ==
+                   TokenKind.Keyword;
+    }
+
+    private bool PeekKeyword(
+        string keyword)
+    {
+        return Current().Kind ==
+                   TokenKind.Keyword &&
+               Current().Text.Equals(
+                   keyword,
+                   StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool PeekSymbol(
+        string symbol)
+    {
+        return Current().Kind ==
+                   TokenKind.Symbol &&
+               Current().Text == symbol;
+    }
+
+    private bool MatchKeyword(
+        string keyword)
+    {
+        if (!PeekKeyword(keyword))
+        {
+            return false;
+        }
 
         Advance();
 
-        return value;
+        return true;
+    }
 
+    private bool MatchSymbol(
+        string symbol)
+    {
+        if (!PeekSymbol(symbol))
+        {
+            return false;
+        }
 
+        Advance();
+
+        return true;
+    }
+
+    private void ExpectKeyword(
+        string keyword)
+    {
+        if (!MatchKeyword(keyword))
+        {
+            throw ParserError(
+                $"Expected keyword '{keyword}'.");
+        }
+    }
+
+    private void ExpectSymbol(
+        string symbol)
+    {
+        if (!MatchSymbol(symbol))
+        {
+            throw ParserError(
+                $"Expected symbol '{symbol}'.");
+        }
+    }
+
+    private void Advance()
+    {
+        if (_position < _tokens.Count - 1)
+        {
+            _position++;
+        }
+    }
+
+    // ========================================================
+    // ERROR DIAGNOSTICS
+    // ========================================================
+
+    private Exception ParserError(
+        string message)
+    {
+        string current =
+            IsEnd()
+                ? "<EOF>"
+                : $"{Current().Kind} '{Current().Text}'";
+
+        var context =
+            new List<string>();
+
+        const int radius = 8;
+
+        int start =
+            Math.Max(
+                0,
+                _position - radius);
+
+        int end =
+            Math.Min(
+                _tokens.Count,
+                _position + radius + 1);
+
+        for (int i = start; i < end; i++)
+        {
+            var token =
+                _tokens[i];
+
+            string marker =
+                i == _position
+                    ? ">"
+                    : " ";
+
+            context.Add(
+                $"{marker} {i,5}: " +
+                $"{token.Kind} '{token.Text}'");
+        }
+
+        return new InvalidOperationException(
+            $"{message} Current token: {current}. " +
+            $"Position: {_position}." +
+            Environment.NewLine +
+            "Token context:" +
+            Environment.NewLine +
+            string.Join(
+                Environment.NewLine,
+                context));
     }
 }

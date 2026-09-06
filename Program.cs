@@ -86,6 +86,43 @@ if (args[0].Equals(
     return;
 }
 
+if (args.Length >= 1 &&
+    args[0].Equals(
+        "--test-paging",
+        StringComparison.OrdinalIgnoreCase))
+{
+    var lines =
+        Enumerable
+            .Range(1, 100)
+            .Select(
+                x => $"Diagnostic line {x}")
+            .ToList();
+
+    var listing =
+        new PagedListing(
+            lines,
+            pageSize: 10);
+
+    PagedListingViewer.Show(
+        listing,
+        "FireURQ.Porter — Paging Test");
+
+    return;
+}
+
+if (args.Length >= 2 &&
+    args[0].Equals("--analyze-bodies", StringComparison.OrdinalIgnoreCase))
+{
+    bool showProgress =
+        args.Any(
+    x => x.Equals(
+        "--progress",
+        StringComparison.OrdinalIgnoreCase));
+
+    BodyBatchAnalyzer.Analyze(args[1], showProgress);
+    return;
+}
+
 // ========================================================
 // SINGLE FILE
 // ========================================================
