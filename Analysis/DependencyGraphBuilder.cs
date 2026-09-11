@@ -70,6 +70,7 @@ public static class DependencyGraphBuilder
                 unit.Name);
         }
 
+        // Classes
         foreach (var value in unit.Classes)
         {
             if (!string.IsNullOrWhiteSpace(
@@ -84,6 +85,22 @@ public static class DependencyGraphBuilder
 
             foreach (var member in value.Members)
             {
+                AddMemberNode(
+                    nodes,
+                    value.Name,
+                    member,
+                    unit.Name);
+
+                if (member.Kind !=
+                    SemanticMemberKind.MethodResolution)
+                {
+                    edges.Add(
+                        new DependencyEdge(
+                            value.Name,
+                            $"{value.Name}.{member.Name}",
+                            DependencyKind.Contains));
+                }
+
                 AddMemberDependencies(
                     nodes,
                     edges,
@@ -93,6 +110,7 @@ public static class DependencyGraphBuilder
             }
         }
 
+        // Interfaces
         foreach (var value in unit.Interfaces)
         {
             if (!string.IsNullOrWhiteSpace(
@@ -107,6 +125,22 @@ public static class DependencyGraphBuilder
 
             foreach (var member in value.Members)
             {
+                AddMemberNode(
+                    nodes,
+                    value.Name,
+                    member,
+                    unit.Name);
+
+                if (member.Kind !=
+                    SemanticMemberKind.MethodResolution)
+                {
+                    edges.Add(
+                        new DependencyEdge(
+                            value.Name,
+                            $"{value.Name}.{member.Name}",
+                            DependencyKind.Contains));
+                }
+
                 AddMemberDependencies(
                     nodes,
                     edges,
@@ -116,6 +150,7 @@ public static class DependencyGraphBuilder
             }
         }
 
+        // Global functions / procedures
         foreach (var function in unit.Functions)
         {
             foreach (var parameter in function.Parameters)
@@ -142,6 +177,7 @@ public static class DependencyGraphBuilder
             }
         }
 
+        // Uses clause
         foreach (var usedUnit in unit.Uses)
         {
             if (string.IsNullOrWhiteSpace(
@@ -160,6 +196,44 @@ public static class DependencyGraphBuilder
         return new DependencyGraph(
             nodes,
             edges);
+    }
+
+    private static void AddMemberNode(
+        List<DependencyNode> nodes,
+        string owner,
+        SemanticMember member,
+        string unitName)
+    {
+        string? kind =
+            member.Kind switch
+            {
+                SemanticMemberKind.Field =>
+                    "Field",
+
+                SemanticMemberKind.Property =>
+                    "Property",
+
+                SemanticMemberKind.Method =>
+                    "Method",
+
+                _ =>
+                    null
+            };
+
+        if (kind is null)
+        {
+            return;
+        }
+
+        string id =
+            $"{owner}.{member.Name}";
+
+        AddNode(
+            nodes,
+            id,
+            member.Name,
+            kind,
+            unitName);
     }
 
     private static void AddMemberDependencies(
@@ -249,3 +323,4 @@ public static class DependencyGraphBuilder
                 unitName));
     }
 }
+

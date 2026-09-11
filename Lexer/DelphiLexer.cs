@@ -5,7 +5,6 @@ namespace FireURQ.Porter.Lexer;
 public sealed class DelphiLexer
 {
     private readonly string _source;
-
     private int _position;
     private int _line = 1;
     private int _column = 1;
@@ -16,29 +15,30 @@ public sealed class DelphiLexer
 
     private LexerToken ReadCharacterCode()
     {
-    int line = _line;
-    int column = _column;
+        int line = _line;
+        int column = _column;
 
-    var builder = new StringBuilder();
+        var builder =
+            new StringBuilder();
 
-    while (!IsAtEnd() && Current() == '#')
-    {
-        builder.Append(Current());
-        Advance();
-
-        while (!IsAtEnd() &&
-               char.IsDigit(Current()))
+        while (!IsAtEnd() && Current() == '#')
         {
             builder.Append(Current());
             Advance();
-        }
-    }
 
-    return new LexerToken(
-        TokenKind.Character,
-        builder.ToString(),
-        line,
-        column);
+            while (!IsAtEnd() &&
+                   char.IsDigit(Current()))
+            {
+                builder.Append(Current());
+                Advance();
+            }
+        }
+
+        return new LexerToken(
+            TokenKind.Character,
+            builder.ToString(),
+            line,
+            column);
     }
 
     private static readonly HashSet<string> Keywords =
@@ -48,24 +48,19 @@ public sealed class DelphiLexer
             "interface",
             "implementation",
             "uses",
-
             "const",
             "type",
             "var",
-
             "function",
             "procedure",
             "class",
             "record",
             "object",
-
             "read",
             "write",
             "default",
-
             "set",
             "of",
-
             "array",
             "string",
             "char",
@@ -75,54 +70,39 @@ public sealed class DelphiLexer
             "extended",
             "double",
             "single",
-
             "begin",
             "end",
-
             "if",
             "then",
             "else",
-
             "for",
             "while",
             "repeat",
             "until",
-
             "do",
             "to",
             "downto",
-
             "case",
-            "of",
-
             "try",
             "except",
             "finally",
-
             "nil",
             "true",
             "false",
-
             "and",
             "or",
             "not",
-
             "in",
             "out",
-
             "private",
             "protected",
             "public",
             "published",
-
             "virtual",
             "override",
             "abstract",
-
             "constructor",
             "destructor",
-
-            "interface",
             "property"
         };
 
@@ -133,7 +113,8 @@ public sealed class DelphiLexer
 
     public List<LexerToken> Tokenize()
     {
-        var tokens = new List<LexerToken>();
+        var tokens =
+            new List<LexerToken>();
 
         while (!IsAtEnd())
         {
@@ -144,7 +125,6 @@ public sealed class DelphiLexer
 
             int line = _line;
             int column = _column;
-
             char c = Current();
 
             // -------------------------------------------------
@@ -153,21 +133,21 @@ public sealed class DelphiLexer
 
             if (c == '/' && Peek(1) == '/')
             {
-            ReadLineComment();
-            continue;
+                ReadLineComment();
+                continue;
             }
 
             if (c == '{')
             {
-            ReadBraceComment();
-            continue;
+                ReadBraceComment();
+                continue;
             }
 
             if (c == '(' && Peek(1) == '*')
             {
-            ReadBlockComment();
-            continue;
-           }
+                ReadBlockComment();
+                continue;
+            }
 
             // -------------------------------------------------
             // String / character literal
@@ -185,7 +165,8 @@ public sealed class DelphiLexer
 
             if (IsIdentifierStart(c))
             {
-                string text = ReadIdentifier();
+                string text =
+                    ReadIdentifier();
 
                 TokenKind kind =
                     Keywords.Contains(text)
@@ -201,15 +182,35 @@ public sealed class DelphiLexer
 
                 continue;
             }
+
             // -------------------------------------------------
             // Character code literal
-            // Delphi: #9, #13, #13#10
+            //
+            // Delphi:
+            // #9
+            // #13
+            // #13#10
             // -------------------------------------------------
 
             if (c == '#' && char.IsDigit(Peek(1)))
             {
-               tokens.Add(ReadCharacterCode());
-               continue;
+                tokens.Add(ReadCharacterCode());
+                continue;
+            }
+
+            // -------------------------------------------------
+            // Hex number
+            //
+            // Delphi:
+            // $3F
+            // $67452301
+            // $EFCDAB89
+            // -------------------------------------------------
+
+            if (c == '$' && IsHexDigit(Peek(1)))
+            {
+                tokens.Add(ReadHexNumber());
+                continue;
             }
 
             // -------------------------------------------------
@@ -226,7 +227,8 @@ public sealed class DelphiLexer
             // Operators
             // -------------------------------------------------
 
-            string? op = ReadOperator();
+            string? op =
+                ReadOperator();
 
             if (op != null)
             {
@@ -239,8 +241,6 @@ public sealed class DelphiLexer
 
                 continue;
             }
-
-
 
             // -------------------------------------------------
             // Symbol
@@ -272,7 +272,8 @@ public sealed class DelphiLexer
 
     private string ReadIdentifier()
     {
-        var builder = new StringBuilder();
+        var builder =
+            new StringBuilder();
 
         while (!IsAtEnd() &&
                IsIdentifierPart(Current()))
@@ -305,7 +306,8 @@ public sealed class DelphiLexer
         int line = _line;
         int column = _column;
 
-        var builder = new StringBuilder();
+        var builder =
+            new StringBuilder();
 
         while (!IsAtEnd() &&
                char.IsDigit(Current()))
@@ -336,6 +338,39 @@ public sealed class DelphiLexer
             column);
     }
 
+    private LexerToken ReadHexNumber()
+    {
+        int line = _line;
+        int column = _column;
+
+        var builder =
+            new StringBuilder();
+
+        // Opening '$'.
+        builder.Append(Current());
+        Advance();
+
+        while (!IsAtEnd() &&
+               IsHexDigit(Current()))
+        {
+            builder.Append(Current());
+            Advance();
+        }
+
+        return new LexerToken(
+            TokenKind.Number,
+            builder.ToString(),
+            line,
+            column);
+    }
+
+    private static bool IsHexDigit(char c)
+    {
+        return char.IsDigit(c) ||
+               (c >= 'a' && c <= 'f') ||
+               (c >= 'A' && c <= 'F');
+    }
+
     // =========================================================
     // STRINGS
     // =========================================================
@@ -345,26 +380,36 @@ public sealed class DelphiLexer
         int line = _line;
         int column = _column;
 
-        var builder = new StringBuilder();
+        var builder =
+            new StringBuilder();
 
-        Advance(); // opening '
+        // Opening apostrophe.
+        builder.Append(Current());
+        Advance();
 
         while (!IsAtEnd())
         {
-            char c = Current();
+            char c =
+                Current();
 
             if (c == '\'')
             {
-                // Delphi escapes ' as ''
+                // Delphi escapes apostrophe as ''.
                 if (Peek(1) == '\'')
                 {
-                    builder.Append('\'');
+                    builder.Append(Current());
                     Advance();
+
+                    builder.Append(Current());
                     Advance();
+
                     continue;
                 }
 
+                // Closing apostrophe.
+                builder.Append(Current());
                 Advance();
+
                 break;
             }
 
@@ -388,7 +433,8 @@ public sealed class DelphiLexer
         int line = _line;
         int column = _column;
 
-        var builder = new StringBuilder();
+        var builder =
+            new StringBuilder();
 
         while (!IsAtEnd() &&
                Current() != '\n')
@@ -409,7 +455,8 @@ public sealed class DelphiLexer
         int line = _line;
         int column = _column;
 
-        var builder = new StringBuilder();
+        var builder =
+            new StringBuilder();
 
         Advance(); // {
 
@@ -435,7 +482,8 @@ public sealed class DelphiLexer
         int line = _line;
         int column = _column;
 
-        var builder = new StringBuilder();
+        var builder =
+            new StringBuilder();
 
         Advance(); // (
         Advance(); // *
@@ -467,23 +515,22 @@ public sealed class DelphiLexer
 
     private string? ReadOperator()
     {
-        char c = Current();
-        char next = Peek(1);
+        char c =
+            Current();
+
+        char next =
+            Peek(1);
 
         string? result = null;
 
         if (c == ':' && next == '=')
             result = ":=";
-
         else if (c == '<' && next == '=')
             result = "<=";
-
         else if (c == '>' && next == '=')
             result = ">=";
-
         else if (c == '<' && next == '>')
             result = "<>";
-
         else if (c == '.' && next == '.')
             result = "..";
 
@@ -507,7 +554,8 @@ public sealed class DelphiLexer
 
     private char Peek(int offset)
     {
-        int index = _position + offset;
+        int index =
+            _position + offset;
 
         if (index >= _source.Length)
             return '\0';
@@ -547,5 +595,4 @@ public sealed class DelphiLexer
         return _position >= _source.Length;
     }
 }
-
 

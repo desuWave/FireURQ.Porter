@@ -47,7 +47,6 @@ public sealed class DelphiParser
         }
         else
         {
-            // Fallback for simplified/non-standard input.
             uses.AddRange(ParseUses());
 
             ParseDeclarationSection(
@@ -62,7 +61,31 @@ public sealed class DelphiParser
 
         if (MatchKeyword("implementation"))
         {
+            Console.WriteLine(
+                $"[UNIT-IMPLEMENTATION] entered pos={_position}");
+
+            Console.WriteLine(
+                $"[UNIT-IMPLEMENTATION-BEFORE-USES] " +
+                $"pos={_position} " +
+                $"line={Current().Line} " +
+                $"kind={Current().Kind} " +
+                $"text={Current().Text}");
+
+            int usesBefore = _position;
+
             uses.AddRange(ParseUses());
+
+            Console.WriteLine(
+                $"[UNIT-IMPLEMENTATION-AFTER-USES] " +
+                $"before={usesBefore} " +
+                $"after={_position}");
+
+            Console.WriteLine(
+                $"[UNIT-IMPLEMENTATION-NEXT] " +
+                $"pos={_position} " +
+                $"line={Current().Line} " +
+                $"kind={Current().Kind} " +
+                $"text={Current().Text}");
 
             ParseDeclarationSection(
                 declarations,
@@ -85,41 +108,115 @@ public sealed class DelphiParser
         bool readBodies,
         bool stopAtImplementation)
     {
+        if (readBodies)
+        {
+            Console.WriteLine(
+                $"[PARSER-IMPL-START] position={_position}");
+        }
+
         while (!IsEnd())
         {
+            Console.WriteLine(
+                $"[DECL] pos={_position} " +
+                $"line={Current().Line} " +
+                $"kind={Current().Kind} " +
+                $"text={Current().Text}");
+
             if (stopAtImplementation &&
                 PeekKeyword("implementation"))
             {
+                Console.WriteLine(
+                    $"[DECL-STOP-IMPLEMENTATION] pos={_position}");
+
                 return;
+            }
+
+            if (readBodies &&
+                (PeekKeyword("function") ||
+                 PeekKeyword("procedure") ||
+                 PeekKeyword("constructor") ||
+                 PeekKeyword("destructor")))
+            {
+                Console.WriteLine(
+                    $"[PARSER-CALLABLE] " +
+                    $"{Current().Text} " +
+                    $"position={_position} " +
+                    $"line={Current().Line}");
+
+                Console.Write("  tokens: ");
+
+                for (int j = 0;
+                     j < 12 &&
+                     _position + j < _tokens.Count;
+                     j++)
+                {
+                    Console.Write(
+                        $"{_tokens[_position + j].Text} ");
+                }
+
+                Console.WriteLine();
             }
 
             if (MatchKeyword("const"))
             {
+                int before = _position - 1;
+
+                Console.WriteLine(
+                    $"[DECL-CONST-BEGIN] pos={before}");
+
                 ParseConstSection(declarations);
+
+                Console.WriteLine(
+                    $"[DECL-CONST-END] pos={_position}");
+
                 continue;
             }
 
             if (MatchKeyword("type"))
             {
+                int before = _position - 1;
+
+                Console.WriteLine(
+                    $"[DECL-TYPE-BEGIN] pos={before}");
+
                 ParseTypeSection(declarations);
+
+                Console.WriteLine(
+                    $"[DECL-TYPE-END] pos={_position}");
+
                 continue;
             }
 
             if (PeekKeyword("function") ||
                 PeekKeyword("procedure"))
             {
+                int before = _position;
+
+                Console.WriteLine(
+                    $"[DECL-CALLABLE-BEGIN] " +
+                    $"pos={before} " +
+                    $"line={Current().Line}");
+
                 DelphiNode callable =
                     ParseCallableDeclaration(
                         readBodies);
 
-                declarations.Add(callable);
+                Console.WriteLine(
+                    $"[DECL-CALLABLE-END] " +
+                    $"before={before} " +
+                    $"after={_position}");
 
+                declarations.Add(callable);
                 continue;
             }
 
             if (MatchKeyword("end"))
             {
+                Console.WriteLine(
+                    $"[DECL-END] pos={_position - 1}");
+
                 MatchSymbol(".");
+
                 break;
             }
 
@@ -144,16 +241,13 @@ public sealed class DelphiParser
                 "Expected function or procedure.");
         }
 
-        // IMPORTANT:
-        //
-        // Delphi method resolutions have the form:
+        // Delphi method resolution:
         //
         // function A.B = C;
         // procedure A.B = C;
         //
-        // They must be recognized before ParseFunction(),
-        // because a function resolution has no return type
-        // and therefore no ':' before '='.
+        // Recognize it before ParseFunction(),
+        // because it has no normal return-type syntax.
 
         if (IsMethodResolutionAhead())
         {
@@ -174,9 +268,7 @@ public sealed class DelphiParser
                 implementationMethod);
         }
 
-        // Ordinary function/procedure.
-
-        Advance(); // consume function/procedure
+        Advance();
 
         return ParseFunction(
             isProcedure,
@@ -209,6 +301,41 @@ public sealed class DelphiParser
         return IsSymbolAt(
             position,
             "=");
+    }
+
+    private bool IsKeywordAt(int offset)
+    {
+        int position =
+            _position + offset;
+
+        if (position < 0 ||
+            position >= _tokens.Count)
+        {
+            return false;
+        }
+
+        return _tokens[position].Kind ==
+               TokenKind.Keyword;
+    }
+
+    private bool IsKeywordAt(
+        int offset,
+        string keyword)
+    {
+        int position =
+            _position + offset;
+
+        if (position < 0 ||
+            position >= _tokens.Count)
+        {
+            return false;
+        }
+
+        return _tokens[position].Kind ==
+                   TokenKind.Keyword &&
+               _tokens[position].Text.Equals(
+                   keyword,
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private bool IsIdentifierAt(int position)
@@ -279,12 +406,22 @@ public sealed class DelphiParser
     {
         while (!IsEnd())
         {
+            Console.WriteLine(
+                $"[CONST] pos={_position} " +
+                $"line={Current().Line} " +
+                $"kind={Current().Kind} " +
+                $"text={Current().Text}");
+
             if (PeekKeyword("type") ||
                 PeekKeyword("var") ||
                 PeekKeyword("function") ||
                 PeekKeyword("procedure") ||
                 PeekKeyword("implementation"))
             {
+                Console.WriteLine(
+                    $"[CONST-STOP] pos={_position} " +
+                    $"text={Current().Text}");
+
                 return;
             }
 
@@ -512,6 +649,7 @@ public sealed class DelphiParser
                 //
                 // TFoo = class;
                 //
+
                 if (MatchSymbol(";"))
                 {
                     declarations.Add(
@@ -605,6 +743,45 @@ public sealed class DelphiParser
                     }
 
                     // ----------------------------------------
+                    // CLASS FUNCTION / PROCEDURE
+                    // ----------------------------------------
+                    //
+                    // Delphi:
+                    //
+                    // class function Make: IFoo;
+                    // class procedure DoSomething;
+                    //
+                    // At this point the current token is
+                    // "class". Consume it, then parse the
+                    // following function/procedure normally.
+                    //
+
+                    if (PeekKeyword("class") &&
+                        (IsKeywordAt(1, "function") ||
+                         IsKeywordAt(1, "procedure")))
+                    {
+                        Advance(); // class
+
+                        bool isProcedure =
+                            PeekKeyword("procedure");
+
+                        Advance(); // function / procedure
+
+                        var classFunction =
+                            ParseFunction(
+                                isProcedure,
+                                readBody: false);
+
+                        members.Add(
+                            new DelphiClassMember(
+                                visibility,
+                                DelphiClassMemberKind.Method,
+                                classFunction));
+
+                        continue;
+                    }
+
+                    // ----------------------------------------
                     // FUNCTION / PROCEDURE
                     // ----------------------------------------
 
@@ -614,13 +791,12 @@ public sealed class DelphiParser
                         bool isProcedure =
                             PeekKeyword("procedure");
 
-                        // Class/interface method resolution:
+                        // Class method resolution:
                         //
-                        // function Foo = Bar;
-                        // procedure Foo = Bar;
+                        // function IFoo.GetByID = GetPicture;
                         //
-                        // Use the same lookahead as the
-                        // top-level parser.
+                        // Keep this before ordinary
+                        // ParseFunction().
 
                         if (IsMethodResolutionAhead())
                         {
@@ -985,10 +1161,6 @@ public sealed class DelphiParser
             isDefault);
     }
 
-    // ========================================================
-    // FUNCTION / PROCEDURE
-    // ========================================================
-
     private DelphiFunction ParseFunction(
         bool isProcedure,
         bool readBody)
@@ -1051,7 +1223,7 @@ public sealed class DelphiParser
                         ReadParameterDefaultValue();
                 }
 
-                foreach (var parameterName in parameterNames)
+                foreach (string parameterName in parameterNames)
                 {
                     parameters.Add(
                         new DelphiParameter(
@@ -1086,8 +1258,37 @@ public sealed class DelphiParser
         {
             SkipLocalDeclarations();
 
+            Console.WriteLine(
+                $"[CALLABLE-BODY] {name} " +
+                $"pos={_position} " +
+                $"line={Current().Line} " +
+                $"kind={Current().Kind} " +
+                $"text={Current().Text}");
+
             bodyTokens =
                 ReadFunctionBody();
+
+            Console.WriteLine(
+                $"[AFTER-READ-BODY] {name} " +
+                $"pos={_position} " +
+                $"line={Current().Line} " +
+                $"kind={Current().Kind} " +
+                $"text={Current().Text}");
+
+            Console.WriteLine(
+                $"[CALLABLE-BODY-END] {name} " +
+                $"pos={_position} " +
+                $"line={Current().Line} " +
+                $"kind={Current().Kind} " +
+                $"text={Current().Text} " +
+                $"bodyTokens={bodyTokens.Count}");
+
+            Console.WriteLine(
+                $"[PARSE-FUNCTION-END] {name} " +
+                $"pos={_position} " +
+                $"line={Current().Line} " +
+                $"kind={Current().Kind} " +
+                $"text={Current().Text}");
         }
 
         return new DelphiFunction(
@@ -1117,6 +1318,14 @@ public sealed class DelphiParser
                 continue;
             }
 
+            if (PeekKeyword("function") ||
+                PeekKeyword("procedure"))
+            {
+                SkipLocalCallableDeclaration();
+
+                continue;
+            }
+
             break;
         }
     }
@@ -1124,8 +1333,76 @@ public sealed class DelphiParser
     private void SkipLocalDeclarationSection()
     {
         while (!IsEnd() &&
-               !PeekKeyword("begin"))
+               !PeekKeyword("begin") &&
+               !PeekKeyword("function") &&
+               !PeekKeyword("procedure"))
         {
+            Advance();
+        }
+    }
+
+    private void SkipLocalCallableDeclaration()
+    {
+        // Skip "function" / "procedure".
+        Advance();
+
+        // Skip the callable header until its terminating semicolon.
+        // This includes:
+        //
+        // function BoolToVar(
+        //   const aBool: Boolean
+        // ): Variant;
+        //
+        // We deliberately do not try to parse the header here.
+        while (!IsEnd())
+        {
+            if (MatchSymbol(";"))
+            {
+                break;
+            }
+
+            Advance();
+        }
+
+        // A local callable with no body is possible in some
+        // declaration forms. If the next token is not "begin",
+        // leave it for the surrounding declaration scanner.
+        if (!PeekKeyword("begin"))
+        {
+            return;
+        }
+
+        // Skip the complete local callable body.
+        //
+        // We balance begin/end so that nested blocks and nested
+        // begin/end pairs do not terminate the scan prematurely.
+        int beginDepth = 0;
+
+        while (!IsEnd())
+        {
+            if (PeekKeyword("begin"))
+            {
+                beginDepth++;
+                Advance();
+                continue;
+            }
+
+            if (PeekKeyword("end"))
+            {
+                Advance();
+
+                beginDepth--;
+
+                MatchSymbol(";");
+
+                if (beginDepth == 0)
+                {
+                    break;
+                }
+
+                continue;
+            }
+
             Advance();
         }
     }
@@ -1136,52 +1413,120 @@ public sealed class DelphiParser
 
     private IReadOnlyList<LexerToken> ReadFunctionBody()
     {
-        var body =
-            new List<LexerToken>();
 
-        if (!PeekKeyword("begin"))
+        Console.WriteLine("=== GetVirtualVariable BODY WINDOW ===");
+
+        for (int i = _position;
+             i < Math.Min(_tokens.Count, _position + 40);
+             i++)
         {
-            return body;
+            var t = _tokens[i];
+
+            Console.WriteLine(
+                $"[BODY-TOK] pos={i} " +
+                $"line={t.Line} " +
+                $"col={t.Column} " +
+                $"kind={t.Kind} " +
+                $"text={t.Text}");
         }
 
-        int depth = 0;
+        Console.WriteLine("=== END BODY WINDOW ===");
+
+        var body = new List<LexerToken>();
+
+        if (!PeekKeyword("begin"))
+            return body;
+
+        int beginDepth = 0;
+        int caseDepth = 0;
 
         while (!IsEnd())
         {
             if (PeekKeyword("begin"))
             {
-                depth++;
+                beginDepth++;
 
-                body.Add(
-                    Current());
+                Console.WriteLine(
+                    $"[BODY-BEGIN] pos={_position} " +
+                    $"line={Current().Line} " +
+                    $"beginDepth={beginDepth} " +
+                    $"caseDepth={caseDepth}");
 
+                body.Add(Current());
                 Advance();
+                continue;
+            }
 
+            if (PeekKeyword("case"))
+            {
+                caseDepth++;
+
+                Console.WriteLine(
+                    $"[BODY-CASE] pos={_position} " +
+                    $"line={Current().Line} " +
+                    $"beginDepth={beginDepth} " +
+                    $"caseDepth={caseDepth}");
+
+                body.Add(Current());
+                Advance();
                 continue;
             }
 
             if (PeekKeyword("end"))
             {
-                depth--;
+                Console.WriteLine(
+                    $"[BODY-END] pos={_position} " +
+                    $"line={Current().Line} " +
+                    $"beginDepth={beginDepth} " +
+                    $"caseDepth={caseDepth}");
 
-                body.Add(
-                    Current());
-
+                body.Add(Current());
                 Advance();
 
-                if (depth == 0)
+                if (caseDepth > 0)
+                {
+                    caseDepth--;
+
+                    Console.WriteLine(
+                        $"[BODY-CASE-END] " +
+                        $"beginDepth={beginDepth} " +
+                        $"caseDepth={caseDepth}");
+
+                    MatchSymbol(";");
+                    continue;
+                }
+
+                beginDepth--;
+
+                Console.WriteLine(
+                    $"[BODY-BEGIN-END] " +
+                    $"beginDepth={beginDepth} " +
+                    $"caseDepth={caseDepth}");
+
+                Console.WriteLine(
+                    $"[BODY-AFTER-END] pos={_position} " +
+                    $"line={Current().Line} " +
+                    $"kind={Current().Kind} " +
+                    $"text={Current().Text}");
+
+                if (beginDepth == 0)
                 {
                     MatchSymbol(";");
+
+                    Console.WriteLine(
+                        $"[BODY-BREAK] pos={_position} " +
+                        $"line={Current().Line} " +
+                        $"kind={Current().Kind} " +
+                        $"text={Current().Text}");
 
                     break;
                 }
 
+                MatchSymbol(";");
                 continue;
             }
 
-            body.Add(
-                Current());
-
+            body.Add(Current());
             Advance();
         }
 
@@ -1553,6 +1898,7 @@ public sealed class DelphiParser
         }
     }
 
+
     private void Advance()
     {
         if (_position < _tokens.Count - 1)
@@ -1560,6 +1906,8 @@ public sealed class DelphiParser
             _position++;
         }
     }
+
+
 
     // ========================================================
     // ERROR DIAGNOSTICS

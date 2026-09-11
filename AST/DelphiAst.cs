@@ -1,3 +1,5 @@
+using FireURQ.Porter.Lexer;
+
 namespace FireURQ.Porter.AST;
 
 public abstract record DelphiNode;
@@ -100,14 +102,16 @@ public enum DelphiParameterKind
 public sealed record DelphiParameter(
     string Name,
     string Type,
-    DelphiParameterKind Kind
+    DelphiParameterKind Kind,
+    string? DefaultValue
 ) : DelphiNode;
 
 public sealed record DelphiFunction(
     string Name,
     IReadOnlyList<DelphiParameter> Parameters,
     string ReturnType,
-    bool IsProcedure
+    bool IsProcedure,
+    IReadOnlyList<LexerToken> BodyTokens
 ) : DelphiNode;
 
 public sealed record DelphiMethodResolution(

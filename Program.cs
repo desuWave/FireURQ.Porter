@@ -37,6 +37,15 @@ if (args[0].Equals(
         return;
     }
 
+    if (args.Length >= 2 &&
+        args[0].Equals(
+            "--trace-headers",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        ImplementationHeaderTrace.Analyze(args[1]);
+        return;
+    }
+
     string rootPath = args[1];
 
     string? exportPath =
@@ -50,38 +59,38 @@ if (args[0].Equals(
 
     if (projectGraph != null &&
     !string.IsNullOrWhiteSpace(exportPath))
-{
-    Console.WriteLine(
-        "================================");
+    {
+        Console.WriteLine(
+            "================================");
 
-    Console.WriteLine(
-        " Exporting Dependency Graph");
+        Console.WriteLine(
+            " Exporting Dependency Graph");
 
-    Console.WriteLine(
-        "================================");
+        Console.WriteLine(
+            "================================");
 
-    DependencyGraphJsonExporter.Export(
-        projectGraph,
-        exportPath);
+        DependencyGraphJsonExporter.Export(
+            projectGraph,
+            exportPath);
 
-    Console.WriteLine();
+        Console.WriteLine();
 
-    Console.WriteLine(
-        $"Graph exported to:");
+        Console.WriteLine(
+            $"Graph exported to:");
 
-    Console.WriteLine(
-        Path.GetFullPath(exportPath));
+        Console.WriteLine(
+            Path.GetFullPath(exportPath));
 
-    Console.WriteLine();
+        Console.WriteLine();
 
-    Console.WriteLine(
-        $"Nodes: {projectGraph.Units.Count}");
+        Console.WriteLine(
+            $"Nodes: {projectGraph.Units.Count}");
 
-    Console.WriteLine(
-        $"Edges: {projectGraph.Edges.Count}");
+        Console.WriteLine(
+            $"Edges: {projectGraph.Edges.Count}");
 
-    Console.WriteLine();
-}
+        Console.WriteLine();
+    }
 
     return;
 }
@@ -120,6 +129,42 @@ if (args.Length >= 2 &&
         StringComparison.OrdinalIgnoreCase));
 
     BodyBatchAnalyzer.Analyze(args[1], showProgress);
+    return;
+}
+
+if (args.Length >= 2 &&
+    args[0].Equals(
+        "--audit-methods",
+        StringComparison.OrdinalIgnoreCase))
+{
+    MethodResolutionAudit.Analyze(args[1]);
+    return;
+}
+
+if (args.Length >= 2 &&
+    args[0].Equals(
+        "--census-methods",
+        StringComparison.OrdinalIgnoreCase))
+{
+    MethodImplementationCensus.Analyze(args[1]);
+    return;
+}
+
+if (args.Length >= 2 &&
+    args[0].Equals(
+        "--census-headers",
+        StringComparison.OrdinalIgnoreCase))
+{
+    ImplementationHeaderCensus.Analyze(args[1]);
+    return;
+}
+
+if (args.Length >= 2 &&
+    args[0].Equals(
+        "--trace-headers",
+        StringComparison.OrdinalIgnoreCase))
+{
+    ImplementationHeaderTrace.Analyze(args[1]);
     return;
 }
 
@@ -249,6 +294,18 @@ static string? GetOptionValue(
 
 static void PrintUsage()
 {
+    Console.WriteLine(
+        "  FireURQ.Porter --trace-headers <directory>");
+
+    Console.WriteLine(
+        "  FireURQ.Porter --census-headers <directory>");
+
+    Console.WriteLine(
+        "  FireURQ.Porter --census-methods <directory>");
+
+    Console.WriteLine(
+    "  FireURQ.Porter --audit-methods <directory>");
+
     Console.WriteLine("Usage:");
 
     Console.WriteLine(

@@ -18,5 +18,6 @@ public sealed record ProjectDependencyEdge(
 
 public sealed record ProjectDependencyGraph(
     IReadOnlyList<ProjectUnitNode> Units,
+    IReadOnlyList<DependencyNode> Nodes,
     IReadOnlyList<ProjectDependencyEdge> Edges
 );

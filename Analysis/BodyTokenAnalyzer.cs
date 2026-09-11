@@ -1,4 +1,5 @@
 using FireURQ.Porter.AST;
+using FireURQ.Porter.Lexer;
 
 namespace FireURQ.Porter.Analysis;
 
@@ -16,7 +17,8 @@ public static class BodyTokenAnalyzer
         string Name,
         bool IsProcedure,
         int TokenCount,
-        BodyOwnerKind OwnerKind);
+        BodyOwnerKind OwnerKind,
+        IReadOnlyList<LexerToken> BodyTokens);
 
     public static IReadOnlyList<BodyInfo> Analyze(
         DelphiUnit unit,
@@ -49,7 +51,8 @@ public static class BodyTokenAnalyzer
                     function.Name,
                     function.IsProcedure,
                     function.BodyTokens.Count,
-                    BodyOwnerKind.TopLevel));
+                    BodyOwnerKind.TopLevel,
+                    function.BodyTokens));
 
             return;
         }
@@ -66,7 +69,8 @@ public static class BodyTokenAnalyzer
                             $"{delphiClass.Name}.{classFunction.Name}",
                             classFunction.IsProcedure,
                             classFunction.BodyTokens.Count,
-                            BodyOwnerKind.Class));
+                            BodyOwnerKind.Class,
+                            classFunction.BodyTokens));
                 }
             }
 
@@ -85,7 +89,8 @@ public static class BodyTokenAnalyzer
                             $"{delphiInterface.Name}.{interfaceFunction.Name}",
                             interfaceFunction.IsProcedure,
                             interfaceFunction.BodyTokens.Count,
-                            BodyOwnerKind.Interface));
+                            BodyOwnerKind.Interface,
+                            interfaceFunction.BodyTokens));
                 }
             }
         }

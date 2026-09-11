@@ -6,7 +6,8 @@ public enum DependencyKind
     UsesType,
     UsesInterface,
     UsesUnit,
-    ResolvesMethod
+    ResolvesMethod,
+    Contains
 }
 
 public sealed record DependencyNode(

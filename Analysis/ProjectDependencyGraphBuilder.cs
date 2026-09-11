@@ -8,11 +8,14 @@ public static class ProjectDependencyGraphBuilder
         var units =
             new List<ProjectUnitNode>();
 
+        var nodes =
+            new List<DependencyNode>();
+
         var edges =
             new List<ProjectDependencyEdge>();
 
         // --------------------------------------------------------
-        // Nodes
+        // Unit nodes
         // --------------------------------------------------------
 
         foreach (var analysis in analyses)
@@ -32,29 +35,84 @@ public static class ProjectDependencyGraphBuilder
         }
 
         // --------------------------------------------------------
-        // Unit dependencies
+        // Full dependency graph
         // --------------------------------------------------------
 
         foreach (var analysis in analyses)
         {
-            var unit =
-                analysis.SemanticModel;
+            var dependencyGraph =
+                analysis.DependencyGraph;
 
-            foreach (var usedUnit in unit.Uses)
+            // Nodes
+            foreach (var node in dependencyGraph.Nodes)
             {
-                if (string.IsNullOrWhiteSpace(usedUnit))
-                    continue;
+                AddNode(
+                    nodes,
+                    node);
+            }
 
-                edges.Add(
+            // Edges
+            foreach (var edge in dependencyGraph.Edges)
+            {
+                AddEdge(
+                    edges,
                     new ProjectDependencyEdge(
-                        unit.Name,
-                        usedUnit,
-                        DependencyKind.UsesUnit));
+                        edge.From,
+                        edge.To,
+                        edge.Kind));
             }
         }
 
         return new ProjectDependencyGraph(
             units,
+            nodes,
             edges);
+    }
+
+    private static void AddNode(
+        List<DependencyNode> nodes,
+        DependencyNode node)
+    {
+        if (string.IsNullOrWhiteSpace(node.Name))
+            return;
+
+        bool exists =
+            nodes.Any(
+                existing =>
+                    existing.Id.Equals(
+                        node.Id,
+                        StringComparison.OrdinalIgnoreCase) &&
+                    existing.Kind.Equals(
+                        node.Kind,
+                        StringComparison.OrdinalIgnoreCase) &&
+                    existing.UnitName.Equals(
+                        node.UnitName,
+                        StringComparison.OrdinalIgnoreCase));
+
+        if (exists)
+            return;
+
+        nodes.Add(node);
+    }
+
+    private static void AddEdge(
+        List<ProjectDependencyEdge> edges,
+        ProjectDependencyEdge edge)
+    {
+        bool exists =
+            edges.Any(
+                existing =>
+                    existing.From.Equals(
+                        edge.From,
+                        StringComparison.OrdinalIgnoreCase) &&
+                    existing.To.Equals(
+                        edge.To,
+                        StringComparison.OrdinalIgnoreCase) &&
+                    existing.Kind == edge.Kind);
+
+        if (exists)
+            return;
+
+        edges.Add(edge);
     }
 }
