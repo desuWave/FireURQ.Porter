@@ -46,6 +46,15 @@ if (args[0].Equals(
         return;
     }
 
+    if (args.Length >= 2 &&
+        args[0].Equals(
+            "--probe-expressions",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        ExpressionProbe.Analyze(args[1]);
+        return;
+    }
+
     string rootPath = args[1];
 
     string? exportPath =
@@ -120,6 +129,15 @@ if (args.Length >= 1 &&
 }
 
 if (args.Length >= 2 &&
+    args[0].Equals(
+        "--probe-expressions",
+        StringComparison.OrdinalIgnoreCase))
+{
+    ExpressionProbe.Analyze(args[1]);
+    return;
+}
+
+if (args.Length >= 2 &&
     args[0].Equals("--analyze-bodies", StringComparison.OrdinalIgnoreCase))
 {
     bool showProgress =
@@ -165,6 +183,31 @@ if (args.Length >= 2 &&
         StringComparison.OrdinalIgnoreCase))
 {
     ImplementationHeaderTrace.Analyze(args[1]);
+    return;
+}
+
+if (args.Length >= 2 &&
+    args[0].Equals(
+        "--browse-bodies",
+        StringComparison.OrdinalIgnoreCase))
+{
+    BodyIndex index =
+        BodyIndex.Build(args[1]);
+
+    BodyBrowser.Show(index);
+
+    return;
+}
+
+if (args.Length >= 3 &&
+    args[0].Equals(
+        "--probe-body-owner",
+        StringComparison.OrdinalIgnoreCase))
+{
+    BodyOwnerProbe.Analyze(
+        args[1],
+        args[2]);
+
     return;
 }
 
@@ -294,6 +337,15 @@ static string? GetOptionValue(
 
 static void PrintUsage()
 {
+    Console.WriteLine(
+        "  FireURQ.Porter --probe-body-owner <directory> <body>");
+
+    Console.WriteLine(
+        "  FireURQ.Porter --browse-bodies <directory>");
+
+    Console.WriteLine(
+        "  FireURQ.Porter --probe-expressions <directory>");
+
     Console.WriteLine(
         "  FireURQ.Porter --trace-headers <directory>");
 

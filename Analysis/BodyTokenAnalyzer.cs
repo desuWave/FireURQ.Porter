@@ -32,6 +32,7 @@ public static class BodyTokenAnalyzer
             CollectFunction(
                 declaration,
                 filePath,
+                unit.Declarations,
                 bodies);
         }
 
@@ -41,6 +42,7 @@ public static class BodyTokenAnalyzer
     private static void CollectFunction(
         DelphiNode declaration,
         string filePath,
+        IReadOnlyList<DelphiNode> declarations,
         List<BodyInfo> bodies)
     {
         if (declaration is DelphiFunction function)
@@ -51,7 +53,9 @@ public static class BodyTokenAnalyzer
                     function.Name,
                     function.IsProcedure,
                     function.BodyTokens.Count,
-                    BodyOwnerKind.TopLevel,
+                    ResolveQualifiedOwnerKind(
+                        function.Name,
+                        declarations),
                     function.BodyTokens));
 
             return;
@@ -94,6 +98,41 @@ public static class BodyTokenAnalyzer
                 }
             }
         }
+    }
+
+    private static BodyOwnerKind ResolveQualifiedOwnerKind(
+        string functionName,
+        IReadOnlyList<DelphiNode> declarations)
+    {
+        int separator =
+            functionName.LastIndexOf('.');
+
+        if (separator < 1)
+            return BodyOwnerKind.TopLevel;
+
+        string ownerName =
+            functionName[..separator];
+
+        foreach (DelphiNode declaration in declarations)
+        {
+            if (declaration is DelphiClass delphiClass &&
+                delphiClass.Name.Equals(
+                    ownerName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return BodyOwnerKind.Class;
+            }
+
+            if (declaration is DelphiInterface delphiInterface &&
+                delphiInterface.Name.Equals(
+                    ownerName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return BodyOwnerKind.Interface;
+            }
+        }
+
+        return BodyOwnerKind.TopLevel;
     }
 
     public static void PrintZeroBodyAudit(
