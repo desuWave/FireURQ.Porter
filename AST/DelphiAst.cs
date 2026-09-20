@@ -29,6 +29,11 @@ public sealed record DelphiField(
     string Type
 ) : DelphiNode;
 
+public sealed record DelphiVariable(
+    string Name,
+    string Type
+) : DelphiNode;
+
 public sealed record DelphiProperty(
     string Name,
     string Type,

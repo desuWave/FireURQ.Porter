@@ -7,6 +7,7 @@ public sealed record SemanticUnit(
     IReadOnlyList<SemanticInterface> Interfaces,
     IReadOnlyList<SemanticType> Types,
     IReadOnlyList<SemanticConstant> Constants,
+    IReadOnlyList<SemanticVariable> Variables,
     IReadOnlyList<SemanticFunction> Functions
 );
 
@@ -49,6 +50,11 @@ public sealed record SemanticConstant(
     string Name,
     string Type,
     string Value
+);
+
+public sealed record SemanticVariable(
+    string Name,
+    string Type
 );
 
 public sealed record SemanticFunction(

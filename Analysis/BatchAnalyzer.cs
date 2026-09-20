@@ -208,6 +208,137 @@ public static class BatchAnalyzer
             files.Count,
             "Analysis complete");
 
+        var semanticUnits =
+            analyses
+                .Select(
+                    analysis => analysis.SemanticModel)
+                .ToList();
+
+        var symbolIndex =
+            SymbolIndexBuilder.Build(
+                semanticUnits);
+
+        var resolver =
+            new SemanticResolver(
+                symbolIndex);
+
+        Console.WriteLine();
+        Console.WriteLine("================================");
+        Console.WriteLine(" Symbol Index");
+        Console.WriteLine("================================");
+        Console.WriteLine();
+
+        Console.WriteLine(
+            $"Symbols: {symbolIndex.Count}");
+
+        Console.WriteLine();
+        Console.WriteLine("Tf2Context Members");
+        Console.WriteLine("--------------------------------");
+
+        SemanticClass? tf2Context =
+            semanticUnits
+                .SelectMany(unit => unit.Classes)
+                .FirstOrDefault(
+                    value => value.Name.Equals(
+                        "Tf2Context",
+                        StringComparison.OrdinalIgnoreCase));
+
+        if (tf2Context is null)
+        {
+            Console.WriteLine("  <class not found>");
+        }
+        else
+        {
+            Console.WriteLine(
+                $"Members: {tf2Context.Members.Count}");
+
+            foreach (SemanticMember member in tf2Context.Members)
+            {
+                Console.WriteLine(
+                    $"  {member.Kind,-18} " +
+                    $"{member.Name,-35} " +
+                    $"Type={member.Type}");
+            }
+        }
+
+        Console.WriteLine();
+
+        foreach (string name in new[]
+        {
+    "gD2DE",
+    "Tf2Context",
+    "System_Log",
+    "WHandle",
+    "OutError",
+    "VariantToAlign"
+})
+        {
+            Console.WriteLine(
+                $"Lookup: {name}");
+
+            IReadOnlyList<SymbolInfo> symbols =
+                symbolIndex.Find(name);
+
+            if (symbols.Count == 0)
+            {
+                Console.WriteLine(
+                    "  <not found>");
+            }
+            else
+            {
+                foreach (SymbolInfo symbol in symbols)
+                {
+                    Console.WriteLine(
+                        $"  {symbol.Kind,-12} " +
+                        $"{symbol.QualifiedName,-40} " +
+                        $"Unit={symbol.UnitName}" +
+                        (string.IsNullOrWhiteSpace(
+                            symbol.OwnerName)
+                            ? string.Empty
+                            : $" Owner={symbol.OwnerName}") +
+                        (string.IsNullOrWhiteSpace(
+                            symbol.Type)
+                            ? string.Empty
+                            : $" Type={symbol.Type}"));
+                }
+            }
+
+            Console.WriteLine();
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("Semantic Resolver");
+        Console.WriteLine("--------------------------------");
+
+        foreach (string reference in new[]
+        {
+    "gD2DE.System_Log",
+    "gD2DE.WHandle",
+    "gD2DE.Input_GetEvent"
+})
+        {
+            ResolvedSymbol? resolved =
+                resolver.ResolveMember(
+                    reference);
+
+            Console.WriteLine(
+                $"Resolve: {reference}");
+
+            if (resolved is null)
+            {
+                Console.WriteLine(
+                    "  <not resolved>");
+
+                continue;
+            }
+
+            Console.WriteLine(
+                $"  {resolved.Symbol.Kind,-12} " +
+                $"{resolved.Symbol.QualifiedName,-35} " +
+                $"Unit={resolved.Symbol.UnitName} " +
+                $"Owner={resolved.Symbol.OwnerName}");
+        }
+
         Console.WriteLine();
 
         Console.WriteLine("================================");
@@ -277,12 +408,58 @@ public static class BatchAnalyzer
          * The BehaviorInfo objects were collected during
          * the same file-analysis pass above.
          */
-        ExpressionCensus.Counts expressionCounts =
+
+        Console.WriteLine();
+        Console.WriteLine("Behavior Names");
+        Console.WriteLine("--------------------------------");
+
+        foreach (BehaviorAnalyzer.BehaviorInfo behavior in behaviors.Take(30))
+        {
+            Console.WriteLine(
+                $"{behavior.Name,-50} {behavior.FilePath}");
+        }
+
+        Console.WriteLine();
+
+        var expressionCounts =
             ExpressionCensus.Analyze(
                 behaviors);
 
         ExpressionCensus.Print(
             expressionCounts);
+
+        var semanticCounts =
+            ExpressionCensus.AnalyzeSemantics(
+                behaviors);
+
+        ExpressionCensus.PrintSemantic(
+            semanticCounts);
+
+        var semanticEdges =
+            SemanticDependencyBuilder.Build(
+                semanticCounts.References);
+
+        Console.WriteLine();
+        Console.WriteLine("================================");
+        Console.WriteLine(" Semantic Dependency Graph");
+        Console.WriteLine("================================");
+        Console.WriteLine();
+
+        foreach (
+            SemanticDependencyEdge edge
+            in semanticEdges.Take(30))
+        {
+            Console.WriteLine(
+                $"{edge.From,-40} " +
+                $"--{edge.Kind}--> " +
+                $"{edge.To,-50} " +
+                $"{edge.FilePath}:{edge.Line}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine(
+            $"Semantic dependency edges: {semanticEdges.Count}");
+        Console.WriteLine();
 
         Console.WriteLine();
 
