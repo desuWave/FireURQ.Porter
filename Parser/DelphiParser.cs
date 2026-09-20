@@ -460,10 +460,16 @@ public sealed class DelphiParser
             string name =
                 ExpectIdentifier();
 
+            Console.WriteLine(
+                $"TYPE NAME: {name}, next={Current().Kind} '{Current().Text}'");
+
             if (!MatchSymbol("="))
             {
                 continue;
             }
+
+            Console.WriteLine(
+                $"TYPE DEBUG: {name} = {Current().Kind} '{Current().Text}'");
 
             // ------------------------------------------------
             // ENUM
@@ -593,6 +599,28 @@ public sealed class DelphiParser
                         name,
                         DelphiTypeKind.Set,
                         $"set of {elementType}"));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // FUNCTION TYPE
+            // ------------------------------------------------
+            Console.WriteLine(
+                $"FUNCTION CHECK: name={name}, token={Current().Kind} '{Current().Text}'");
+
+            if (MatchKeyword("function"))
+            {
+                string definition =
+                    ReadUntil(";");
+
+                MatchSymbol(";");
+
+                declarations.Add(
+                    new DelphiType(
+                        name,
+                        DelphiTypeKind.Procedure,
+                        $"function {definition}"));
 
                 continue;
             }
@@ -969,7 +997,7 @@ public sealed class DelphiParser
             if (MatchKeyword("procedure"))
             {
                 string definition =
-                    ReadUntil(";");
+                    ReadCallableTypeDefinition();
 
                 MatchSymbol(";");
 
@@ -989,7 +1017,7 @@ public sealed class DelphiParser
             if (MatchKeyword("function"))
             {
                 string definition =
-                    ReadUntil(";");
+                    ReadCallableTypeDefinition();
 
                 MatchSymbol(";");
 
@@ -1664,6 +1692,87 @@ public sealed class DelphiParser
         return string.Join(
             " ",
             parts);
+    }
+
+    private string ReadCallableTypeDefinition()
+    {
+        var parts =
+            new List<string>();
+
+        int parenDepth = 0;
+
+        while (!IsEnd())
+        {
+            if (PeekSymbol("("))
+            {
+                parenDepth++;
+                parts.Add(Current().Text);
+                Advance();
+                continue;
+            }
+
+            if (PeekSymbol(")"))
+            {
+                parenDepth--;
+                parts.Add(Current().Text);
+                Advance();
+                continue;
+            }
+
+            if (PeekSymbol(";") &&
+                parenDepth == 0)
+            {
+                int nextPosition =
+                    _position + 1;
+
+                if (nextPosition >= _tokens.Count)
+                {
+                    break;
+                }
+
+                string nextText =
+                    _tokens[nextPosition].Text;
+
+                if (IsCallableDirective(nextText))
+                {
+                    parts.Add(Current().Text);
+                    Advance();
+                    continue;
+                }
+
+                break;
+            }
+
+            parts.Add(Current().Text);
+            Advance();
+        }
+
+        return string.Join(
+            " ",
+            parts);
+    }
+
+    private bool IsCallableDirective(
+        string text)
+    {
+        return text.Equals(
+                   "stdcall",
+                   StringComparison.OrdinalIgnoreCase) ||
+               text.Equals(
+                   "cdecl",
+                   StringComparison.OrdinalIgnoreCase) ||
+               text.Equals(
+                   "register",
+                   StringComparison.OrdinalIgnoreCase) ||
+               text.Equals(
+                   "pascal",
+                   StringComparison.OrdinalIgnoreCase) ||
+               text.Equals(
+                   "safecall",
+                   StringComparison.OrdinalIgnoreCase) ||
+               text.Equals(
+                   "fastcall",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private string ReadUntilStatementTerminator()
