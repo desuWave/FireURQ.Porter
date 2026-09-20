@@ -110,6 +110,12 @@ public sealed class DelphiParser
                 continue;
             }
 
+            if (MatchKeyword("var"))
+            {
+                ParseVarSection(declarations);
+                continue;
+            }
+
             if (MatchKeyword("type"))
             {
                 ParseTypeSection(
@@ -370,6 +376,63 @@ public sealed class DelphiParser
         }
     }
 
+    private void ParseVarSection(
+        List<DelphiNode> declarations)
+    {
+        while (!IsEnd())
+        {
+            if (PeekKeyword("const") ||
+                PeekKeyword("type") ||
+                PeekKeyword("function") ||
+                PeekKeyword("procedure") ||
+                PeekKeyword("implementation") ||
+                PeekKeyword("begin"))
+            {
+                return;
+            }
+
+            if (!IsIdentifier())
+            {
+                Advance();
+                continue;
+            }
+
+            var names =
+                new List<string>();
+
+            names.Add(
+                ExpectIdentifier());
+
+            while (MatchSymbol(","))
+            {
+                names.Add(
+                    ExpectIdentifier());
+            }
+
+            string type = "";
+
+            if (MatchSymbol(":"))
+            {
+                type =
+                    ReadTypeExpression();
+            }
+            else
+            {
+                continue;
+            }
+
+            MatchSymbol(";");
+
+            foreach (string name in names)
+            {
+                declarations.Add(
+                    new DelphiVariable(
+                        name,
+                        type));
+            }
+        }
+    }
+
     // ========================================================
     // TYPE
     // ========================================================
@@ -530,6 +593,29 @@ public sealed class DelphiParser
                         name,
                         DelphiTypeKind.Set,
                         $"set of {elementType}"));
+
+                continue;
+            }
+
+            // ------------------------------------------------
+            // CLASS REFERENCE
+            // ------------------------------------------------
+            if (IsKeywordAt(0, "class") &&
+                IsKeywordAt(1, "of"))
+            {
+                Advance(); // class
+                Advance(); // of
+
+                string target =
+                    ExpectTypeName();
+
+                MatchSymbol(";");
+
+                declarations.Add(
+                    new DelphiType(
+                        name,
+                        DelphiTypeKind.ClassReference,
+                        target));
 
                 continue;
             }

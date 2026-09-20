@@ -21,6 +21,7 @@ public enum DelphiTypeKind
     Procedure,
     Array,
     Pointer,
+    ClassReference,
     Unknown
 }
 

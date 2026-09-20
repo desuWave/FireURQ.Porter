@@ -214,6 +214,34 @@ public static class BatchAnalyzer
                     analysis => analysis.SemanticModel)
                 .ToList();
 
+        Console.WriteLine();
+        Console.WriteLine("Semantic Classes: d2dApplication");
+        Console.WriteLine("--------------------------------");
+
+        foreach (SemanticUnit unit in semanticUnits)
+        {
+            if (!unit.Name.Equals(
+                    "d2dApplication",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (SemanticClass @class in unit.Classes)
+            {
+                Console.WriteLine(
+                    $"Class: {@class.Name}");
+
+                foreach (SemanticMember member in @class.Members)
+                {
+                    Console.WriteLine(
+                        $"  {member.Kind,-12} " +
+                        $"{member.Name,-30} " +
+                        $"Type={member.Type}");
+                }
+            }
+        }
+
         var symbolIndex =
             SymbolIndexBuilder.Build(
                 semanticUnits);
@@ -270,7 +298,8 @@ public static class BatchAnalyzer
     "System_Log",
     "WHandle",
     "OutError",
-    "VariantToAlign"
+    "VariantToAlign",
+    "f_CurrentSceneObj"
 })
         {
             Console.WriteLine(
@@ -314,7 +343,9 @@ public static class BatchAnalyzer
         {
     "gD2DE.System_Log",
     "gD2DE.WHandle",
-    "gD2DE.Input_GetEvent"
+    "gD2DE.Input_GetEvent",
+    "f_CurrentSceneObj.ProcessEvent",
+    "f_CurrentSceneObj.Frame"
 })
         {
             ResolvedSymbol? resolved =

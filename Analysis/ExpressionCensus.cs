@@ -12,6 +12,28 @@ public static class ExpressionCensus
             string,
             int> RawExpressions);
 
+    public enum SemanticReferenceKind
+    {
+        Read,
+        Write,
+        Call,
+        MemberAccess,
+        IndexAccess
+    }
+
+    public sealed record SemanticReference(
+        SemanticReferenceKind Kind,
+        string Text,
+        string FilePath,
+        string ProcedureName,
+        int Line);
+
+    public sealed record SemanticCounts(
+        IReadOnlyDictionary<
+            SemanticReferenceKind,
+            int> ByKind,
+        IReadOnlyList<SemanticReference> References);
+
     public static Counts Analyze(
         IReadOnlyList<BehaviorAnalyzer.BehaviorInfo> behaviors)
     {
@@ -42,9 +64,7 @@ public static class ExpressionCensus
                     counts,
                     rawExpressions,
                     ref totalNodes,
-                    ref statementsWithExpressions,
-                    behavior.FilePath,
-                    behavior.Name);
+                    ref statementsWithExpressions);
             }
         }
 
@@ -55,20 +75,49 @@ public static class ExpressionCensus
             rawExpressions);
     }
 
+    public static SemanticCounts AnalyzeSemantics(
+        IReadOnlyList<BehaviorAnalyzer.BehaviorInfo> behaviors)
+    {
+        var semanticReferences =
+            new Dictionary<
+                SemanticReferenceKind,
+                int>();
+
+        var references =
+            new List<SemanticReference>();
+
+        foreach (
+            BehaviorAnalyzer.BehaviorInfo behavior
+            in behaviors)
+        {
+            foreach (
+                BehaviorAnalyzer.BehaviorStatement statement
+                in behavior.Statements)
+            {
+                AnalyzeSemanticStatement(
+                    statement,
+                    semanticReferences,
+                    references,
+                    behavior.FilePath,
+                    behavior.Name);
+            }
+        }
+
+        return new SemanticCounts(
+            semanticReferences,
+            references);
+    }
+
     public static void Print(
         Counts counts)
     {
         Console.WriteLine();
-
         Console.WriteLine(
             "================================");
-
         Console.WriteLine(
             " Expression Census");
-
         Console.WriteLine(
             "================================");
-
         Console.WriteLine();
 
         Console.WriteLine(
@@ -184,6 +233,59 @@ public static class ExpressionCensus
         Console.WriteLine();
     }
 
+    public static void PrintSemantic(
+        SemanticCounts counts)
+    {
+        Console.WriteLine();
+        Console.WriteLine(
+            "================================");
+        Console.WriteLine(
+            " Semantic Census");
+        Console.WriteLine(
+            "================================");
+        Console.WriteLine();
+
+        foreach (
+            SemanticReferenceKind kind
+            in Enum.GetValues<
+                SemanticReferenceKind>())
+        {
+            counts.ByKind.TryGetValue(
+                kind,
+                out int count);
+
+            Console.WriteLine(
+                $"{kind,-16} {count,6}");
+        }
+
+        Console.WriteLine();
+
+        Console.WriteLine(
+            "Semantic References");
+
+        Console.WriteLine(
+            "--------------------------------");
+
+        foreach (
+            SemanticReference reference
+            in counts.References.Take(20))
+        {
+            Console.WriteLine(
+                $"{reference.Kind,-16} " +
+                $"{reference.Text,-40} " +
+                $"{reference.FilePath}:{reference.Line} " +
+                $"[{reference.ProcedureName}]");
+        }
+
+        Console.WriteLine();
+
+        Console.WriteLine(
+            $"Total semantic references: " +
+            $"{counts.References.Count}");
+
+        Console.WriteLine();
+    }
+
     private static void AnalyzeStatement(
         BehaviorAnalyzer.BehaviorStatement statement,
         Dictionary<
@@ -191,9 +293,7 @@ public static class ExpressionCensus
             int> counts,
         Dictionary<string, int> rawExpressions,
         ref int totalNodes,
-        ref int statementsWithExpressions,
-        string filePath,
-        string procedureName)
+        ref int statementsWithExpressions)
     {
         bool hasExpression = false;
 
@@ -205,10 +305,7 @@ public static class ExpressionCensus
                 statement.Expression,
                 counts,
                 rawExpressions,
-                ref totalNodes,
-                filePath,
-                procedureName,
-                statement.Line);
+                ref totalNodes);
         }
 
         if (statement.Assignment is not null)
@@ -219,19 +316,13 @@ public static class ExpressionCensus
                 statement.Assignment.Target,
                 counts,
                 rawExpressions,
-                ref totalNodes,
-                filePath,
-                procedureName,
-                statement.Line);
+                ref totalNodes);
 
             CountExpression(
                 statement.Assignment.Value,
                 counts,
                 rawExpressions,
-                ref totalNodes,
-                filePath,
-                procedureName,
-                statement.Line);
+                ref totalNodes);
         }
 
         if (hasExpression)
@@ -248,9 +339,7 @@ public static class ExpressionCensus
                 counts,
                 rawExpressions,
                 ref totalNodes,
-                ref statementsWithExpressions,
-                filePath,
-                procedureName);
+                ref statementsWithExpressions);
         }
 
         if (statement.ElseChildren is not null)
@@ -264,9 +353,7 @@ public static class ExpressionCensus
                     counts,
                     rawExpressions,
                     ref totalNodes,
-                    ref statementsWithExpressions,
-                    filePath,
-                    procedureName);
+                    ref statementsWithExpressions);
             }
         }
 
@@ -285,12 +372,368 @@ public static class ExpressionCensus
                         counts,
                         rawExpressions,
                         ref totalNodes,
-                        ref statementsWithExpressions,
+                        ref statementsWithExpressions);
+                }
+            }
+        }
+    }
+
+    private static void AnalyzeSemanticStatement(
+        BehaviorAnalyzer.BehaviorStatement statement,
+        Dictionary<
+            SemanticReferenceKind,
+            int> semanticReferences,
+        List<SemanticReference> references,
+        string filePath,
+        string procedureName)
+    {
+        if (statement.Expression is not null)
+        {
+            CollectSemanticReferences(
+                statement.Expression,
+                semanticReferences,
+                references,
+                filePath,
+                procedureName,
+                statement.Line);
+        }
+
+        if (statement.Assignment is not null)
+        {
+            CollectSemanticReferences(
+                statement.Assignment.Target,
+                semanticReferences,
+                references,
+                filePath,
+                procedureName,
+                statement.Line,
+                isWriteTarget: true);
+
+            CollectSemanticReferences(
+                statement.Assignment.Value,
+                semanticReferences,
+                references,
+                filePath,
+                procedureName,
+                statement.Line);
+        }
+
+        foreach (
+            BehaviorAnalyzer.BehaviorStatement child
+            in statement.Children)
+        {
+            AnalyzeSemanticStatement(
+                child,
+                semanticReferences,
+                references,
+                filePath,
+                procedureName);
+        }
+
+        if (statement.ElseChildren is not null)
+        {
+            foreach (
+                BehaviorAnalyzer.BehaviorStatement child
+                in statement.ElseChildren)
+            {
+                AnalyzeSemanticStatement(
+                    child,
+                    semanticReferences,
+                    references,
+                    filePath,
+                    procedureName);
+            }
+        }
+
+        if (statement.Clauses is not null)
+        {
+            foreach (
+                BehaviorAnalyzer.BehaviorClause clause
+                in statement.Clauses)
+            {
+                foreach (
+                    BehaviorAnalyzer.BehaviorStatement child
+                    in clause.Statements)
+                {
+                    AnalyzeSemanticStatement(
+                        child,
+                        semanticReferences,
+                        references,
                         filePath,
                         procedureName);
                 }
             }
         }
+    }
+
+    private static void CollectSemanticReferences(
+        ExpressionParser.ExpressionNode expression,
+        Dictionary<
+            SemanticReferenceKind,
+            int> semanticReferences,
+        List<SemanticReference> references,
+        string filePath,
+        string procedureName,
+        int line,
+        bool isWriteTarget = false)
+    {
+        switch (expression.Kind)
+        {
+            case ExpressionParser.ExpressionKind.Identifier:
+                {
+                    AddSemanticReference(
+                        semanticReferences,
+                        references,
+                        isWriteTarget
+                            ? SemanticReferenceKind.Write
+                            : SemanticReferenceKind.Read,
+                        expression.Text,
+                        filePath,
+                        procedureName,
+                        line);
+
+                    break;
+                }
+
+            case ExpressionParser.ExpressionKind.MemberAccess:
+                {
+                    AddSemanticReference(
+                        semanticReferences,
+                        references,
+                        SemanticReferenceKind.MemberAccess,
+                        FormatExpression(expression),
+                        filePath,
+                        procedureName,
+                        line);
+
+                    if (expression.Children.Count > 0)
+                    {
+                        CollectSemanticReferences(
+                            expression.Children[0],
+                            semanticReferences,
+                            references,
+                            filePath,
+                            procedureName,
+                            line,
+                            isWriteTarget);
+                    }
+
+                    break;
+                }
+
+            case ExpressionParser.ExpressionKind.IndexAccess:
+                {
+                    AddSemanticReference(
+                        semanticReferences,
+                        references,
+                        SemanticReferenceKind.IndexAccess,
+                        FormatExpression(expression),
+                        filePath,
+                        procedureName,
+                        line);
+
+                    if (expression.Children.Count > 0)
+                    {
+                        CollectSemanticReferences(
+                            expression.Children[0],
+                            semanticReferences,
+                            references,
+                            filePath,
+                            procedureName,
+                            line,
+                            isWriteTarget);
+                    }
+
+                    foreach (
+                        ExpressionParser.ExpressionNode index
+                        in expression.Children.Skip(1))
+                    {
+                        CollectSemanticReferences(
+                            index,
+                            semanticReferences,
+                            references,
+                            filePath,
+                            procedureName,
+                            line);
+                    }
+
+                    break;
+                }
+
+            case ExpressionParser.ExpressionKind.Call:
+                {
+                    string targetText =
+                        expression.Children.Count >= 1
+                            ? FormatExpression(expression.Children[0])
+                            : expression.Text;
+
+                    AddSemanticReference(
+                        semanticReferences,
+                        references,
+                        SemanticReferenceKind.Call,
+                        targetText,
+                        filePath,
+                        procedureName,
+                        line);
+
+                    foreach (ExpressionParser.ExpressionNode child in expression.Children)
+                    {
+                        CollectSemanticReferences(
+                            child,
+                            semanticReferences,
+                            references,
+                            filePath,
+                            procedureName,
+                            line);
+                    }
+
+                    break;
+                }
+
+            default:
+                {
+                    foreach (
+                        ExpressionParser.ExpressionNode child
+                        in expression.Children)
+                    {
+                        CollectSemanticReferences(
+                            child,
+                            semanticReferences,
+                            references,
+                            filePath,
+                            procedureName,
+                            line);
+                    }
+
+                    break;
+                }
+        }
+    }
+
+    private static void AddSemanticReference(
+        Dictionary<
+            SemanticReferenceKind,
+            int> semanticReferences,
+        List<SemanticReference> references,
+        SemanticReferenceKind kind,
+        string text,
+        string filePath,
+        string procedureName,
+        int line)
+    {
+        if (semanticReferences.TryGetValue(
+                kind,
+                out int count))
+        {
+            semanticReferences[kind] =
+                count + 1;
+        }
+        else
+        {
+            semanticReferences[kind] = 1;
+        }
+
+        references.Add(
+            new SemanticReference(
+                kind,
+                text,
+                filePath,
+                procedureName,
+                line));
+    }
+
+    private static string FormatExpression(
+        ExpressionParser.ExpressionNode expression)
+    {
+        return expression.Kind switch
+        {
+            ExpressionParser.ExpressionKind.Empty =>
+                string.Empty,
+
+            ExpressionParser.ExpressionKind.Identifier =>
+                expression.Text,
+
+            ExpressionParser.ExpressionKind.Literal =>
+                expression.Text,
+
+            ExpressionParser.ExpressionKind.MemberAccess =>
+                expression.Children.Count >= 2
+                    ? $"{FormatExpression(expression.Children[0])}." +
+                      $"{FormatExpression(expression.Children[1])}"
+                    : expression.Text,
+
+            ExpressionParser.ExpressionKind.IndexAccess =>
+                expression.Children.Count >= 1
+                    ? $"{FormatExpression(expression.Children[0])}" +
+                      $"[" +
+                      $"{string.Join(
+                          ", ",
+                          expression.Children
+                              .Skip(1)
+                              .Select(FormatExpression))}" +
+                      $"]"
+                    : expression.Text,
+
+            ExpressionParser.ExpressionKind.Call =>
+                expression.Children.Count >= 1
+                    ? $"{FormatExpression(expression.Children[0])}" +
+                      $"(" +
+                      $"{string.Join(
+                          ", ",
+                          expression.Children
+                              .Skip(1)
+                              .Select(FormatExpression))}" +
+                      $")"
+                    : expression.Text,
+
+            ExpressionParser.ExpressionKind.Unary =>
+                expression.Children.Count >= 1
+                    ? $"{expression.Text}" +
+                      $"{FormatExpression(expression.Children[0])}"
+                    : expression.Text,
+
+            ExpressionParser.ExpressionKind.Binary =>
+                expression.Children.Count >= 2
+                    ? $"{FormatExpression(expression.Children[0])} " +
+                      $"{expression.Text} " +
+                      $"{FormatExpression(expression.Children[1])}"
+                    : expression.Text,
+
+            ExpressionParser.ExpressionKind.AddressOf =>
+                expression.Children.Count >= 1
+                    ? $"@{FormatExpression(expression.Children[0])}"
+                    : expression.Text,
+
+            ExpressionParser.ExpressionKind.Dereference =>
+                expression.Children.Count >= 1
+                    ? $"{FormatExpression(expression.Children[0])}^"
+                    : expression.Text,
+
+            ExpressionParser.ExpressionKind.TypeTest =>
+                expression.Children.Count >= 2
+                    ? $"{FormatExpression(expression.Children[0])} " +
+                      $"{expression.Text} " +
+                      $"{FormatExpression(expression.Children[1])}"
+                    : expression.Text,
+
+            ExpressionParser.ExpressionKind.TypeCast =>
+                expression.Children.Count >= 1
+                    ? $"{expression.Text}(" +
+                      $"{FormatExpression(expression.Children[0])})"
+                    : expression.Text,
+
+            ExpressionParser.ExpressionKind.Set =>
+                expression.Text,
+
+            ExpressionParser.ExpressionKind.Inherited =>
+                expression.Text,
+
+            ExpressionParser.ExpressionKind.Raw =>
+                expression.Text,
+
+            _ =>
+                expression.Text
+        };
     }
 
     private static void CountExpression(
@@ -299,10 +742,7 @@ public static class ExpressionCensus
             ExpressionParser.ExpressionKind,
             int> counts,
         Dictionary<string, int> rawExpressions,
-        ref int totalNodes,
-        string? filePath = null,
-        string? procedureName = null,
-        int line = 0)
+        ref int totalNodes)
     {
         totalNodes++;
 
@@ -335,39 +775,6 @@ public static class ExpressionCensus
             {
                 rawExpressions[text] = 1;
             }
-
-            if (text == "0 , 0" ||
-                text ==
-                    "#13#10 '[%s]' #13#10#13#10")
-            {
-                Console.WriteLine();
-
-                Console.WriteLine(
-                    "================================");
-
-                Console.WriteLine(
-                    " RAW EXPRESSION DIAGNOSTIC");
-
-                Console.WriteLine(
-                    "================================");
-
-                Console.WriteLine(
-                    $"File:      {filePath}");
-
-                Console.WriteLine(
-                    $"Procedure: {procedureName}");
-
-                Console.WriteLine(
-                    $"Line:      {line}");
-
-                Console.WriteLine(
-                    $"Raw:       {text}");
-
-                Console.WriteLine(
-                    "================================");
-
-                Console.WriteLine();
-            }
         }
 
         foreach (
@@ -378,11 +785,7 @@ public static class ExpressionCensus
                 child,
                 counts,
                 rawExpressions,
-                ref totalNodes,
-                filePath,
-                procedureName,
-                line);
+                ref totalNodes);
         }
     }
 }
-

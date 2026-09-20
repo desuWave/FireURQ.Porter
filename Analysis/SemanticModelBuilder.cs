@@ -10,6 +10,7 @@ public static class SemanticModelBuilder
         var interfaces = new List<SemanticInterface>();
         var types = new List<SemanticType>();
         var constants = new List<SemanticConstant>();
+        var variables = new List<SemanticVariable>();
         var functions = new List<SemanticFunction>();
 
         foreach (var declaration in unit.Declarations)
@@ -40,6 +41,13 @@ public static class SemanticModelBuilder
                             value.Value));
                     break;
 
+                case DelphiVariable value:
+                    variables.Add(
+                        new SemanticVariable(
+                            value.Name,
+                            value.Type));
+                    break;
+
                 case DelphiFunction value:
                     functions.Add(BuildFunction(value));
                     break;
@@ -53,6 +61,7 @@ public static class SemanticModelBuilder
             interfaces,
             types,
             constants,
+            variables,
             functions);
     }
 

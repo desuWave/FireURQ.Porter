@@ -10,6 +10,7 @@ public static class SemanticAnalyzer
         var interfaces = new List<SemanticInterface>();
         var types = new List<SemanticType>();
         var constants = new List<SemanticConstant>();
+        var variables = new List<SemanticVariable>();
         var functions = new List<SemanticFunction>();
 
         foreach (var declaration in unit.Declarations)
@@ -40,6 +41,13 @@ public static class SemanticAnalyzer
                             value.Value));
                     break;
 
+                case DelphiVariable value:
+                    variables.Add(
+                        new SemanticVariable(
+                            value.Name,
+                            value.Type));
+                    break;
+
                 case DelphiFunction value:
                     functions.Add(
                         AnalyzeFunction(value));
@@ -54,6 +62,7 @@ public static class SemanticAnalyzer
             interfaces,
             types,
             constants,
+            variables,
             functions);
     }
 
@@ -130,7 +139,7 @@ public static class SemanticAnalyzer
                                 parameter.Kind.ToString()))
                         .ToList(),
                         property.IsDefault),
-                        
+
 
             DelphiMethodResolution resolution =>
                 new SemanticMember(
