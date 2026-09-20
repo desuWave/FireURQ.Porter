@@ -8,7 +8,8 @@ public sealed class DelphiParser
     private readonly IReadOnlyList<LexerToken> _tokens;
     private int _position;
 
-    public DelphiParser(IReadOnlyList<LexerToken> tokens)
+    public DelphiParser(
+        IReadOnlyList<LexerToken> tokens)
     {
         _tokens = tokens;
     }
@@ -61,31 +62,7 @@ public sealed class DelphiParser
 
         if (MatchKeyword("implementation"))
         {
-            Console.WriteLine(
-                $"[UNIT-IMPLEMENTATION] entered pos={_position}");
-
-            Console.WriteLine(
-                $"[UNIT-IMPLEMENTATION-BEFORE-USES] " +
-                $"pos={_position} " +
-                $"line={Current().Line} " +
-                $"kind={Current().Kind} " +
-                $"text={Current().Text}");
-
-            int usesBefore = _position;
-
             uses.AddRange(ParseUses());
-
-            Console.WriteLine(
-                $"[UNIT-IMPLEMENTATION-AFTER-USES] " +
-                $"before={usesBefore} " +
-                $"after={_position}");
-
-            Console.WriteLine(
-                $"[UNIT-IMPLEMENTATION-NEXT] " +
-                $"pos={_position} " +
-                $"line={Current().Line} " +
-                $"kind={Current().Kind} " +
-                $"text={Current().Text}");
 
             ParseDeclarationSection(
                 declarations,
@@ -108,26 +85,11 @@ public sealed class DelphiParser
         bool readBodies,
         bool stopAtImplementation)
     {
-        if (readBodies)
-        {
-            Console.WriteLine(
-                $"[PARSER-IMPL-START] position={_position}");
-        }
-
         while (!IsEnd())
         {
-            Console.WriteLine(
-                $"[DECL] pos={_position} " +
-                $"line={Current().Line} " +
-                $"kind={Current().Kind} " +
-                $"text={Current().Text}");
-
             if (stopAtImplementation &&
                 PeekKeyword("implementation"))
             {
-                Console.WriteLine(
-                    $"[DECL-STOP-IMPLEMENTATION] pos={_position}");
-
                 return;
             }
 
@@ -137,52 +99,21 @@ public sealed class DelphiParser
                  PeekKeyword("constructor") ||
                  PeekKeyword("destructor")))
             {
-                Console.WriteLine(
-                    $"[PARSER-CALLABLE] " +
-                    $"{Current().Text} " +
-                    $"position={_position} " +
-                    $"line={Current().Line}");
-
-                Console.Write("  tokens: ");
-
-                for (int j = 0;
-                     j < 12 &&
-                     _position + j < _tokens.Count;
-                     j++)
-                {
-                    Console.Write(
-                        $"{_tokens[_position + j].Text} ");
-                }
-
-                Console.WriteLine();
+                // Callable implementation.
             }
 
             if (MatchKeyword("const"))
             {
-                int before = _position - 1;
-
-                Console.WriteLine(
-                    $"[DECL-CONST-BEGIN] pos={before}");
-
-                ParseConstSection(declarations);
-
-                Console.WriteLine(
-                    $"[DECL-CONST-END] pos={_position}");
+                ParseConstSection(
+                    declarations);
 
                 continue;
             }
 
             if (MatchKeyword("type"))
             {
-                int before = _position - 1;
-
-                Console.WriteLine(
-                    $"[DECL-TYPE-BEGIN] pos={before}");
-
-                ParseTypeSection(declarations);
-
-                Console.WriteLine(
-                    $"[DECL-TYPE-END] pos={_position}");
+                ParseTypeSection(
+                    declarations);
 
                 continue;
             }
@@ -190,31 +121,18 @@ public sealed class DelphiParser
             if (PeekKeyword("function") ||
                 PeekKeyword("procedure"))
             {
-                int before = _position;
-
-                Console.WriteLine(
-                    $"[DECL-CALLABLE-BEGIN] " +
-                    $"pos={before} " +
-                    $"line={Current().Line}");
-
                 DelphiNode callable =
                     ParseCallableDeclaration(
                         readBodies);
 
-                Console.WriteLine(
-                    $"[DECL-CALLABLE-END] " +
-                    $"before={before} " +
-                    $"after={_position}");
+                declarations.Add(
+                    callable);
 
-                declarations.Add(callable);
                 continue;
             }
 
             if (MatchKeyword("end"))
             {
-                Console.WriteLine(
-                    $"[DECL-END] pos={_position - 1}");
-
                 MatchSymbol(".");
 
                 break;
@@ -303,7 +221,8 @@ public sealed class DelphiParser
             "=");
     }
 
-    private bool IsKeywordAt(int offset)
+    private bool IsKeywordAt(
+        int offset)
     {
         int position =
             _position + offset;
@@ -338,7 +257,8 @@ public sealed class DelphiParser
                    StringComparison.OrdinalIgnoreCase);
     }
 
-    private bool IsIdentifierAt(int position)
+    private bool IsIdentifierAt(
+        int position)
     {
         if (position < 0 ||
             position >= _tokens.Count)
@@ -406,22 +326,12 @@ public sealed class DelphiParser
     {
         while (!IsEnd())
         {
-            Console.WriteLine(
-                $"[CONST] pos={_position} " +
-                $"line={Current().Line} " +
-                $"kind={Current().Kind} " +
-                $"text={Current().Text}");
-
             if (PeekKeyword("type") ||
                 PeekKeyword("var") ||
                 PeekKeyword("function") ||
                 PeekKeyword("procedure") ||
                 PeekKeyword("implementation"))
             {
-                Console.WriteLine(
-                    $"[CONST-STOP] pos={_position} " +
-                    $"text={Current().Text}");
-
                 return;
             }
 
@@ -518,6 +428,7 @@ public sealed class DelphiParser
                 }
 
                 ExpectSymbol(")");
+
                 MatchSymbol(";");
 
                 declarations.Add(
@@ -648,7 +559,6 @@ public sealed class DelphiParser
                 // Forward declaration:
                 //
                 // TFoo = class;
-                //
 
                 if (MatchSymbol(";"))
                 {
@@ -676,7 +586,9 @@ public sealed class DelphiParser
                     if (PeekKeyword("end"))
                     {
                         Advance();
+
                         MatchSymbol(";");
+
                         break;
                     }
 
@@ -745,27 +657,21 @@ public sealed class DelphiParser
                     // ----------------------------------------
                     // CLASS FUNCTION / PROCEDURE
                     // ----------------------------------------
-                    //
-                    // Delphi:
-                    //
-                    // class function Make: IFoo;
-                    // class procedure DoSomething;
-                    //
-                    // At this point the current token is
-                    // "class". Consume it, then parse the
-                    // following function/procedure normally.
-                    //
 
                     if (PeekKeyword("class") &&
-                        (IsKeywordAt(1, "function") ||
-                         IsKeywordAt(1, "procedure")))
+                        (IsKeywordAt(
+                             1,
+                             "function") ||
+                         IsKeywordAt(
+                             1,
+                             "procedure")))
                     {
-                        Advance(); // class
+                        Advance();
 
                         bool isProcedure =
                             PeekKeyword("procedure");
 
-                        Advance(); // function / procedure
+                        Advance();
 
                         var classFunction =
                             ParseFunction(
@@ -1120,6 +1026,7 @@ public sealed class DelphiParser
 
         string? readAccessor = null;
         string? writeAccessor = null;
+
         bool isDefault = false;
 
         while (!IsEnd() &&
@@ -1144,6 +1051,7 @@ public sealed class DelphiParser
             if (MatchKeyword("default"))
             {
                 isDefault = true;
+
                 continue;
             }
 
@@ -1258,37 +1166,8 @@ public sealed class DelphiParser
         {
             SkipLocalDeclarations();
 
-            Console.WriteLine(
-                $"[CALLABLE-BODY] {name} " +
-                $"pos={_position} " +
-                $"line={Current().Line} " +
-                $"kind={Current().Kind} " +
-                $"text={Current().Text}");
-
             bodyTokens =
                 ReadFunctionBody();
-
-            Console.WriteLine(
-                $"[AFTER-READ-BODY] {name} " +
-                $"pos={_position} " +
-                $"line={Current().Line} " +
-                $"kind={Current().Kind} " +
-                $"text={Current().Text}");
-
-            Console.WriteLine(
-                $"[CALLABLE-BODY-END] {name} " +
-                $"pos={_position} " +
-                $"line={Current().Line} " +
-                $"kind={Current().Kind} " +
-                $"text={Current().Text} " +
-                $"bodyTokens={bodyTokens.Count}");
-
-            Console.WriteLine(
-                $"[PARSE-FUNCTION-END] {name} " +
-                $"pos={_position} " +
-                $"line={Current().Line} " +
-                $"kind={Current().Kind} " +
-                $"text={Current().Text}");
         }
 
         return new DelphiFunction(
@@ -1344,16 +1223,12 @@ public sealed class DelphiParser
     private void SkipLocalCallableDeclaration()
     {
         // Skip "function" / "procedure".
+
         Advance();
 
-        // Skip the callable header until its terminating semicolon.
-        // This includes:
-        //
-        // function BoolToVar(
-        //   const aBool: Boolean
-        // ): Variant;
-        //
-        // We deliberately do not try to parse the header here.
+        // Skip the callable header until its
+        // terminating semicolon.
+
         while (!IsEnd())
         {
             if (MatchSymbol(";"))
@@ -1364,18 +1239,16 @@ public sealed class DelphiParser
             Advance();
         }
 
-        // A local callable with no body is possible in some
-        // declaration forms. If the next token is not "begin",
-        // leave it for the surrounding declaration scanner.
+        // A local callable with no body is possible
+        // in some declaration forms.
+
         if (!PeekKeyword("begin"))
         {
             return;
         }
 
         // Skip the complete local callable body.
-        //
-        // We balance begin/end so that nested blocks and nested
-        // begin/end pairs do not terminate the scan prematurely.
+
         int beginDepth = 0;
 
         while (!IsEnd())
@@ -1383,7 +1256,9 @@ public sealed class DelphiParser
             if (PeekKeyword("begin"))
             {
                 beginDepth++;
+
                 Advance();
+
                 continue;
             }
 
@@ -1413,29 +1288,13 @@ public sealed class DelphiParser
 
     private IReadOnlyList<LexerToken> ReadFunctionBody()
     {
-
-        Console.WriteLine("=== GetVirtualVariable BODY WINDOW ===");
-
-        for (int i = _position;
-             i < Math.Min(_tokens.Count, _position + 40);
-             i++)
-        {
-            var t = _tokens[i];
-
-            Console.WriteLine(
-                $"[BODY-TOK] pos={i} " +
-                $"line={t.Line} " +
-                $"col={t.Column} " +
-                $"kind={t.Kind} " +
-                $"text={t.Text}");
-        }
-
-        Console.WriteLine("=== END BODY WINDOW ===");
-
-        var body = new List<LexerToken>();
+        var body =
+            new List<LexerToken>();
 
         if (!PeekKeyword("begin"))
+        {
             return body;
+        }
 
         int beginDepth = 0;
         int caseDepth = 0;
@@ -1446,14 +1305,11 @@ public sealed class DelphiParser
             {
                 beginDepth++;
 
-                Console.WriteLine(
-                    $"[BODY-BEGIN] pos={_position} " +
-                    $"line={Current().Line} " +
-                    $"beginDepth={beginDepth} " +
-                    $"caseDepth={caseDepth}");
+                body.Add(
+                    Current());
 
-                body.Add(Current());
                 Advance();
+
                 continue;
             }
 
@@ -1461,72 +1317,47 @@ public sealed class DelphiParser
             {
                 caseDepth++;
 
-                Console.WriteLine(
-                    $"[BODY-CASE] pos={_position} " +
-                    $"line={Current().Line} " +
-                    $"beginDepth={beginDepth} " +
-                    $"caseDepth={caseDepth}");
+                body.Add(
+                    Current());
 
-                body.Add(Current());
                 Advance();
+
                 continue;
             }
 
             if (PeekKeyword("end"))
             {
-                Console.WriteLine(
-                    $"[BODY-END] pos={_position} " +
-                    $"line={Current().Line} " +
-                    $"beginDepth={beginDepth} " +
-                    $"caseDepth={caseDepth}");
+                body.Add(
+                    Current());
 
-                body.Add(Current());
                 Advance();
 
                 if (caseDepth > 0)
                 {
                     caseDepth--;
 
-                    Console.WriteLine(
-                        $"[BODY-CASE-END] " +
-                        $"beginDepth={beginDepth} " +
-                        $"caseDepth={caseDepth}");
-
                     MatchSymbol(";");
+
                     continue;
                 }
 
                 beginDepth--;
 
-                Console.WriteLine(
-                    $"[BODY-BEGIN-END] " +
-                    $"beginDepth={beginDepth} " +
-                    $"caseDepth={caseDepth}");
-
-                Console.WriteLine(
-                    $"[BODY-AFTER-END] pos={_position} " +
-                    $"line={Current().Line} " +
-                    $"kind={Current().Kind} " +
-                    $"text={Current().Text}");
-
                 if (beginDepth == 0)
                 {
                     MatchSymbol(";");
-
-                    Console.WriteLine(
-                        $"[BODY-BREAK] pos={_position} " +
-                        $"line={Current().Line} " +
-                        $"kind={Current().Kind} " +
-                        $"text={Current().Text}");
 
                     break;
                 }
 
                 MatchSymbol(";");
+
                 continue;
             }
 
-            body.Add(Current());
+            body.Add(
+                Current());
+
             Advance();
         }
 
@@ -1701,7 +1532,9 @@ public sealed class DelphiParser
         while (MatchSymbol("."))
         {
             result += ".";
-            result += ExpectIdentifier();
+
+            result +=
+                ExpectIdentifier();
         }
 
         return result;
@@ -1898,16 +1731,14 @@ public sealed class DelphiParser
         }
     }
 
-
     private void Advance()
     {
-        if (_position < _tokens.Count - 1)
+        if (_position <
+            _tokens.Count - 1)
         {
             _position++;
         }
     }
-
-
 
     // ========================================================
     // ERROR DIAGNOSTICS
@@ -1936,7 +1767,9 @@ public sealed class DelphiParser
                 _tokens.Count,
                 _position + radius + 1);
 
-        for (int i = start; i < end; i++)
+        for (int i = start;
+             i < end;
+             i++)
         {
             var token =
                 _tokens[i];

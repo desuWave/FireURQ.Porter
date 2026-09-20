@@ -138,8 +138,7 @@ public static class BodyBatchAnalyzer
 
             progress?.Report(
                 processed,
-                files.Count,
-                fileName);
+                files.Count);
         }
 
         if (progress is not null)

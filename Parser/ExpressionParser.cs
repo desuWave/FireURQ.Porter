@@ -14,6 +14,12 @@ public static class ExpressionParser
         Call,
         Unary,
         Binary,
+        AddressOf,
+        Dereference,
+        TypeTest,
+        TypeCast,
+        Set,
+        Inherited,
         Raw
     }
 
@@ -100,6 +106,86 @@ public static class ExpressionParser
             }
         }
 
+        // Delphi inherited call:
+        //
+        // inherited Foo
+        // inherited Foo(X)
+        // inherited Foo(A, B)
+        //
+        // Представляем как отдельный ExpressionKind.Inherited.
+        // Text содержит имя вызываемого метода,
+        // Children содержат аргументы.
+        if (string.Equals(
+                tokens[start].Text,
+                "inherited",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            int methodIndex =
+                start + 1;
+
+            if (methodIndex >= end)
+            {
+                return new ExpressionNode(
+                    ExpressionKind.Inherited,
+                    "inherited",
+                    Array.Empty<ExpressionNode>());
+            }
+
+            LexerToken methodToken =
+                tokens[methodIndex];
+
+            string method =
+                methodToken.Text;
+
+            int position =
+                methodIndex + 1;
+
+            var arguments =
+                new List<ExpressionNode>();
+
+            if (position < end &&
+                tokens[position].Text == "(")
+            {
+                int closeParen =
+                    FindMatchingParenthesis(
+                        tokens,
+                        position,
+                        end);
+
+                if (closeParen >= 0)
+                {
+                    arguments =
+                        ParseArguments(
+                            tokens,
+                            position + 1,
+                            closeParen);
+
+                    position =
+                        closeParen + 1;
+                }
+            }
+
+            // Если после inherited-вызова остался
+            // неожиданный хвост, сохраняем его отдельно
+            // через Raw-узел, чтобы ничего не потерять.
+            if (position < end)
+            {
+                var remaining =
+                    ParseRange(
+                        tokens,
+                        position,
+                        end);
+
+                arguments.Add(
+                    remaining);
+            }
+
+            return new ExpressionNode(
+                ExpressionKind.Inherited,
+                method,
+                arguments);
+        }
+
         // Binary operators.
         int binaryIndex =
             FindTopLevelBinaryOperator(
@@ -121,9 +207,23 @@ public static class ExpressionParser
                     binaryIndex + 1,
                     end);
 
+            string operatorText =
+                tokens[binaryIndex].Text;
+
+            ExpressionKind kind =
+                operatorText.Equals(
+                    "is",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? ExpressionKind.TypeTest
+                    : operatorText.Equals(
+                        "as",
+                        StringComparison.OrdinalIgnoreCase)
+                        ? ExpressionKind.TypeCast
+                        : ExpressionKind.Binary;
+
             return new ExpressionNode(
-                ExpressionKind.Binary,
-                tokens[binaryIndex].Text,
+                kind,
+                operatorText,
                 new[]
                 {
                     left,
@@ -131,7 +231,7 @@ public static class ExpressionParser
                 });
         }
 
-        // Unary operators.
+        // Prefix unary operators.
         if (IsUnaryOperator(
                 tokens[start].Text))
         {
@@ -150,132 +250,48 @@ public static class ExpressionParser
                 });
         }
 
-        // Function / method call.
-        //
-        // Example:
-        //   Trunc(Value)
-        //   f_CurContext.DoAction(anActionData)
-        int openParen =
-            FindCallParenthesis(
-                tokens,
-                start,
-                end);
-
-        if (openParen > start)
+        // Pascal address-of operator.
+        if (tokens[start].Text == "@")
         {
-            int closeParen =
-                FindMatchingParenthesis(
-                    tokens,
-                    openParen,
-                    end);
-
-            if (closeParen == end - 1)
-            {
-                var target =
-                    ParseRange(
-                        tokens,
-                        start,
-                        openParen);
-
-                var arguments =
-                    ParseArguments(
-                        tokens,
-                        openParen + 1,
-                        closeParen);
-
-                return new ExpressionNode(
-                    ExpressionKind.Call,
-                    "call",
-                    new[]
-                    {
-                        target
-                    }
-                    .Concat(arguments)
-                    .ToList());
-            }
-        }
-
-        // Index access.
-        //
-        // Example:
-        //   rData[1]
-        //   c_DefaultFonts[I]
-        //
-        // Important: this is checked before member access so that
-        // the indexed expression itself becomes a proper node.
-        int bracketIndex =
-            FindTopLevelOpenBracket(
-                tokens,
-                start,
-                end);
-
-        if (bracketIndex > start)
-        {
-            int closeBracket =
-                FindMatchingBracket(
-                    tokens,
-                    bracketIndex,
-                    end);
-
-            if (closeBracket == end - 1)
-            {
-                var target =
-                    ParseRange(
-                        tokens,
-                        start,
-                        bracketIndex);
-
-                var index =
-                    ParseRange(
-                        tokens,
-                        bracketIndex + 1,
-                        closeBracket);
-
-                return new ExpressionNode(
-                    ExpressionKind.IndexAccess,
-                    "[]",
-                    new[]
-                    {
-                        target,
-                        index
-                    });
-            }
-        }
-
-        // Member access.
-        //
-        // Example:
-        //   f_CurContext.DoAction
-        //   c_DefaultFonts[I].rFontFileName
-        int dotIndex =
-            FindTopLevelMemberDot(
-                tokens,
-                start,
-                end);
-
-        if (dotIndex > start &&
-            dotIndex < end - 1)
-        {
-            var left =
+            var operand =
                 ParseRange(
                     tokens,
-                    start,
-                    dotIndex);
-
-            var right =
-                ParseRange(
-                    tokens,
-                    dotIndex + 1,
+                    start + 1,
                     end);
 
             return new ExpressionNode(
-                ExpressionKind.MemberAccess,
-                ".",
+                ExpressionKind.AddressOf,
+                "@",
                 new[]
                 {
-                    left,
-                    right
+                    operand
                 });
+        }
+
+        // Postfix expression chain:
+        //
+        // A.B
+        // A.B.C
+        // A[B]
+        // A[B].C
+        // A(B)
+        // A.B(X)
+        // A.B(X).C
+        // A[B](X)
+        // A^
+        // A[B]^
+        //
+        // Разбираем базовое выражение, а затем
+        // последовательно навешиваем postfix-операции.
+        ExpressionNode? postfix =
+            ParsePostfix(
+                tokens,
+                start,
+                end);
+
+        if (postfix is not null)
+        {
+            return postfix;
         }
 
         // Single identifier / keyword / literal.
@@ -314,6 +330,354 @@ public static class ExpressionParser
             Array.Empty<ExpressionNode>());
     }
 
+    private static ExpressionNode? ParsePostfix(
+        IReadOnlyList<LexerToken> tokens,
+        int start,
+        int end)
+    {
+        if (start >= end)
+        {
+            return null;
+        }
+
+        int position =
+            start;
+
+        ExpressionNode? expression =
+            ParsePrimary(
+                tokens,
+                ref position,
+                end);
+
+        if (expression is null)
+        {
+            return null;
+        }
+
+        while (position < end)
+        {
+            // Member access:
+            //
+            // A.B
+            // A.B.C
+            // A().B
+            // A[B].C
+            if (tokens[position].Text == ".")
+            {
+                if (position + 1 >= end)
+                {
+                    return null;
+                }
+
+                position++;
+
+                ExpressionNode? member =
+                    ParseIdentifierOrLiteral(
+                        tokens,
+                        ref position,
+                        end);
+
+                if (member is null)
+                {
+                    return null;
+                }
+
+                expression =
+                    new ExpressionNode(
+                        ExpressionKind.MemberAccess,
+                        ".",
+                        new[]
+                        {
+                            expression,
+                            member
+                        });
+
+                continue;
+            }
+
+            // Index access:
+            //
+            // A[B]
+            // A[B].C
+            // A[B](X)
+            if (tokens[position].Text == "[")
+            {
+                int closeBracket =
+                    FindMatchingBracket(
+                        tokens,
+                        position,
+                        end);
+
+                if (closeBracket < 0)
+                {
+                    return null;
+                }
+
+                var indices =
+                    ParseArguments(
+                        tokens,
+                        position + 1,
+                        closeBracket);
+
+                expression =
+                    new ExpressionNode(
+                        ExpressionKind.IndexAccess,
+                        "[]",
+                        new[]
+                        {
+                expression
+                        }
+                        .Concat(indices)
+                        .ToList());
+
+                position =
+                    closeBracket + 1;
+
+                continue;
+            }
+
+            // Call:
+            //
+            // A()
+            // A(X)
+            // A.B(X)
+            // A[B](X)
+            if (tokens[position].Text == "(")
+            {
+                int closeParen =
+                    FindMatchingParenthesis(
+                        tokens,
+                        position,
+                        end);
+
+                if (closeParen < 0)
+                {
+                    return null;
+                }
+
+                var arguments =
+                    ParseArguments(
+                        tokens,
+                        position + 1,
+                        closeParen);
+
+                expression =
+                    new ExpressionNode(
+                        ExpressionKind.Call,
+                        "call",
+                        new[]
+                        {
+                            expression
+                        }
+                        .Concat(arguments)
+                        .ToList());
+
+                position =
+                    closeParen + 1;
+
+                continue;
+            }
+
+            // Pascal dereference operator:
+            //
+            // A^
+            // A.B^
+            // A[B]^
+            if (tokens[position].Text == "^")
+            {
+                expression =
+                    new ExpressionNode(
+                        ExpressionKind.Dereference,
+                        "^",
+                        new[]
+                        {
+                            expression
+                        });
+
+                position++;
+
+                continue;
+            }
+
+            return null;
+        }
+
+        return expression;
+    }
+
+    private static ExpressionNode? ParsePrimary(
+        IReadOnlyList<LexerToken> tokens,
+        ref int position,
+        int end)
+    {
+        if (position >= end)
+        {
+            return null;
+        }
+
+        LexerToken token =
+            tokens[position];
+
+        if (token.Kind == TokenKind.Identifier ||
+            token.Kind == TokenKind.Keyword)
+        {
+            position++;
+
+            return new ExpressionNode(
+                ExpressionKind.Identifier,
+                token.Text,
+                Array.Empty<ExpressionNode>());
+        }
+
+        if (token.Kind == TokenKind.Character)
+        {
+            int literalStart = position;
+
+            while (position < end)
+            {
+                LexerToken current =
+                    tokens[position];
+
+                if (current.Kind != TokenKind.Character &&
+                    current.Kind != TokenKind.String)
+                {
+                    break;
+                }
+
+                position++;
+            }
+
+            string text =
+                string.Concat(
+                    tokens
+                        .Skip(literalStart)
+                        .Take(position - literalStart)
+                        .Select(token => token.Text));
+
+            return new ExpressionNode(
+                ExpressionKind.Literal,
+                text,
+                Array.Empty<ExpressionNode>());
+        }
+
+        if (token.Kind == TokenKind.Number ||
+            token.Kind == TokenKind.String ||
+            token.Kind == TokenKind.Character)
+        {
+            position++;
+
+            return new ExpressionNode(
+                ExpressionKind.Literal,
+                token.Text,
+                Array.Empty<ExpressionNode>());
+        }
+
+        if (token.Text == "(")
+        {
+            int closeParen =
+                FindMatchingParenthesis(
+                    tokens,
+                    position,
+                    end);
+
+            if (closeParen < 0)
+            {
+                return null;
+            }
+
+            var inner =
+                ParseRange(
+                    tokens,
+                    position + 1,
+                    closeParen);
+
+            position =
+                closeParen + 1;
+
+            return inner;
+        }
+
+        // Pascal set constructor:
+        //
+        // []
+        // [A]
+        // [A, B]
+        // [A, B, C]
+        //
+        // Здесь "[" является началом выражения.
+        // В отличие от A[B], который обрабатывается
+        // в ParsePostfix как IndexAccess.
+        if (token.Text == "[")
+        {
+            int closeBracket =
+                FindMatchingBracket(
+                    tokens,
+                    position,
+                    end);
+
+            if (closeBracket < 0)
+            {
+                return null;
+            }
+
+            var elements =
+                ParseArguments(
+                    tokens,
+                    position + 1,
+                    closeBracket);
+
+            position =
+                closeBracket + 1;
+
+            return new ExpressionNode(
+                ExpressionKind.Set,
+                "set",
+                elements);
+        }
+
+        return null;
+    }
+
+    private static ExpressionNode?
+        ParseIdentifierOrLiteral(
+            IReadOnlyList<LexerToken> tokens,
+            ref int position,
+            int end)
+    {
+        if (position >= end)
+        {
+            return null;
+        }
+
+        LexerToken token =
+            tokens[position];
+
+        if (token.Kind == TokenKind.Identifier ||
+            token.Kind == TokenKind.Keyword)
+        {
+            position++;
+
+            return new ExpressionNode(
+                ExpressionKind.Identifier,
+                token.Text,
+                Array.Empty<ExpressionNode>());
+        }
+
+        if (token.Kind == TokenKind.Number ||
+            token.Kind == TokenKind.String ||
+            token.Kind == TokenKind.Character)
+        {
+            position++;
+
+            return new ExpressionNode(
+                ExpressionKind.Literal,
+                token.Text,
+                Array.Empty<ExpressionNode>());
+        }
+
+        return null;
+    }
+
     private static List<ExpressionNode> ParseArguments(
         IReadOnlyList<LexerToken> tokens,
         int start,
@@ -327,7 +691,9 @@ public static class ExpressionParser
             return result;
         }
 
-        int currentStart = start;
+        int currentStart =
+            start;
+
         int roundDepth = 0;
         int squareDepth = 0;
 
@@ -376,11 +742,8 @@ public static class ExpressionParser
             }
         }
 
-        // Вызов без аргументов:
-        //
-        // Foo()
-        //
-        // не должен создавать пустой аргумент.
+        // Вызов / set constructor без элементов
+        // не должен создавать пустой элемент.
         if (currentStart < end)
         {
             result.Add(
@@ -391,61 +754,6 @@ public static class ExpressionParser
         }
 
         return result;
-    }
-
-    private static int FindCallParenthesis(
-        IReadOnlyList<LexerToken> tokens,
-        int start,
-        int end)
-    {
-        int roundDepth = 0;
-        int squareDepth = 0;
-
-        for (int i = start;
-             i < end;
-             i++)
-        {
-            string text =
-                tokens[i].Text;
-
-            if (text == "[")
-            {
-                squareDepth++;
-                continue;
-            }
-
-            if (text == "]")
-            {
-                if (squareDepth > 0)
-                {
-                    squareDepth--;
-                }
-
-                continue;
-            }
-
-            if (text == "(")
-            {
-                if (roundDepth == 0 &&
-                    squareDepth == 0)
-                {
-                    return i;
-                }
-
-                roundDepth++;
-                continue;
-            }
-
-            if (text == ")")
-            {
-                if (roundDepth > 0)
-                {
-                    roundDepth--;
-                }
-            }
-        }
-
-        return -1;
     }
 
     private static int FindMatchingParenthesis(
@@ -479,61 +787,6 @@ public static class ExpressionParser
         return -1;
     }
 
-    private static int FindTopLevelOpenBracket(
-        IReadOnlyList<LexerToken> tokens,
-        int start,
-        int end)
-    {
-        int roundDepth = 0;
-        int squareDepth = 0;
-
-        for (int i = start;
-             i < end;
-             i++)
-        {
-            string text =
-                tokens[i].Text;
-
-            if (text == "(")
-            {
-                roundDepth++;
-                continue;
-            }
-
-            if (text == ")")
-            {
-                if (roundDepth > 0)
-                {
-                    roundDepth--;
-                }
-
-                continue;
-            }
-
-            if (text == "[")
-            {
-                if (roundDepth == 0 &&
-                    squareDepth == 0)
-                {
-                    return i;
-                }
-
-                squareDepth++;
-                continue;
-            }
-
-            if (text == "]")
-            {
-                if (squareDepth > 0)
-                {
-                    squareDepth--;
-                }
-            }
-        }
-
-        return -1;
-    }
-
     private static int FindMatchingBracket(
         IReadOnlyList<LexerToken> tokens,
         int openIndex,
@@ -559,64 +812,6 @@ public static class ExpressionParser
                 {
                     return i;
                 }
-            }
-        }
-
-        return -1;
-    }
-
-    private static int FindTopLevelMemberDot(
-        IReadOnlyList<LexerToken> tokens,
-        int start,
-        int end)
-    {
-        int roundDepth = 0;
-        int squareDepth = 0;
-
-        for (int i = start;
-             i < end;
-             i++)
-        {
-            string text =
-                tokens[i].Text;
-
-            if (text == "(")
-            {
-                roundDepth++;
-                continue;
-            }
-
-            if (text == ")")
-            {
-                if (roundDepth > 0)
-                {
-                    roundDepth--;
-                }
-
-                continue;
-            }
-
-            if (text == "[")
-            {
-                squareDepth++;
-                continue;
-            }
-
-            if (text == "]")
-            {
-                if (squareDepth > 0)
-                {
-                    squareDepth--;
-                }
-
-                continue;
-            }
-
-            if (text == "." &&
-                roundDepth == 0 &&
-                squareDepth == 0)
-            {
-                return i;
             }
         }
 
@@ -663,12 +858,20 @@ public static class ExpressionParser
          * This is intentionally still a simplified Delphi
          * precedence table. It is enough for the current
          * structural expression layer.
+         *
+         * "is", "as" and "in" are included here because
+         * they behave as binary expression operators for
+         * the structural AST.
          */
+
         string[] operators =
         {
             "or",
             "xor",
             "and",
+            "in",
+            "is",
+            "as",
             "=",
             "<>",
             "<",

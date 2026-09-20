@@ -27,6 +27,17 @@ public static class BehaviorAnalyzer
         string Header,
         IReadOnlyList<BehaviorStatement> Statements);
 
+    public sealed record ForLoopInfo(
+        string Variable,
+        ExpressionParser.ExpressionNode From,
+        string Direction,
+        ExpressionParser.ExpressionNode To);
+
+    public sealed record InheritedCallInfo(
+        string Method,
+        IReadOnlyList<
+            ExpressionParser.ExpressionNode> Arguments);
+
     public sealed record BehaviorStatement(
         StatementKind Kind,
         string Text,
@@ -35,7 +46,10 @@ public static class BehaviorAnalyzer
         IReadOnlyList<BehaviorStatement>? ElseChildren = null,
         string? SecondaryText = null,
         IReadOnlyList<BehaviorClause>? Clauses = null,
-        ExpressionParser.AssignmentExpression? Assignment = null);
+        ExpressionParser.AssignmentExpression? Assignment = null,
+        ExpressionParser.ExpressionNode? Expression = null,
+        ForLoopInfo? ForLoop = null,
+        InheritedCallInfo? InheritedCall = null);
 
     public sealed record BehaviorInfo(
         string FilePath,
@@ -125,6 +139,39 @@ public static class BehaviorAnalyzer
             AddLine(
                 lines,
                 $"{indent}  VALUE: {value}");
+        }
+        else if (statement.Expression is not null)
+        {
+            AddLine(
+                lines,
+                $"{indent}  EXPRESSION: " +
+                FormatExpression(
+                    statement.Expression));
+        }
+
+        if (statement.ForLoop is not null)
+        {
+            AddLine(
+                lines,
+                $"{indent}  VARIABLE: " +
+                statement.ForLoop.Variable);
+
+            AddLine(
+                lines,
+                $"{indent}  FROM: " +
+                FormatExpression(
+                    statement.ForLoop.From));
+
+            AddLine(
+                lines,
+                $"{indent}  DIRECTION: " +
+                statement.ForLoop.Direction);
+
+            AddLine(
+                lines,
+                $"{indent}  TO: " +
+                FormatExpression(
+                    statement.ForLoop.To));
         }
 
         if (!string.IsNullOrWhiteSpace(
@@ -269,6 +316,11 @@ public static class BehaviorAnalyzer
                 return ParseTry();
             }
 
+            if (PeekText("with"))
+            {
+                return ParseWith();
+            }
+
             if (PeekText("raise"))
             {
                 return ParseSimpleStatement(
@@ -293,7 +345,140 @@ public static class BehaviorAnalyzer
                     StatementKind.Continue);
             }
 
+            if (PeekText("inherited"))
+            {
+                return ParseInheritedStatement();
+            }
+
             return ParseExpressionStatement();
+        }
+
+        private BehaviorStatement ParseInheritedStatement()
+        {
+            int line =
+                Current().Line;
+
+            Advance(); // inherited
+
+            var tokens =
+                new List<LexerToken>();
+
+            while (!IsEnd() &&
+                   !PeekText(";") &&
+                   !PeekText("end") &&
+                   !PeekText("until") &&
+                   !PeekText("except") &&
+                   !PeekText("finally"))
+            {
+                tokens.Add(
+                    Current());
+
+                Advance();
+            }
+
+            MatchText(";");
+
+            if (tokens.Count == 0)
+            {
+                return new BehaviorStatement(
+                    StatementKind.Expression,
+                    "inherited",
+                    line,
+                    Array.Empty<BehaviorStatement>());
+            }
+
+            string text =
+                JoinTokens(tokens);
+
+            string method =
+                tokens[0].Text;
+
+            var argumentTokens =
+                new List<List<LexerToken>>();
+
+            int openParenIndex =
+                -1;
+
+            for (int i = 0;
+                 i < tokens.Count;
+                 i++)
+            {
+                if (tokens[i].Text == "(")
+                {
+                    openParenIndex = i;
+                    break;
+                }
+            }
+
+            if (openParenIndex >= 0 &&
+                tokens[^1].Text == ")")
+            {
+                var currentArgument =
+                    new List<LexerToken>();
+
+                int depth = 0;
+
+                for (int i = openParenIndex + 1;
+                     i < tokens.Count - 1;
+                     i++)
+                {
+                    string token =
+                        tokens[i].Text;
+
+                    if (token == "(" ||
+                        token == "[")
+                    {
+                        depth++;
+                    }
+                    else if (token == ")" ||
+                             token == "]")
+                    {
+                        if (depth > 0)
+                        {
+                            depth--;
+                        }
+                    }
+
+                    if (token == "," &&
+                        depth == 0)
+                    {
+                        argumentTokens.Add(
+                            currentArgument);
+
+                        currentArgument =
+                            new List<LexerToken>();
+
+                        continue;
+                    }
+
+                    currentArgument.Add(
+                        tokens[i]);
+                }
+
+                if (currentArgument.Count > 0)
+                {
+                    argumentTokens.Add(
+                        currentArgument);
+                }
+            }
+
+            var arguments =
+                argumentTokens
+                    .Select(
+                        ExpressionParser.Parse)
+                    .ToList();
+
+            var inheritedCall =
+                new InheritedCallInfo(
+                    method,
+                    arguments);
+
+            return new BehaviorStatement(
+                StatementKind.Call,
+                $"inherited {text}",
+                line,
+                Array.Empty<BehaviorStatement>(),
+                InheritedCall: inheritedCall);
         }
 
         private BehaviorStatement ParseBlock()
@@ -335,6 +520,10 @@ public static class BehaviorAnalyzer
 
             string condition =
                 JoinTokens(conditionTokens);
+
+            ExpressionParser.ExpressionNode expression =
+                ExpressionParser.Parse(
+                    conditionTokens);
 
             var children =
                 new List<BehaviorStatement>();
@@ -380,7 +569,8 @@ public static class BehaviorAnalyzer
                 condition,
                 line,
                 children,
-                elseChildren);
+                elseChildren,
+                Expression: expression);
         }
 
         private BehaviorStatement ParseWhile()
@@ -397,6 +587,10 @@ public static class BehaviorAnalyzer
 
             string condition =
                 JoinTokens(conditionTokens);
+
+            ExpressionParser.ExpressionNode expression =
+                ExpressionParser.Parse(
+                    conditionTokens);
 
             var children =
                 new List<BehaviorStatement>();
@@ -416,7 +610,8 @@ public static class BehaviorAnalyzer
                 StatementKind.While,
                 condition,
                 line,
-                children);
+                children,
+                Expression: expression);
         }
 
         private BehaviorStatement ParseFor()
@@ -434,7 +629,108 @@ public static class BehaviorAnalyzer
             string header =
                 JoinTokens(headerTokens);
 
-            var children =
+            int assignmentIndex =
+                FindTopLevelOperator(
+                    headerTokens,
+                    ":=");
+
+            if (assignmentIndex < 0)
+            {
+                var children =
+                    new List<BehaviorStatement>();
+
+                if (!IsEnd())
+                {
+                    BehaviorStatement? statement =
+                        ParseStatement();
+
+                    if (statement is not null)
+                    {
+                        children.Add(statement);
+                    }
+                }
+
+                return new BehaviorStatement(
+                    StatementKind.For,
+                    header,
+                    line,
+                    children);
+            }
+
+            var variableTokens =
+                headerTokens
+                    .Take(assignmentIndex)
+                    .ToList();
+
+            var rangeTokens =
+                headerTokens
+                    .Skip(assignmentIndex + 1)
+                    .ToList();
+
+            int directionIndex =
+                FindTopLevelKeyword(
+                    rangeTokens,
+                    "to");
+
+            string direction =
+                "TO";
+
+            if (directionIndex < 0)
+            {
+                directionIndex =
+                    FindTopLevelKeyword(
+                        rangeTokens,
+                        "downto");
+
+                direction =
+                    "DOWNTO";
+            }
+
+            if (directionIndex < 0)
+            {
+                var children =
+                    new List<BehaviorStatement>();
+
+                if (!IsEnd())
+                {
+                    BehaviorStatement? statement =
+                        ParseStatement();
+
+                    if (statement is not null)
+                    {
+                        children.Add(statement);
+                    }
+                }
+
+                return new BehaviorStatement(
+                    StatementKind.For,
+                    header,
+                    line,
+                    children);
+            }
+
+            var fromTokens =
+                rangeTokens
+                    .Take(directionIndex)
+                    .ToList();
+
+            var toTokens =
+                rangeTokens
+                    .Skip(directionIndex + 1)
+                    .ToList();
+
+            string variable =
+                JoinTokens(variableTokens);
+
+            ExpressionParser.ExpressionNode from =
+                ExpressionParser.Parse(
+                    fromTokens);
+
+            ExpressionParser.ExpressionNode to =
+                ExpressionParser.Parse(
+                    toTokens);
+
+            var childrenFor =
                 new List<BehaviorStatement>();
 
             if (!IsEnd())
@@ -444,15 +740,23 @@ public static class BehaviorAnalyzer
 
                 if (statement is not null)
                 {
-                    children.Add(statement);
+                    childrenFor.Add(statement);
                 }
             }
+
+            var forLoop =
+                new ForLoopInfo(
+                    variable,
+                    from,
+                    direction,
+                    to);
 
             return new BehaviorStatement(
                 StatementKind.For,
                 header,
                 line,
-                children);
+                childrenFor,
+                ForLoop: forLoop);
         }
 
         private BehaviorStatement ParseCase()
@@ -495,8 +799,12 @@ public static class BehaviorAnalyzer
 
             MatchText("of");
 
-            string expression =
+            string expressionText =
                 JoinTokens(expressionTokens);
+
+            ExpressionParser.ExpressionNode expression =
+                ExpressionParser.Parse(
+                    expressionTokens);
 
             var children =
                 new List<BehaviorStatement>();
@@ -582,9 +890,10 @@ public static class BehaviorAnalyzer
 
             return new BehaviorStatement(
                 StatementKind.Case,
-                expression,
+                expressionText,
                 line,
-                children);
+                children,
+                Expression: expression);
         }
 
         private BehaviorStatement ParseRepeat()
@@ -606,13 +915,18 @@ public static class BehaviorAnalyzer
             string condition =
                 JoinTokens(conditionTokens);
 
+            ExpressionParser.ExpressionNode expression =
+                ExpressionParser.Parse(
+                    conditionTokens);
+
             MatchText(";");
 
             return new BehaviorStatement(
                 StatementKind.Repeat,
                 $"until {condition}",
                 line,
-                body);
+                body,
+                Expression: expression);
         }
 
         private BehaviorStatement ParseTry()
@@ -671,8 +985,48 @@ public static class BehaviorAnalyzer
                 Clauses: clauses);
         }
 
-        private List<BehaviorStatement>
-            ParseExceptionHandlers()
+        private BehaviorStatement ParseWith()
+        {
+            int line =
+                Current().Line;
+
+            Advance();
+
+            var targetTokens =
+                ReadUntilKeyword("do");
+
+            MatchText("do");
+
+            string targetText =
+                JoinTokens(targetTokens);
+
+            ExpressionParser.ExpressionNode target =
+                ExpressionParser.Parse(
+                    targetTokens);
+
+            var children =
+                new List<BehaviorStatement>();
+
+            if (!IsEnd())
+            {
+                BehaviorStatement? statement =
+                    ParseStatement();
+
+                if (statement is not null)
+                {
+                    children.Add(statement);
+                }
+            }
+
+            return new BehaviorStatement(
+                StatementKind.Expression,
+                $"with {targetText}",
+                line,
+                children,
+                Expression: target);
+        }
+
+        private List<BehaviorStatement> ParseExceptionHandlers()
         {
             var handlers =
                 new List<BehaviorStatement>();
@@ -711,8 +1065,7 @@ public static class BehaviorAnalyzer
             return handlers;
         }
 
-        private BehaviorStatement
-            ParseExceptionHandler()
+        private BehaviorStatement ParseExceptionHandler()
         {
             int line =
                 Current().Line;
@@ -726,6 +1079,24 @@ public static class BehaviorAnalyzer
 
             string header =
                 JoinTokens(headerTokens);
+
+            string? exceptionType = null;
+
+            int colonIndex =
+                headerTokens
+                    .ToList()
+                    .FindIndex(
+                        token => token.Text == ":");
+
+            if (colonIndex >= 0 &&
+                colonIndex + 1 < headerTokens.Count)
+            {
+                exceptionType =
+                    string.Concat(
+                        headerTokens
+                            .Skip(colonIndex + 1)
+                            .Select(token => token.Text));
+            }
 
             var children =
                 new List<BehaviorStatement>();
@@ -745,7 +1116,8 @@ public static class BehaviorAnalyzer
                 StatementKind.Expression,
                 $"on {header}",
                 line,
-                children);
+                children,
+                SecondaryText: exceptionType);
         }
 
         private BehaviorStatement?
@@ -851,18 +1223,28 @@ public static class BehaviorAnalyzer
 
             if (LooksLikeCall(statementTokens))
             {
+                ExpressionParser.ExpressionNode expression =
+                    ExpressionParser.Parse(
+                        statementTokens);
+
                 return new BehaviorStatement(
                     StatementKind.Call,
                     text,
                     line,
-                    Array.Empty<BehaviorStatement>());
+                    Array.Empty<BehaviorStatement>(),
+                    Expression: expression);
             }
+
+            ExpressionParser.ExpressionNode parsedExpression =
+                ExpressionParser.Parse(
+                    statementTokens);
 
             return new BehaviorStatement(
                 StatementKind.Expression,
                 text,
                 line,
-                Array.Empty<BehaviorStatement>());
+                Array.Empty<BehaviorStatement>(),
+                Expression: parsedExpression);
         }
 
         private BehaviorStatement ParseSimpleStatement(
@@ -873,6 +1255,11 @@ public static class BehaviorAnalyzer
 
             int line =
                 Current().Line;
+
+            string keyword =
+                Current().Text;
+
+            Advance();
 
             while (!IsEnd() &&
                    !PeekText(";") &&
@@ -889,11 +1276,22 @@ public static class BehaviorAnalyzer
 
             MatchText(";");
 
+            string text =
+                tokens.Count == 0
+                    ? keyword
+                    : $"{keyword} {JoinTokens(tokens)}";
+
+            ExpressionParser.ExpressionNode? expression =
+                tokens.Count > 0
+                    ? ExpressionParser.Parse(tokens)
+                    : null;
+
             return new BehaviorStatement(
                 kind,
-                JoinTokens(tokens),
+                text,
                 line,
-                Array.Empty<BehaviorStatement>());
+                Array.Empty<BehaviorStatement>(),
+                Expression: expression);
         }
 
         private List<BehaviorStatement>
@@ -1057,6 +1455,66 @@ public static class BehaviorAnalyzer
             return false;
         }
 
+        private static int FindTopLevelKeyword(
+            IReadOnlyList<LexerToken> tokens,
+            string keyword)
+        {
+            int roundDepth = 0;
+            int squareDepth = 0;
+
+            for (int i = 0;
+                 i < tokens.Count;
+                 i++)
+            {
+                string current =
+                    tokens[i].Text;
+
+                if (current == "(")
+                {
+                    roundDepth++;
+                    continue;
+                }
+
+                if (current == ")")
+                {
+                    if (roundDepth > 0)
+                    {
+                        roundDepth--;
+                    }
+
+                    continue;
+                }
+
+                if (current == "[")
+                {
+                    squareDepth++;
+                    continue;
+                }
+
+                if (current == "]")
+                {
+                    if (squareDepth > 0)
+                    {
+                        squareDepth--;
+                    }
+
+                    continue;
+                }
+
+                if (roundDepth == 0 &&
+                    squareDepth == 0 &&
+                    string.Equals(
+                        current,
+                        keyword,
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
         private static int FindTopLevelOperator(
             IReadOnlyList<LexerToken> tokens,
             string text)
@@ -1191,10 +1649,13 @@ public static class BehaviorAnalyzer
     }
 
     private static string FormatExpression(
-    ExpressionParser.ExpressionNode expression)
+        ExpressionParser.ExpressionNode expression)
     {
         return expression.Kind switch
         {
+            ExpressionParser.ExpressionKind.Empty =>
+                "EMPTY",
+
             ExpressionParser.ExpressionKind.Identifier =>
                 $"IDENTIFIER {expression.Text}",
 

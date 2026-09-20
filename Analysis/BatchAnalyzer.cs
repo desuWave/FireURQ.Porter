@@ -1,4 +1,5 @@
 using System.Text;
+
 using FireURQ.Porter.AST;
 using FireURQ.Porter.Lexer;
 using FireURQ.Porter.Parser;
@@ -8,7 +9,7 @@ namespace FireURQ.Porter.Analysis;
 public static class BatchAnalyzer
 {
     public static ProjectDependencyGraph? Analyze(
-    string rootPath)
+        string rootPath)
     {
         Console.WriteLine();
         Console.WriteLine("================================");
@@ -22,7 +23,6 @@ public static class BatchAnalyzer
             Console.WriteLine("ERROR: Directory not found:");
             Console.WriteLine(rootPath);
             Console.WriteLine();
-
             return null;
         }
 
@@ -46,6 +46,9 @@ public static class BatchAnalyzer
         int success = 0;
         int failed = 0;
 
+        var progress =
+            new ConsoleProgressBar();
+
         int totalTokens = 0;
         int totalClasses = 0;
         int totalInterfaces = 0;
@@ -61,16 +64,15 @@ public static class BatchAnalyzer
         var analyses =
             new List<ProjectAnalysisResult>();
 
+        var behaviors =
+            new List<BehaviorAnalyzer.BehaviorInfo>();
+
         foreach (var file in files)
         {
             string relativePath =
                 Path.GetRelativePath(
                     rootPath,
                     file);
-
-            Console.WriteLine("--------------------------------");
-            Console.WriteLine(relativePath);
-            Console.WriteLine("--------------------------------");
 
             try
             {
@@ -91,15 +93,6 @@ public static class BatchAnalyzer
                 DelphiUnit unit =
                     parser.ParseUnit();
 
-                Console.WriteLine(
-                    $"  Uses:       {unit.Uses.Count}");
-
-                foreach (var usedUnit in unit.Uses)
-                {
-                    Console.WriteLine(
-                        $"    -> {usedUnit}");
-                }
-
                 var semanticModel =
                     SemanticModelBuilder.Build(
                         unit);
@@ -114,6 +107,33 @@ public static class BatchAnalyzer
                         semanticModel,
                         dependencyGraph,
                         tokens.Count));
+
+                /*
+                 * Build behavior information from the same
+                 * already parsed DelphiUnit.
+                 *
+                 * This does not create another lexer/parser pass.
+                 */
+                IReadOnlyList<BodyTokenAnalyzer.BodyInfo> bodies =
+                    BodyTokenAnalyzer.Analyze(
+                        unit,
+                        file);
+
+                foreach (
+                    BodyTokenAnalyzer.BodyInfo body
+                    in bodies)
+                {
+                    if (body.BodyTokens.Count == 0)
+                        continue;
+
+                    BehaviorAnalyzer.BehaviorInfo behavior =
+                        BehaviorAnalyzer.Analyze(
+                            body.FilePath,
+                            body.Name,
+                            body.BodyTokens);
+
+                    behaviors.Add(behavior);
+                }
 
                 int classes =
                     semanticModel.Classes.Count;
@@ -135,36 +155,6 @@ public static class BatchAnalyzer
 
                 int graphEdges =
                     dependencyGraph.Edges.Count;
-
-                Console.WriteLine(
-                    $"  Unit:       {unit.Name}");
-
-                Console.WriteLine(
-                    $"  Tokens:     {tokens.Count}");
-
-                Console.WriteLine(
-                    $"  Classes:    {classes}");
-
-                Console.WriteLine(
-                    $"  Interfaces: {interfaces}");
-
-                Console.WriteLine(
-                    $"  Types:      {types}");
-
-                Console.WriteLine(
-                    $"  Constants:  {constants}");
-
-                Console.WriteLine(
-                    $"  Functions:  {functions}");
-
-                Console.WriteLine(
-                    $"  Graph nodes:{graphNodes}");
-
-                Console.WriteLine(
-                    $"  Graph edges:{graphEdges}");
-
-                Console.WriteLine(
-                    "  Status:     OK");
 
                 totalTokens +=
                     tokens.Count;
@@ -194,12 +184,6 @@ public static class BatchAnalyzer
             }
             catch (Exception ex)
             {
-                Console.WriteLine(
-                    "  Status:     FAIL");
-
-                Console.WriteLine(
-                    $"  Error:      {ex.Message}");
-
                 failed++;
 
                 string error =
@@ -215,8 +199,16 @@ public static class BatchAnalyzer
                 }
             }
 
-            Console.WriteLine();
+            progress.Report(
+                success + failed,
+                files.Count);
         }
+
+        progress.Complete(
+            files.Count,
+            "Analysis complete");
+
+        Console.WriteLine();
 
         Console.WriteLine("================================");
         Console.WriteLine(" FireURQ Project Summary");
@@ -262,20 +254,35 @@ public static class BatchAnalyzer
         if (errors.Count > 0)
         {
             Console.WriteLine();
+
             Console.WriteLine("================================");
             Console.WriteLine(" Failure Categories");
             Console.WriteLine("================================");
 
-            foreach (var item in
-                     errors
-                         .OrderByDescending(
-                             x => x.Value)
-                         .ThenBy(x => x.Key))
+            foreach (
+                var item in
+                errors
+                    .OrderByDescending(
+                        x => x.Value)
+                    .ThenBy(x => x.Key))
             {
                 Console.WriteLine(
                     $"  {item.Value,3}x  {item.Key}");
             }
         }
+
+        /*
+         * Expression census.
+         *
+         * The BehaviorInfo objects were collected during
+         * the same file-analysis pass above.
+         */
+        ExpressionCensus.Counts expressionCounts =
+            ExpressionCensus.Analyze(
+                behaviors);
+
+        ExpressionCensus.Print(
+            expressionCounts);
 
         Console.WriteLine();
 
@@ -321,6 +328,7 @@ public static class BatchAnalyzer
         Console.WriteLine("================================");
         Console.WriteLine(" Batch Analysis Complete");
         Console.WriteLine("================================");
+
         Console.WriteLine();
 
         return projectGraph;
