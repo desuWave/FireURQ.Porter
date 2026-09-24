@@ -111,30 +111,31 @@ public static class ExpressionCensus
     public static void Print(
         Counts counts)
     {
-        Console.WriteLine();
-        Console.WriteLine(
-            "================================");
-        Console.WriteLine(
-            " Expression Census");
-        Console.WriteLine(
-            "================================");
-        Console.WriteLine();
+        Print(
+            counts,
+            Console.Out);
+    }
 
-        Console.WriteLine(
-            $"Expression nodes:           " +
-            $"{counts.TotalNodes}");
+    public static void Print(
+        Counts counts,
+        TextWriter writer)
+    {
+        writer.WriteLine();
+        writer.WriteLine("================================");
+        writer.WriteLine(" Expression Census");
+        writer.WriteLine("================================");
+        writer.WriteLine();
 
-        Console.WriteLine(
-            $"Statements with expression: " +
-            $"{counts.StatementsWithExpressions}");
+        writer.WriteLine(
+            $"Expression nodes:           {counts.TotalNodes}");
 
-        Console.WriteLine();
+        writer.WriteLine(
+            $"Statements with expression: {counts.StatementsWithExpressions}");
 
-        Console.WriteLine(
-            "By kind");
+        writer.WriteLine();
 
-        Console.WriteLine(
-            "--------------------------------");
+        writer.WriteLine("By kind");
+        writer.WriteLine("--------------------------------");
 
         foreach (
             ExpressionParser.ExpressionKind kind
@@ -145,7 +146,7 @@ public static class ExpressionCensus
                 kind,
                 out int count);
 
-            Console.WriteLine(
+            writer.WriteLine(
                 $"{kind,-16} {count,6}");
         }
 
@@ -178,31 +179,26 @@ public static class ExpressionCensus
                 : raw * 100.0 /
                   counts.TotalNodes;
 
-        Console.WriteLine();
+        writer.WriteLine();
 
-        Console.WriteLine(
+        writer.WriteLine(
             $"Structured:                  {structured}");
 
-        Console.WriteLine(
+        writer.WriteLine(
             $"Raw:                         {raw}");
 
-        Console.WriteLine(
-            $"Structured coverage:         " +
-            $"{structuredCoverage:F1}%");
+        writer.WriteLine(
+            $"Structured coverage:         {structuredCoverage:F1}%");
 
-        Console.WriteLine(
-            $"Raw share:                   " +
-            $"{rawShare:F1}%");
+        writer.WriteLine(
+            $"Raw share:                   {rawShare:F1}%");
 
         if (counts.RawExpressions.Count > 0)
         {
-            Console.WriteLine();
+            writer.WriteLine();
 
-            Console.WriteLine(
-                "Raw expressions");
-
-            Console.WriteLine(
-                "--------------------------------");
+            writer.WriteLine("Raw expressions");
+            writer.WriteLine("--------------------------------");
 
             int index = 1;
 
@@ -215,7 +211,7 @@ public static class ExpressionCensus
                         pair => pair.Key,
                         StringComparer.Ordinal))
             {
-                Console.WriteLine(
+                writer.WriteLine(
                     $"{index,3}. " +
                     $"{pair.Value,3}x  " +
                     $"{pair.Key}");
@@ -223,27 +219,33 @@ public static class ExpressionCensus
                 index++;
             }
 
-            Console.WriteLine();
+            writer.WriteLine();
 
-            Console.WriteLine(
+            writer.WriteLine(
                 $"Unique Raw expressions: " +
                 $"{counts.RawExpressions.Count}");
         }
 
-        Console.WriteLine();
+        writer.WriteLine();
     }
 
     public static void PrintSemantic(
         SemanticCounts counts)
     {
-        Console.WriteLine();
-        Console.WriteLine(
-            "================================");
-        Console.WriteLine(
-            " Semantic Census");
-        Console.WriteLine(
-            "================================");
-        Console.WriteLine();
+        PrintSemantic(
+            counts,
+            Console.Out);
+    }
+
+    public static void PrintSemantic(
+        SemanticCounts counts,
+        TextWriter writer)
+    {
+        writer.WriteLine();
+        writer.WriteLine("================================");
+        writer.WriteLine(" Semantic Census");
+        writer.WriteLine("================================");
+        writer.WriteLine();
 
         foreach (
             SemanticReferenceKind kind
@@ -254,36 +256,33 @@ public static class ExpressionCensus
                 kind,
                 out int count);
 
-            Console.WriteLine(
+            writer.WriteLine(
                 $"{kind,-16} {count,6}");
         }
 
-        Console.WriteLine();
+        writer.WriteLine();
 
-        Console.WriteLine(
-            "Semantic References");
-
-        Console.WriteLine(
-            "--------------------------------");
+        writer.WriteLine("Semantic References");
+        writer.WriteLine("--------------------------------");
 
         foreach (
             SemanticReference reference
             in counts.References.Take(20))
         {
-            Console.WriteLine(
+            writer.WriteLine(
                 $"{reference.Kind,-16} " +
                 $"{reference.Text,-40} " +
                 $"{reference.FilePath}:{reference.Line} " +
                 $"[{reference.ProcedureName}]");
         }
 
-        Console.WriteLine();
+        writer.WriteLine();
 
-        Console.WriteLine(
+        writer.WriteLine(
             $"Total semantic references: " +
             $"{counts.References.Count}");
 
-        Console.WriteLine();
+        writer.WriteLine();
     }
 
     private static void AnalyzeStatement(
@@ -576,7 +575,9 @@ public static class ExpressionCensus
                         procedureName,
                         line);
 
-                    foreach (ExpressionParser.ExpressionNode child in expression.Children)
+                    foreach (
+                        ExpressionParser.ExpressionNode child
+                        in expression.Children)
                     {
                         CollectSemanticReferences(
                             child,

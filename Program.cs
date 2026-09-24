@@ -55,16 +55,34 @@ if (args[0].Equals(
         return;
     }
 
-    string rootPath = args[1];
+var rootPaths =
+    args
+        .Skip(1)
+        .TakeWhile(
+            arg =>
+                !arg.Equals(
+                    "--export-graph",
+                    StringComparison.OrdinalIgnoreCase))
+        .ToList();
 
-    string? exportPath =
-        GetOptionValue(
-            args,
-            "--export-graph");
+if (rootPaths.Count == 0)
+{
+    Console.WriteLine(
+        "ERROR: Analysis directory is missing.");
 
-    ProjectDependencyGraph? projectGraph =
+    Console.WriteLine();
+
+    return;
+}
+
+string? exportPath =
+    GetOptionValue(
+        args,
+        "--export-graph");
+
+ProjectDependencyGraph? projectGraph =
     BatchAnalyzer.Analyze(
-        rootPath);
+        rootPaths);
 
     if (projectGraph != null &&
     !string.IsNullOrWhiteSpace(exportPath))

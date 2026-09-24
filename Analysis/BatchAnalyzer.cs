@@ -11,6 +11,13 @@ public static class BatchAnalyzer
     public static ProjectDependencyGraph? Analyze(
         string rootPath)
     {
+        return Analyze(
+            new[] { rootPath });
+    }
+
+    public static ProjectDependencyGraph? Analyze(
+        IReadOnlyList<string> rootPaths)
+    {
         Console.WriteLine();
         Console.WriteLine("================================");
         Console.WriteLine(" FireURQ.Porter");
@@ -18,24 +25,54 @@ public static class BatchAnalyzer
         Console.WriteLine("================================");
         Console.WriteLine();
 
-        if (!Directory.Exists(rootPath))
+        if (rootPaths.Count == 0)
         {
-            Console.WriteLine("ERROR: Directory not found:");
-            Console.WriteLine(rootPath);
+            Console.WriteLine(
+                "ERROR: No analysis directories specified.");
+
             Console.WriteLine();
+
             return null;
+        }
+
+        foreach (string rootPath in rootPaths)
+        {
+            if (!Directory.Exists(rootPath))
+            {
+                Console.WriteLine(
+                    "ERROR: Directory not found:");
+
+                Console.WriteLine(rootPath);
+                Console.WriteLine();
+
+                return null;
+            }
         }
 
         Encoding.RegisterProvider(
             CodePagesEncodingProvider.Instance);
 
         var files =
-            Directory
-                .GetFiles(
-                    rootPath,
-                    "*.pas",
-                    SearchOption.AllDirectories)
-                .OrderBy(path => path)
+            rootPaths
+                .SelectMany(
+                    rootPath =>
+                        Directory
+                            .GetFiles(
+                                rootPath,
+                                "*.pas",
+                                SearchOption.AllDirectories)
+                            .Select(
+                                file => new
+                                {
+                                    RootPath = rootPath,
+                                    FilePath = file
+                                }))
+                .OrderBy(
+                    item => item.RootPath,
+                    StringComparer.OrdinalIgnoreCase)
+                .ThenBy(
+                    item => item.FilePath,
+                    StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
         Console.WriteLine(
@@ -67,11 +104,14 @@ public static class BatchAnalyzer
         var behaviors =
             new List<BehaviorAnalyzer.BehaviorInfo>();
 
-        foreach (var file in files)
+        foreach (var item in files)
         {
+            string file =
+                item.FilePath;
+
             string relativePath =
                 Path.GetRelativePath(
-                    rootPath,
+                    item.RootPath,
                     file);
 
             try
@@ -103,17 +143,12 @@ public static class BatchAnalyzer
 
                 analyses.Add(
                     new ProjectAnalysisResult(
+                        item.RootPath,
                         relativePath,
                         semanticModel,
                         dependencyGraph,
                         tokens.Count));
 
-                /*
-                 * Build behavior information from the same
-                 * already parsed DelphiUnit.
-                 *
-                 * This does not create another lexer/parser pass.
-                 */
                 IReadOnlyList<BodyTokenAnalyzer.BodyInfo> bodies =
                     BodyTokenAnalyzer.Analyze(
                         unit,
@@ -132,53 +167,33 @@ public static class BatchAnalyzer
                             body.Name,
                             body.BodyTokens);
 
-                    behaviors.Add(behavior);
+                    behaviors.Add(
+                        behavior);
                 }
-
-                int classes =
-                    semanticModel.Classes.Count;
-
-                int interfaces =
-                    semanticModel.Interfaces.Count;
-
-                int types =
-                    semanticModel.Types.Count;
-
-                int constants =
-                    semanticModel.Constants.Count;
-
-                int functions =
-                    semanticModel.Functions.Count;
-
-                int graphNodes =
-                    dependencyGraph.Nodes.Count;
-
-                int graphEdges =
-                    dependencyGraph.Edges.Count;
 
                 totalTokens +=
                     tokens.Count;
 
                 totalClasses +=
-                    classes;
+                    semanticModel.Classes.Count;
 
                 totalInterfaces +=
-                    interfaces;
+                    semanticModel.Interfaces.Count;
 
                 totalTypes +=
-                    types;
+                    semanticModel.Types.Count;
 
                 totalConstants +=
-                    constants;
+                    semanticModel.Constants.Count;
 
                 totalFunctions +=
-                    functions;
+                    semanticModel.Functions.Count;
 
                 totalGraphNodes +=
-                    graphNodes;
+                    dependencyGraph.Nodes.Count;
 
                 totalGraphEdges +=
-                    graphEdges;
+                    dependencyGraph.Edges.Count;
 
                 success++;
             }
@@ -208,40 +223,32 @@ public static class BatchAnalyzer
             files.Count,
             "Analysis complete");
 
+        Console.WriteLine();
+
+        /*
+         * Everything below this point works with the already
+         * parsed semantic model and behavior information.
+         *
+         * No second lexer/parser pass is performed.
+         */
+
         var semanticUnits =
             analyses
                 .Select(
                     analysis => analysis.SemanticModel)
                 .ToList();
 
-        Console.WriteLine();
-        Console.WriteLine("Semantic Classes: d2dApplication");
-        Console.WriteLine("--------------------------------");
-
-        foreach (SemanticUnit unit in semanticUnits)
-        {
-            if (!unit.Name.Equals(
-                    "d2dApplication",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            foreach (SemanticClass @class in unit.Classes)
-            {
-                Console.WriteLine(
-                    $"Class: {@class.Name}");
-
-                foreach (SemanticMember member in @class.Members)
-                {
-                    Console.WriteLine(
-                        $"  {member.Kind,-12} " +
-                        $"{member.Name,-30} " +
-                        $"Type={member.Type}");
-                }
-            }
-        }
-
+        /*
+         * One common symbol index for all roots.
+         *
+         * This is important for cross-tree resolution:
+         *
+         * F2 + D2D
+         *      v
+         * common SymbolIndex
+         *      v
+         * common SemanticResolver
+         */
         var symbolIndex =
             SymbolIndexBuilder.Build(
                 semanticUnits);
@@ -250,131 +257,96 @@ public static class BatchAnalyzer
             new SemanticResolver(
                 symbolIndex);
 
-        Console.WriteLine();
-        Console.WriteLine("================================");
-        Console.WriteLine(" Symbol Index");
-        Console.WriteLine("================================");
-        Console.WriteLine();
+        var expressionCounts =
+            ExpressionCensus.Analyze(
+                behaviors);
 
-        Console.WriteLine(
-            $"Symbols: {symbolIndex.Count}");
+        var semanticCounts =
+            ExpressionCensus.AnalyzeSemantics(
+                behaviors);
 
-        Console.WriteLine();
-        Console.WriteLine("Tf2Context Members");
-        Console.WriteLine("--------------------------------");
+        var semanticEdges =
+            SemanticDependencyBuilder.Build(
+                semanticCounts.References);
 
-        SemanticClass? tf2Context =
-            semanticUnits
-                .SelectMany(unit => unit.Classes)
-                .FirstOrDefault(
-                    value => value.Name.Equals(
-                        "Tf2Context",
-                        StringComparison.OrdinalIgnoreCase));
+        /*
+         * Build the complete project graph from all parsed units.
+         */
+        var projectGraph =
+            ProjectDependencyGraphBuilder.Build(
+                analyses);
 
-        if (tf2Context is null)
+        /*
+         * Reports
+         */
+        string reportsDirectory =
+            Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "reports");
+
+        Directory.CreateDirectory(
+            reportsDirectory);
+
+        foreach (string rootPath in rootPaths)
         {
-            Console.WriteLine("  <class not found>");
-        }
-        else
-        {
-            Console.WriteLine(
-                $"Members: {tf2Context.Members.Count}");
+            IReadOnlyList<ProjectAnalysisResult> rootAnalyses =
+                analyses
+                    .Where(
+                        analysis =>
+                            analysis.RootPath.Equals(
+                                rootPath,
+                                StringComparison.OrdinalIgnoreCase))
+                    .ToList();
 
-            foreach (SemanticMember member in tf2Context.Members)
-            {
-                Console.WriteLine(
-                    $"  {member.Kind,-18} " +
-                    $"{member.Name,-35} " +
-                    $"Type={member.Type}");
-            }
-        }
+            IReadOnlyList<BehaviorAnalyzer.BehaviorInfo> rootBehaviors =
+                behaviors
+                    .Where(
+                        behavior =>
+                            behavior.FilePath.StartsWith(
+                                rootPath,
+                                StringComparison.OrdinalIgnoreCase))
+                    .ToList();
 
-        Console.WriteLine();
+            var rootSemanticEdges =
+                semanticEdges
+                    .Where(
+                        edge =>
+                            edge.FilePath.StartsWith(
+                                rootPath,
+                                StringComparison.OrdinalIgnoreCase))
+                    .ToList();
 
-        foreach (string name in new[]
-        {
-    "gD2DE",
-    "Tf2Context",
-    "System_Log",
-    "WHandle",
-    "OutError",
-    "VariantToAlign",
-    "f_CurrentSceneObj"
-})
-        {
-            Console.WriteLine(
-                $"Lookup: {name}");
+            string reportFileName =
+                GetReportFileName(
+                    rootPath);
 
-            IReadOnlyList<SymbolInfo> symbols =
-                symbolIndex.Find(name);
+            string reportPath =
+                Path.Combine(
+                    reportsDirectory,
+                    reportFileName);
 
-            if (symbols.Count == 0)
-            {
-                Console.WriteLine(
-                    "  <not found>");
-            }
-            else
-            {
-                foreach (SymbolInfo symbol in symbols)
-                {
-                    Console.WriteLine(
-                        $"  {symbol.Kind,-12} " +
-                        $"{symbol.QualifiedName,-40} " +
-                        $"Unit={symbol.UnitName}" +
-                        (string.IsNullOrWhiteSpace(
-                            symbol.OwnerName)
-                            ? string.Empty
-                            : $" Owner={symbol.OwnerName}") +
-                        (string.IsNullOrWhiteSpace(
-                            symbol.Type)
-                            ? string.Empty
-                            : $" Type={symbol.Type}"));
-                }
-            }
-
-            Console.WriteLine();
-        }
-
-        Console.WriteLine();
-        Console.WriteLine("Semantic Resolver");
-        Console.WriteLine("--------------------------------");
-
-        foreach (string reference in new[]
-        {
-    "gD2DE.System_Log",
-    "gD2DE.WHandle",
-    "gD2DE.Input_GetEvent",
-    "f_CurrentSceneObj.ProcessEvent",
-    "f_CurrentSceneObj.Frame"
-})
-        {
-            ResolvedSymbol? resolved =
-                resolver.ResolveMember(
-                    reference);
+            AnalysisReportWriter.Write(
+                reportPath,
+                GetReportTitle(rootPath),
+                rootAnalyses,
+                rootBehaviors,
+                symbolIndex,
+                resolver,
+                rootSemanticEdges);
 
             Console.WriteLine(
-                $"Resolve: {reference}");
-
-            if (resolved is null)
-            {
-                Console.WriteLine(
-                    "  <not resolved>");
-
-                continue;
-            }
-
-            Console.WriteLine(
-                $"  {resolved.Symbol.Kind,-12} " +
-                $"{resolved.Symbol.QualifiedName,-35} " +
-                $"Unit={resolved.Symbol.UnitName} " +
-                $"Owner={resolved.Symbol.OwnerName}");
+                $"Report: {reportPath}");
         }
 
         Console.WriteLine();
 
+        /*
+         * Compact console summary.
+         */
         Console.WriteLine("================================");
         Console.WriteLine(" FireURQ Project Summary");
         Console.WriteLine("================================");
+        Console.WriteLine();
 
         Console.WriteLine(
             $"Files found:      {files.Count}");
@@ -413,106 +385,38 @@ public static class BatchAnalyzer
         Console.WriteLine(
             $"Graph edges:      {totalGraphEdges}");
 
+        Console.WriteLine();
+
+        Console.WriteLine(
+            $"Symbols:          {symbolIndex.Count}");
+
+        Console.WriteLine(
+            $"Semantic refs:    {semanticCounts.References.Count}");
+
+        Console.WriteLine(
+            $"Semantic edges:   {semanticEdges.Count}");
+
+        Console.WriteLine();
+
+        Console.WriteLine("Project Dependency Graph");
+        Console.WriteLine("--------------------------------");
+
+        Console.WriteLine(
+            $"Units:             {projectGraph.Units.Count}");
+
+        Console.WriteLine(
+            $"Unit edges:        {projectGraph.Edges.Count}");
+
         if (errors.Count > 0)
         {
             Console.WriteLine();
 
-            Console.WriteLine("================================");
-            Console.WriteLine(" Failure Categories");
-            Console.WriteLine("================================");
-
-            foreach (
-                var item in
-                errors
-                    .OrderByDescending(
-                        x => x.Value)
-                    .ThenBy(x => x.Key))
-            {
-                Console.WriteLine(
-                    $"  {item.Value,3}x  {item.Key}");
-            }
-        }
-
-        /*
-         * Expression census.
-         *
-         * The BehaviorInfo objects were collected during
-         * the same file-analysis pass above.
-         */
-
-        Console.WriteLine();
-        Console.WriteLine("Behavior Names");
-        Console.WriteLine("--------------------------------");
-
-        foreach (BehaviorAnalyzer.BehaviorInfo behavior in behaviors.Take(30))
-        {
             Console.WriteLine(
-                $"{behavior.Name,-50} {behavior.FilePath}");
-        }
+                $"Failures:          {failed}");
 
-        Console.WriteLine();
-
-        var expressionCounts =
-            ExpressionCensus.Analyze(
-                behaviors);
-
-        ExpressionCensus.Print(
-            expressionCounts);
-
-        var semanticCounts =
-            ExpressionCensus.AnalyzeSemantics(
-                behaviors);
-
-        ExpressionCensus.PrintSemantic(
-            semanticCounts);
-
-        var semanticEdges =
-            SemanticDependencyBuilder.Build(
-                semanticCounts.References);
-
-        Console.WriteLine();
-        Console.WriteLine("================================");
-        Console.WriteLine(" Semantic Dependency Graph");
-        Console.WriteLine("================================");
-        Console.WriteLine();
-
-        foreach (
-            SemanticDependencyEdge edge
-            in semanticEdges.Take(30))
-        {
             Console.WriteLine(
-                $"{edge.From,-40} " +
-                $"--{edge.Kind}--> " +
-                $"{edge.To,-50} " +
-                $"{edge.FilePath}:{edge.Line}");
+                "See analysis reports for details.");
         }
-
-        Console.WriteLine();
-        Console.WriteLine(
-            $"Semantic dependency edges: {semanticEdges.Count}");
-        Console.WriteLine();
-
-        Console.WriteLine();
-
-        // ====================================================
-        // PROJECT DEPENDENCY GRAPH
-        // ====================================================
-
-        var projectGraph =
-            ProjectDependencyGraphBuilder.Build(
-                analyses);
-
-        Console.WriteLine("================================");
-        Console.WriteLine(" Project Dependency Graph");
-        Console.WriteLine("================================");
-
-        Console.WriteLine();
-
-        Console.WriteLine(
-            $"Units: {projectGraph.Units.Count}");
-
-        Console.WriteLine(
-            $"Unit edges: {projectGraph.Edges.Count}");
 
         Console.WriteLine();
 
@@ -536,9 +440,64 @@ public static class BatchAnalyzer
         Console.WriteLine("================================");
         Console.WriteLine(" Batch Analysis Complete");
         Console.WriteLine("================================");
-
         Console.WriteLine();
 
         return projectGraph;
+    }
+
+    private static string GetReportFileName(
+        string rootPath)
+    {
+        string directoryName =
+            new DirectoryInfo(rootPath).Name;
+
+        if (directoryName.Equals(
+                "fireurq-master",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "fireurq.analysis.txt";
+        }
+
+        if (directoryName.Equals(
+                "d2dge-furq_2_2_4",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "d2d.analysis.txt";
+        }
+
+        string safeName =
+            new string(
+                directoryName
+                    .Select(
+                        character =>
+                            char.IsLetterOrDigit(character)
+                                ? character
+                                : '_')
+                    .ToArray());
+
+        return $"{safeName}.analysis.txt";
+    }
+
+    private static string GetReportTitle(
+        string rootPath)
+    {
+        string directoryName =
+            new DirectoryInfo(rootPath).Name;
+
+        if (directoryName.Equals(
+                "fireurq-master",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "FireURQ Analysis Report";
+        }
+
+        if (directoryName.Equals(
+                "d2dge-furq_2_2_4",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return "D2D Analysis Report";
+        }
+
+        return $"{directoryName} Analysis Report";
     }
 }

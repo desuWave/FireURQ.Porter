@@ -38,12 +38,12 @@ public sealed class SemanticResolver
         IReadOnlyList<SymbolInfo> roots =
             _index.Find(root);
 
-        foreach (SymbolInfo rootSymbol in roots)
-        {
-            if (rootSymbol.Kind !=
-                SymbolKind.Variable)
+            foreach (SymbolInfo rootSymbol in roots)
             {
-                continue;
+            if (rootSymbol.Kind != SymbolKind.Variable &&
+                rootSymbol.Kind != SymbolKind.Field)
+            {
+            continue;
             }
 
             if (string.IsNullOrWhiteSpace(

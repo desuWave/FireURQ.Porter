@@ -460,16 +460,10 @@ public sealed class DelphiParser
             string name =
                 ExpectIdentifier();
 
-            Console.WriteLine(
-                $"TYPE NAME: {name}, next={Current().Kind} '{Current().Text}'");
-
             if (!MatchSymbol("="))
             {
                 continue;
             }
-
-            Console.WriteLine(
-                $"TYPE DEBUG: {name} = {Current().Kind} '{Current().Text}'");
 
             // ------------------------------------------------
             // ENUM
@@ -606,8 +600,6 @@ public sealed class DelphiParser
             // ------------------------------------------------
             // FUNCTION TYPE
             // ------------------------------------------------
-            Console.WriteLine(
-                $"FUNCTION CHECK: name={name}, token={Current().Kind} '{Current().Text}'");
 
             if (MatchKeyword("function"))
             {
