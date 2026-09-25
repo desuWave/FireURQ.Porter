@@ -19,6 +19,7 @@ public static class ExpressionParser
         TypeTest,
         TypeCast,
         Set,
+        Range,
         Inherited,
         Raw
     }
@@ -847,105 +848,116 @@ public static class ExpressionParser
         return false;
     }
 
-    private static int FindTopLevelBinaryOperator(
-        IReadOnlyList<LexerToken> tokens,
-        int start,
-        int end)
+private static int FindTopLevelBinaryOperator(
+    IReadOnlyList<LexerToken> tokens,
+    int start,
+    int end)
+{
+    /*
+     * Lowest precedence first.
+     *
+     * Operators are grouped by precedence.
+     * For each precedence level we select the RIGHTMOST
+     * top-level operator. This gives left-associative
+     * parsing for operators such as:
+     *
+     *   A - B - C
+     *   A / B / C
+     *   A + B - C
+     *
+     * Parentheses and brackets are ignored while searching
+     * for top-level operators.
+     */
+
+    string[] operators =
     {
-        /*
-         * Lowest precedence first.
-         *
-         * This is intentionally still a simplified Delphi
-         * precedence table. It is enough for the current
-         * structural expression layer.
-         *
-         * "is", "as" and "in" are included here because
-         * they behave as binary expression operators for
-         * the structural AST.
-         */
+        "or",
+        "xor",
+        "and",
+        "in",
+        "is",
+        "as",
+        "=",
+        "<>",
+        "<",
+        ">",
+        "<=",
+        ">=",
+        "..",
+        "+",
+        "-",
+        "*",
+        "/",
+        "div",
+        "mod",
+        "shl",
+        "shr"
+    };
 
-        string[] operators =
+    foreach (string op in operators)
+    {
+        int roundDepth = 0;
+        int squareDepth = 0;
+        int lastIndex = -1;
+
+        for (int i = start;
+             i < end;
+             i++)
         {
-            "or",
-            "xor",
-            "and",
-            "in",
-            "is",
-            "as",
-            "=",
-            "<>",
-            "<",
-            ">",
-            "<=",
-            ">=",
-            "+",
-            "-",
-            "*",
-            "/",
-            "div",
-            "mod",
-            "shl",
-            "shr"
-        };
+            string text =
+                tokens[i].Text;
 
-        foreach (string op in operators)
-        {
-            int roundDepth = 0;
-            int squareDepth = 0;
-
-            for (int i = start;
-                 i < end;
-                 i++)
+            if (text == "(")
             {
-                string text =
-                    tokens[i].Text;
+                roundDepth++;
+                continue;
+            }
 
-                if (text == "(")
+            if (text == ")")
+            {
+                if (roundDepth > 0)
                 {
-                    roundDepth++;
-                    continue;
+                    roundDepth--;
                 }
 
-                if (text == ")")
-                {
-                    if (roundDepth > 0)
-                    {
-                        roundDepth--;
-                    }
+                continue;
+            }
 
-                    continue;
+            if (text == "[")
+            {
+                squareDepth++;
+                continue;
+            }
+
+            if (text == "]")
+            {
+                if (squareDepth > 0)
+                {
+                    squareDepth--;
                 }
 
-                if (text == "[")
-                {
-                    squareDepth++;
-                    continue;
-                }
+                continue;
+            }
 
-                if (text == "]")
-                {
-                    if (squareDepth > 0)
-                    {
-                        squareDepth--;
-                    }
-
-                    continue;
-                }
-
-                if (roundDepth == 0 &&
-                    squareDepth == 0 &&
-                    string.Equals(
-                        text,
-                        op,
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    return i;
-                }
+            if (roundDepth == 0 &&
+                squareDepth == 0 &&
+                string.Equals(
+                    text,
+                    op,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                lastIndex = i;
             }
         }
 
-        return -1;
+        if (lastIndex >= 0)
+        {
+            return lastIndex;
+        }
     }
+
+    return -1;
+}
 
     private static int FindTopLevelOperator(
         IReadOnlyList<LexerToken> tokens,

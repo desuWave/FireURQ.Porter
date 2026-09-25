@@ -17,6 +17,19 @@ function LogicalOr(A, B: Boolean): Boolean;
 function IntegerDiv(A, B: Integer): Integer;
 function IntegerMod(A, B: Integer): Integer;
 function LogicalNot(A: Boolean): Boolean;
+function SubtractChain(A, B, C: Integer): Integer;
+function DivideChain(A, B, C: Integer): Integer;
+function AddMultiply(A, B, C: Integer): Integer;
+function ParenthesizedMultiply(A, B, C: Integer): Integer;
+function LogicalPrecedence(A, B, C: Boolean): Boolean;
+function LogicalPrecedenceReversed(A, B, C: Boolean): Boolean;
+function ShiftLeft(A, B: Integer): Integer;
+function ShiftRight(A, B: Integer): Integer;
+function BitwiseXor(A, B: Integer): Integer;
+function IsObject(A: TObject): Boolean;
+function AsValue(A: TObject): TObject;
+function InSet(A: Integer): Boolean;
+function InSetRange(A: Integer): Boolean;
 
 var
   X: Integer;
@@ -145,6 +158,71 @@ end;
 function LogicalNot(A: Boolean): Boolean;
 begin
   Result := not A;
+end;
+
+function SubtractChain(A, B, C: Integer): Integer;
+begin
+  Result := A - B - C;
+end;
+
+function DivideChain(A, B, C: Integer): Integer;
+begin
+  Result := A div B div C;
+end;
+
+function AddMultiply(A, B, C: Integer): Integer;
+begin
+  Result := A + B * C;
+end;
+
+function ParenthesizedMultiply(A, B, C: Integer): Integer;
+begin
+  Result := (A + B) * C;
+end;
+
+function LogicalPrecedence(A, B, C: Boolean): Boolean;
+begin
+  Result := A and B or C;
+end;
+
+function LogicalPrecedenceReversed(A, B, C: Boolean): Boolean;
+begin
+  Result := A or B and C;
+end;
+
+function ShiftLeft(A, B: Integer): Integer;
+begin
+  Result := A shl B;
+end;
+
+function ShiftRight(A, B: Integer): Integer;
+begin
+  Result := A shr B;
+end;
+
+function BitwiseXor(A, B: Integer): Integer;
+begin
+  Result := A xor B;
+end;
+
+function IsObject(A: TObject): Boolean;
+begin
+  Result := A is TObject;
+end;
+
+function AsValue(A: TObject): TObject;
+begin
+  Result := A as TObject;
+end;
+
+function InSet(A: Integer): Boolean;
+begin
+  Result := A in [1, 2, 3];
+end;
+
+function InSetRange(A: Integer): Boolean;
+begin
+  Result := A in [1..3];
 end;
 
 end.

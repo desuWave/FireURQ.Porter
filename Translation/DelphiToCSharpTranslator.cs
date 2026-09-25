@@ -494,11 +494,20 @@ ExpressionParser.ExpressionKind.Identifier =>
             ExpressionParser.ExpressionKind.IndexAccess =>
                 TranslateIndexAccess(expression),
 
-            ExpressionParser.ExpressionKind.Call =>
-                TranslateCall(expression),
+ExpressionParser.ExpressionKind.Call =>
+    TranslateCall(expression),
 
-            _ =>
-                expression.Text
+ExpressionParser.ExpressionKind.TypeTest =>
+    TranslateTypeTest(expression),
+
+ExpressionParser.ExpressionKind.TypeCast =>
+    TranslateTypeCast(expression),
+
+ExpressionParser.ExpressionKind.Set =>
+    TranslateSet(expression),
+
+_ =>
+    expression.Text
         };
     }
 
@@ -516,6 +525,14 @@ private static string TranslateBinary(
         TranslateExpression(
             expression.Children[1]);
 
+if (string.Equals(
+        expression.Text,
+        "in",
+        StringComparison.OrdinalIgnoreCase))
+{
+    return TranslateSetMembership(expression);
+}
+
     string op =
         expression.Text.ToLowerInvariant() switch
         {
@@ -525,6 +542,9 @@ private static string TranslateBinary(
             "or" => "||",
             "div" => "/",
             "mod" => "%",
+            "shl" => "<<",
+            "shr" => ">>",
+            "xor" => "^",
             _ => expression.Text
         };
 
@@ -608,6 +628,108 @@ private static string TranslateUnary(
 
         return $"{target}({string.Join(", ", arguments)})";
     }
+
+private static string TranslateTypeTest(
+    ExpressionParser.ExpressionNode expression)
+{
+    if (expression.Children.Count < 2)
+        return expression.Text;
+
+    string left =
+        TranslateExpression(
+            expression.Children[0]);
+
+    string right =
+        TranslateExpression(
+            expression.Children[1]);
+
+    return $"({left} is {right})";
+}
+
+private static string TranslateTypeCast(
+    ExpressionParser.ExpressionNode expression)
+{
+    if (expression.Children.Count < 2)
+        return expression.Text;
+
+    string left =
+        TranslateExpression(
+            expression.Children[0]);
+
+    string right =
+        TranslateExpression(
+            expression.Children[1]);
+
+    return $"({left} as {right})";
+}
+
+private static string TranslateSet(
+    ExpressionParser.ExpressionNode expression)
+{
+    if (expression.Children.Count == 0)
+        return "[]";
+
+    var elements =
+        expression.Children
+            .Select(TranslateExpression)
+            .ToList();
+
+    return $"[{string.Join(", ", elements)}]";
+}
+
+private static string TranslateSetMembership(
+    ExpressionParser.ExpressionNode expression)
+{
+    if (expression.Children.Count < 2)
+        return expression.Text;
+
+    string value =
+        TranslateExpression(
+            expression.Children[0]);
+
+    ExpressionParser.ExpressionNode set =
+        expression.Children[1];
+
+    if (set.Kind != ExpressionParser.ExpressionKind.Set)
+        return $"({value} /* in */ {TranslateExpression(set)})";
+
+    var conditions = new List<string>();
+
+    foreach (ExpressionParser.ExpressionNode element in set.Children)
+    {
+        if (element.Kind == ExpressionParser.ExpressionKind.Binary &&
+            string.Equals(
+                element.Text,
+                "..",
+                StringComparison.Ordinal))
+        {
+            if (element.Children.Count >= 2)
+            {
+                string lower =
+                    TranslateExpression(element.Children[0]);
+
+                string upper =
+                    TranslateExpression(element.Children[1]);
+
+                conditions.Add(
+                    $"({value} >= {lower} && {value} <= {upper})");
+            }
+
+            continue;
+        }
+
+        string translatedElement =
+            TranslateExpression(element);
+
+        conditions.Add(
+            $"({value} == {translatedElement})");
+    }
+
+    if (conditions.Count == 0)
+        return "false";
+
+    return $"({string.Join(" || ", conditions)})";
+}
 
     private static string TranslateLiteral(string text)
     {
