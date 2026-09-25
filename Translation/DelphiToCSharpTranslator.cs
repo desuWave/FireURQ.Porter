@@ -502,35 +502,56 @@ ExpressionParser.ExpressionKind.Identifier =>
         };
     }
 
-    private static string TranslateBinary(
-        ExpressionParser.ExpressionNode expression)
-    {
-        if (expression.Children.Count < 2)
-            return expression.Text;
+private static string TranslateBinary(
+    ExpressionParser.ExpressionNode expression)
+{
+    if (expression.Children.Count < 2)
+        return expression.Text;
 
-        string left =
-            TranslateExpression(
-                expression.Children[0]);
+    string left =
+        TranslateExpression(
+            expression.Children[0]);
 
-        string right =
-            TranslateExpression(
-                expression.Children[1]);
+    string right =
+        TranslateExpression(
+            expression.Children[1]);
 
-        return $"({left} {expression.Text} {right})";
-    }
+    string op =
+        expression.Text.ToLowerInvariant() switch
+        {
+            "=" => "==",
+            "<>" => "!=",
+            "and" => "&&",
+            "or" => "||",
+            "div" => "/",
+            "mod" => "%",
+            _ => expression.Text
+        };
 
-    private static string TranslateUnary(
-        ExpressionParser.ExpressionNode expression)
-    {
-        if (expression.Children.Count == 0)
-            return expression.Text;
+    return $"({left} {op} {right})";
+}
 
-        string operand =
-            TranslateExpression(
-                expression.Children[0]);
+private static string TranslateUnary(
+    ExpressionParser.ExpressionNode expression)
+{
+    if (expression.Children.Count == 0)
+        return expression.Text;
 
-        return $"{expression.Text}{operand}";
-    }
+    string operand =
+        TranslateExpression(
+            expression.Children[0]);
+
+    string op =
+        expression.Text.ToLowerInvariant() switch
+        {
+            "not" => "!",
+            "+" => "+",
+            "-" => "-",
+            _ => expression.Text
+        };
+
+    return $"{op}{operand}";
+}
 
     private static string TranslateMemberAccess(
         ExpressionParser.ExpressionNode expression)

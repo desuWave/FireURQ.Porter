@@ -6,10 +6,17 @@ function Add(A, B: Integer): Integer;
 function Calculate(A, B: Integer): Integer;
 function Max(A, B: Integer): Integer;
 function CountUp(A, B: Integer): Integer;
-function SumTo(N: Integer): Integer
+function SumTo(N: Integer): Integer;
 function Multiply(A, B: Integer): Integer;
 procedure SetValue(A: Integer);
 function DescribeValue(A: Integer): Integer;
+function CompareEqual(A, B: Integer): Integer;
+function CompareNotEqual(A, B: Integer): Integer;
+function LogicalAnd(A, B: Boolean): Boolean;
+function LogicalOr(A, B: Boolean): Boolean;
+function IntegerDiv(A, B: Integer): Integer;
+function IntegerMod(A, B: Integer): Integer;
+function LogicalNot(A: Boolean): Boolean;
 
 var
   X: Integer;
@@ -97,6 +104,47 @@ begin
   else
     Result := 40;
   end;
+end;
+
+function CompareEqual(A, B: Integer): Integer;
+begin
+  if A = B then
+    Result := 1
+  else
+    Result := 0;
+end;
+
+function CompareNotEqual(A, B: Integer): Integer;
+begin
+  if A <> B then
+    Result := 1
+  else
+    Result := 0;
+end;
+
+function LogicalAnd(A, B: Boolean): Boolean;
+begin
+  Result := A and B;
+end;
+
+function LogicalOr(A, B: Boolean): Boolean;
+begin
+  Result := A or B;
+end;
+
+function IntegerDiv(A, B: Integer): Integer;
+begin
+  Result := A div B;
+end;
+
+function IntegerMod(A, B: Integer): Integer;
+begin
+  Result := A mod B;
+end;
+
+function LogicalNot(A: Boolean): Boolean;
+begin
+  Result := not A;
 end;
 
 end.
