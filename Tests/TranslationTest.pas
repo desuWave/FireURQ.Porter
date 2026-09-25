@@ -17,6 +17,8 @@ function LogicalOr(A, B: Boolean): Boolean;
 function IntegerDiv(A, B: Integer): Integer;
 function IntegerMod(A, B: Integer): Integer;
 function LogicalNot(A: Boolean): Boolean;
+function UnaryMinus(A: Integer): Integer;
+function UnaryPlus(A: Integer): Integer;
 function SubtractChain(A, B, C: Integer): Integer;
 function DivideChain(A, B, C: Integer): Integer;
 function AddMultiply(A, B, C: Integer): Integer;
@@ -30,6 +32,7 @@ function IsObject(A: TObject): Boolean;
 function AsValue(A: TObject): TObject;
 function InSet(A: Integer): Boolean;
 function InSetRange(A: Integer): Boolean;
+
 
 var
   X: Integer;
@@ -158,6 +161,16 @@ end;
 function LogicalNot(A: Boolean): Boolean;
 begin
   Result := not A;
+end;
+
+function UnaryMinus(A: Integer): Integer;
+begin
+  Result := -A;
+end;
+
+function UnaryPlus(A: Integer): Integer;
+begin
+  Result := +A;
 end;
 
 function SubtractChain(A, B, C: Integer): Integer;

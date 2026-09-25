@@ -109,6 +109,31 @@ if (type.Kind.Equals(
 }
 
 if (type.Kind.Equals(
+        "Pointer",
+        StringComparison.OrdinalIgnoreCase))
+{
+    return
+        $"using {type.Name} = IntPtr;";
+}
+
+if (type.Kind.Equals(
+        "Set",
+        StringComparison.OrdinalIgnoreCase))
+{
+    return
+        $"using {type.Name} = " +
+        "HashSet<int>;";
+}
+
+if (type.Kind.Equals(
+        "ClassReference",
+        StringComparison.OrdinalIgnoreCase))
+{
+    return
+        $"using {type.Name} = Type;";
+}
+
+if (type.Kind.Equals(
         "Record",
         StringComparison.OrdinalIgnoreCase))
 {
