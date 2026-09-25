@@ -117,6 +117,7 @@ public sealed record DelphiFunction(
     IReadOnlyList<DelphiParameter> Parameters,
     string ReturnType,
     bool IsProcedure,
+    IReadOnlyList<DelphiVariable> LocalVariables,
     IReadOnlyList<LexerToken> BodyTokens
 ) : DelphiNode;
 

@@ -147,17 +147,24 @@ public static class SemanticModelBuilder
         };
     }
 
-    private static SemanticFunction BuildFunction(
-        DelphiFunction function)
-    {
-        return new SemanticFunction(
-            function.Name,
-            function.Parameters
-                .Select(BuildParameter)
-                .ToList(),
-            function.ReturnType,
-            function.IsProcedure);
-    }
+private static SemanticFunction BuildFunction(
+    DelphiFunction function)
+{
+    return new SemanticFunction(
+        function.Name,
+        function.Parameters
+            .Select(BuildParameter)
+            .ToList(),
+        function.ReturnType,
+        function.IsProcedure,
+        function.LocalVariables
+            .Select(
+                variable =>
+                    new SemanticVariable(
+                        variable.Name,
+                        variable.Type))
+            .ToList());
+}
 
     private static SemanticParameter BuildParameter(
         DelphiParameter parameter)

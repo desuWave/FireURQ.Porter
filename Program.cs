@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using FireURQ.Porter.AST;
 using FireURQ.Porter.Analysis;
+using FireURQ.Porter.Translation;
 using FireURQ.Porter.Lexer;
 using FireURQ.Porter.Parser;
 
@@ -230,6 +231,142 @@ if (args.Length >= 3 &&
 }
 
 // ========================================================
+// TRANSLATION TEST
+// ========================================================
+
+if (args.Length >= 1 &&
+    args[0].Equals(
+        "--translate-test",
+        StringComparison.OrdinalIgnoreCase))
+{
+    string testFile =
+        Path.Combine(
+            "tests",
+            "TranslationTest.pas");
+
+    if (!File.Exists(testFile))
+    {
+        Console.WriteLine(
+            $"ERROR: Translation test file not found: {testFile}");
+
+        return;
+    }
+
+    Console.WriteLine(
+        $"Translation source: {testFile}");
+
+    Console.WriteLine();
+
+    string testSource =
+        File.ReadAllText(
+            testFile,
+            Encoding.UTF8);
+
+    var testLexer =
+        new DelphiLexer(testSource);
+
+    var testTokens =
+        testLexer.Tokenize();
+
+    var testParser =
+        new DelphiParser(testTokens);
+
+    DelphiUnit testUnit =
+        testParser.ParseUnit();
+
+    SemanticUnit semanticUnit =
+        SemanticAnalyzer.Analyze(testUnit);
+
+    IReadOnlyList<BodyTokenAnalyzer.BodyInfo> bodies =
+        BodyTokenAnalyzer.Analyze(
+            testUnit,
+            testFile);
+
+var translator =
+    new DelphiToCSharpTranslator();
+
+var declarationTranslator =
+    new CSharpDeclarationTranslator();
+
+Console.WriteLine(
+    "================================");
+
+Console.WriteLine(
+    " T0 Translation Test");
+
+Console.WriteLine(
+    "================================");
+
+Console.WriteLine();
+
+int translatedCount = 0;
+
+Console.WriteLine(
+    "================================");
+
+Console.WriteLine(
+    " T2 Declaration Translation");
+
+Console.WriteLine(
+    "================================");
+
+Console.WriteLine();
+
+string declarations =
+    declarationTranslator.Translate(
+        semanticUnit);
+
+Console.WriteLine(
+    declarations);
+
+foreach (BodyTokenAnalyzer.BodyInfo body in bodies)
+{
+    if (body.BodyTokens.Count == 0)
+        continue;
+
+SemanticFunction? function =
+    FunctionImplementationMatcher.Match(
+        testUnit,
+        body,
+        semanticUnit);
+
+if (function is null)
+{
+    Console.WriteLine(
+        $"SKIP: No matching implementation for {body.Name}");
+
+    continue;
+}
+
+    var behavior =
+        BehaviorAnalyzer.Analyze(
+            body.FilePath,
+            body.Name,
+            body.BodyTokens);
+
+    string csharp =
+        translator.TranslateFunction(
+            function,
+            behavior);
+
+    Console.WriteLine(
+        $"// Delphi: {body.Name}");
+
+    Console.WriteLine(
+        csharp);
+
+    Console.WriteLine();
+
+    translatedCount++;
+}
+
+Console.WriteLine(
+    $"Translated bodies: {translatedCount}");
+
+return;
+}
+
+// ========================================================
 // SINGLE FILE
 // ========================================================
 
@@ -355,6 +492,9 @@ static string? GetOptionValue(
 
 static void PrintUsage()
 {
+    Console.WriteLine(
+        "  FireURQ.Porter --translate-test");
+
     Console.WriteLine(
         "  FireURQ.Porter --probe-body-owner <directory> <body>");
 

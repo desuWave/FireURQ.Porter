@@ -366,6 +366,12 @@ public sealed class DelphiParser
             string value =
                 ReadUntilStatementTerminator();
 
+if (string.IsNullOrWhiteSpace(type))
+{
+    type =
+        InferConstantType(value);
+}
+
             declarations.Add(
                 new DelphiConst(
                     name,
@@ -935,52 +941,83 @@ public sealed class DelphiParser
             // RECORD
             // ------------------------------------------------
 
-            if (MatchKeyword("record"))
+if (MatchKeyword("record"))
+{
+    var definition =
+        new List<string>();
+
+    var fields =
+        new List<DelphiField>();
+
+    int depth = 1;
+
+    while (!IsEnd() &&
+           depth > 0)
+    {
+        if (PeekKeyword("record"))
+        {
+            depth++;
+        }
+        else if (PeekKeyword("end"))
+        {
+            depth--;
+
+            if (depth == 0)
             {
-                var definition =
-                    new List<string>();
+                Advance();
+                break;
+            }
+        }
 
-                int depth = 1;
+        if (depth == 0)
+            break;
 
-                while (!IsEnd() &&
-                       depth > 0)
-                {
-                    if (PeekKeyword("record"))
-                    {
-                        depth++;
-                    }
-                    else if (PeekKeyword("end"))
-                    {
-                        depth--;
+        if (IsIdentifier())
+        {
+            string fieldName =
+                ExpectIdentifier();
 
-                        if (depth == 0)
-                        {
-                            Advance();
-                            break;
-                        }
-                    }
-
-                    if (depth > 0)
-                    {
-                        definition.Add(
-                            Current().Text);
-
-                        Advance();
-                    }
-                }
+            if (MatchSymbol(":"))
+            {
+                string fieldType =
+                    ReadTypeExpression();
 
                 MatchSymbol(";");
 
-                declarations.Add(
-                    new DelphiType(
-                        name,
-                        DelphiTypeKind.Record,
-                        string.Join(
-                            " ",
-                            definition)));
+                fields.Add(
+                    new DelphiField(
+                        fieldName,
+                        fieldType));
+
+                definition.Add(
+                    $"{fieldName} : {fieldType} ;");
 
                 continue;
             }
+
+            definition.Add(fieldName);
+            continue;
+        }
+
+        definition.Add(
+            Current().Text);
+
+        Advance();
+    }
+
+    MatchSymbol(";");
+
+    declarations.Add(
+        new DelphiType(
+            name,
+            DelphiTypeKind.Record,
+            string.Join(
+                " ",
+                definition),
+            fields));
+
+    continue;
+}
 
             // ------------------------------------------------
             // PROCEDURE TYPE
@@ -1022,33 +1059,127 @@ public sealed class DelphiParser
                 continue;
             }
 
-            // ------------------------------------------------
-            // UNKNOWN TYPE
-            // ------------------------------------------------
+// ------------------------------------------------
+// SIMPLE / UNKNOWN TYPE
+// ------------------------------------------------
 
-            var unknownDefinition =
-                new List<string>();
+var simpleTypeTokens =
+    new List<string>();
 
-            while (!IsEnd() &&
-                   !PeekSymbol(";"))
-            {
-                unknownDefinition.Add(
-                    Current().Text);
+while (!IsEnd() &&
+       !PeekSymbol(";"))
+{
+    simpleTypeTokens.Add(
+        Current().Text);
 
-                Advance();
-            }
+    Advance();
+}
 
-            MatchSymbol(";");
+MatchSymbol(";");
 
-            declarations.Add(
-                new DelphiType(
-                    name,
-                    DelphiTypeKind.Unknown,
-                    string.Join(
-                        " ",
-                        unknownDefinition)));
+string simpleTypeDefinition =
+    string.Join(
+        " ",
+        simpleTypeTokens);
+
+DelphiTypeKind simpleTypeKind =
+    simpleTypeTokens.Count == 1 &&
+    IsSimpleTypeName(simpleTypeTokens[0])
+        ? DelphiTypeKind.Simple
+        : DelphiTypeKind.Unknown;
+
+declarations.Add(
+    new DelphiType(
+        name,
+        simpleTypeKind,
+        simpleTypeDefinition));
         }
     }
+
+private static bool IsSimpleTypeName(
+    string typeName)
+{
+    return typeName.Equals(
+               "Integer",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Boolean",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "String",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Real",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Double",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Single",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Char",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Byte",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Word",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Cardinal",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Int64",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "LongInt",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "ShortInt",
+               StringComparison.OrdinalIgnoreCase);
+}
+
+private static string InferConstantType(
+    string value)
+{
+    string text =
+        value.Trim();
+
+    if (text.Equals(
+            "true",
+            StringComparison.OrdinalIgnoreCase) ||
+        text.Equals(
+            "false",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        return "Boolean";
+    }
+
+    if (text.StartsWith("'") &&
+        text.EndsWith("'"))
+    {
+        return "String";
+    }
+
+    if (int.TryParse(
+            text,
+            out _))
+    {
+        return "Integer";
+    }
+
+    if (double.TryParse(
+            text,
+            System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out _))
+    {
+        return "Real";
+    }
+
+    return "";
+}
 
     // ========================================================
     // PROPERTY
@@ -1265,55 +1396,114 @@ public sealed class DelphiParser
 
         MatchSymbol(";");
 
-        IReadOnlyList<LexerToken> bodyTokens =
-            Array.Empty<LexerToken>();
+IReadOnlyList<DelphiVariable> localVariables =
+    Array.Empty<DelphiVariable>();
 
-        if (readBody)
-        {
-            SkipLocalDeclarations();
+IReadOnlyList<LexerToken> bodyTokens =
+    Array.Empty<LexerToken>();
 
-            bodyTokens =
-                ReadFunctionBody();
-        }
+if (readBody)
+{
+    localVariables =
+        ParseLocalDeclarations();
 
-        return new DelphiFunction(
-            name,
-            parameters,
-            returnType,
-            isProcedure,
-            bodyTokens);
+    bodyTokens =
+        ReadFunctionBody();
+}
+
+return new DelphiFunction(
+    name,
+    parameters,
+    returnType,
+    isProcedure,
+    localVariables,
+    bodyTokens);
     }
 
     // ========================================================
     // LOCAL DECLARATIONS
     // ========================================================
 
-    private void SkipLocalDeclarations()
+private IReadOnlyList<DelphiVariable> ParseLocalDeclarations()
+{
+    var variables =
+        new List<DelphiVariable>();
+
+    while (!IsEnd())
     {
-        while (!IsEnd())
+        if (PeekKeyword("var"))
         {
-            if (PeekKeyword("var") ||
-                PeekKeyword("const") ||
-                PeekKeyword("type"))
-            {
-                Advance();
+            Advance();
 
-                SkipLocalDeclarationSection();
+            ParseLocalVariableSection(
+                variables);
 
-                continue;
-            }
-
-            if (PeekKeyword("function") ||
-                PeekKeyword("procedure"))
-            {
-                SkipLocalCallableDeclaration();
-
-                continue;
-            }
-
-            break;
+            continue;
         }
+
+        if (PeekKeyword("const") ||
+            PeekKeyword("type"))
+        {
+            Advance();
+
+            SkipLocalDeclarationSection();
+
+            continue;
+        }
+
+        if (PeekKeyword("function") ||
+            PeekKeyword("procedure"))
+        {
+            SkipLocalCallableDeclaration();
+
+            continue;
+        }
+
+        break;
     }
+
+    return variables;
+}
+
+private void ParseLocalVariableSection(
+    List<DelphiVariable> variables)
+{
+    while (!IsEnd())
+    {
+        if (PeekKeyword("const") ||
+            PeekKeyword("type") ||
+            PeekKeyword("function") ||
+            PeekKeyword("procedure") ||
+            PeekKeyword("begin"))
+        {
+            return;
+        }
+
+        if (!IsIdentifier())
+        {
+            Advance();
+            continue;
+        }
+
+        string name =
+            ExpectIdentifier();
+
+        if (!MatchSymbol(":"))
+        {
+            continue;
+        }
+
+        string type =
+            ReadTypeExpression();
+
+        variables.Add(
+            new DelphiVariable(
+                name,
+                type));
+
+        MatchSymbol(";");
+    }
+}
 
     private void SkipLocalDeclarationSection()
     {

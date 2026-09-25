@@ -40,10 +40,16 @@ public sealed record SemanticMember(
     bool IsDefault
 );
 
+public sealed record SemanticField(
+    string Name,
+    string Type
+);
+
 public sealed record SemanticType(
     string Name,
     string Kind,
-    string Definition
+    string Definition,
+    IReadOnlyList<SemanticField>? Fields = null
 );
 
 public sealed record SemanticConstant(
@@ -61,7 +67,8 @@ public sealed record SemanticFunction(
     string Name,
     IReadOnlyList<SemanticParameter> Parameters,
     string ReturnType,
-    bool IsProcedure
+    bool IsProcedure,
+    IReadOnlyList<SemanticVariable> LocalVariables
 );
 
 public sealed record SemanticParameter(

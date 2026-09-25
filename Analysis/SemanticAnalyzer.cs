@@ -25,13 +25,20 @@ public static class SemanticAnalyzer
                     interfaces.Add(AnalyzeInterface(value));
                     break;
 
-                case DelphiType value:
-                    types.Add(
-                        new SemanticType(
-                            value.Name,
-                            value.Kind.ToString(),
-                            value.Definition));
-                    break;
+case DelphiType value:
+    types.Add(
+        new SemanticType(
+            value.Name,
+            value.Kind.ToString(),
+            value.Definition,
+            value.Fields?
+                .Select(
+                    field =>
+                        new SemanticField(
+                            field.Name,
+                            field.Type))
+                .ToList()));
+    break;
 
                 case DelphiConst value:
                     constants.Add(
@@ -169,10 +176,19 @@ public static class SemanticAnalyzer
                         parameter.Kind.ToString()))
                 .ToList();
 
-        return new SemanticFunction(
-            function.Name,
-            parameters,
-            function.ReturnType,
-            function.IsProcedure);
+var localVariables =
+    function.LocalVariables
+        .Select(variable =>
+            new SemanticVariable(
+                variable.Name,
+                variable.Type))
+        .ToList();
+
+return new SemanticFunction(
+    function.Name,
+    parameters,
+    function.ReturnType,
+    function.IsProcedure,
+    localVariables);
     }
 }
