@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using FireURQ.Porter.AST;
 using FireURQ.Porter.Analysis;
 using FireURQ.Porter.Translation;
@@ -142,7 +142,7 @@ if (args.Length >= 1 &&
 
     PagedListingViewer.Show(
         listing,
-        "FireURQ.Porter — Paging Test");
+        "FireURQ.Porter � Paging Test");
 
     return;
 }
@@ -534,3 +534,4 @@ static void PrintUsage()
 
     Console.WriteLine();
 }
+

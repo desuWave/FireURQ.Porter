@@ -38,18 +38,19 @@ public static class BehaviorAnalyzer
         IReadOnlyList<
             ExpressionParser.ExpressionNode> Arguments);
 
-    public sealed record BehaviorStatement(
-        StatementKind Kind,
-        string Text,
-        int Line,
-        IReadOnlyList<BehaviorStatement> Children,
-        IReadOnlyList<BehaviorStatement>? ElseChildren = null,
-        string? SecondaryText = null,
-        IReadOnlyList<BehaviorClause>? Clauses = null,
-        ExpressionParser.AssignmentExpression? Assignment = null,
-        ExpressionParser.ExpressionNode? Expression = null,
-        ForLoopInfo? ForLoop = null,
-        InheritedCallInfo? InheritedCall = null);
+public sealed record BehaviorStatement(
+    StatementKind Kind,
+    string Text,
+    int Line,
+    IReadOnlyList<BehaviorStatement> Children,
+    IReadOnlyList<BehaviorStatement>? ElseChildren = null,
+    string? SecondaryText = null,
+    IReadOnlyList<BehaviorClause>? Clauses = null,
+    ExpressionParser.AssignmentExpression? Assignment = null,
+    ExpressionParser.ExpressionNode? Expression = null,
+    ForLoopInfo? ForLoop = null,
+    InheritedCallInfo? InheritedCall = null,
+    IReadOnlyList<string>? CaseLabels = null);
 
     public sealed record BehaviorInfo(
         string FilePath,
@@ -759,142 +760,217 @@ public static class BehaviorAnalyzer
                 ForLoop: forLoop);
         }
 
-        private BehaviorStatement ParseCase()
-        {
-            int line =
-                Current().Line;
+private BehaviorStatement ParseCase()
+{
+    int line =
+        Current().Line;
 
+    Advance();
+
+    var expressionTokens =
+        new List<LexerToken>();
+
+    int depth = 0;
+
+    while (!IsEnd())
+    {
+        if (PeekText("("))
+        {
+            depth++;
+        }
+        else if (PeekText(")"))
+        {
+            if (depth > 0)
+            {
+                depth--;
+            }
+        }
+
+        if (depth == 0 &&
+            PeekText("of"))
+        {
+            break;
+        }
+
+        expressionTokens.Add(
+            Current());
+
+        Advance();
+    }
+
+    MatchText("of");
+
+    string expressionText =
+        JoinTokens(expressionTokens);
+
+    ExpressionParser.ExpressionNode expression =
+        ExpressionParser.Parse(
+            expressionTokens);
+
+    var children =
+        new List<BehaviorStatement>();
+
+    while (!IsEnd() &&
+           !PeekText("end"))
+    {
+        if (PeekText(";"))
+        {
+            Advance();
+            continue;
+        }
+
+        if (PeekText("else"))
+        {
             Advance();
 
-            var expressionTokens =
-                new List<LexerToken>();
+            var elseStatements =
+                ParseStatementsUntil(
+                    "end");
 
-            int depth = 0;
+            children.Add(
+                new BehaviorStatement(
+                    StatementKind.Expression,
+                    "else",
+                    CurrentLine(),
+                    elseStatements,
+                    CaseLabels:
+                        new[] { "else" }));
 
-            while (!IsEnd())
-            {
-                if (PeekText("("))
-                {
-                    depth++;
-                }
-                else if (PeekText(")"))
-                {
-                    if (depth > 0)
-                    {
-                        depth--;
-                    }
-                }
-
-                if (depth == 0 &&
-                    PeekText("of"))
-                {
-                    break;
-                }
-
-                expressionTokens.Add(
-                    Current());
-
-                Advance();
-            }
-
-            MatchText("of");
-
-            string expressionText =
-                JoinTokens(expressionTokens);
-
-            ExpressionParser.ExpressionNode expression =
-                ExpressionParser.Parse(
-                    expressionTokens);
-
-            var children =
-                new List<BehaviorStatement>();
-
-            while (!IsEnd() &&
-                   !PeekText("end"))
-            {
-                if (PeekText(";"))
-                {
-                    Advance();
-                    continue;
-                }
-
-                if (PeekText("else"))
-                {
-                    Advance();
-
-                    var elseStatements =
-                        ParseStatementsUntil(
-                            "end");
-
-                    children.Add(
-                        new BehaviorStatement(
-                            StatementKind.Expression,
-                            "else",
-                            CurrentLine(),
-                            elseStatements));
-
-                    break;
-                }
-
-                var labelTokens =
-                    new List<LexerToken>();
-
-                while (!IsEnd() &&
-                       !PeekText(":") &&
-                       !PeekText("end"))
-                {
-                    labelTokens.Add(
-                        Current());
-
-                    Advance();
-                }
-
-                if (MatchText(":"))
-                {
-                    string label =
-                        JoinTokens(labelTokens);
-
-                    BehaviorStatement? statement =
-                        ParseStatement();
-
-                    var armChildren =
-                        new List<BehaviorStatement>();
-
-                    if (statement is not null)
-                    {
-                        armChildren.Add(
-                            statement);
-                    }
-
-                    children.Add(
-                        new BehaviorStatement(
-                            StatementKind.Expression,
-                            $"case {label}",
-                            labelTokens.Count > 0
-                                ? labelTokens[0].Line
-                                : line,
-                            armChildren));
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            if (PeekText("end"))
-            {
-                Advance();
-            }
-
-            MatchText(";");
-
-            return new BehaviorStatement(
-                StatementKind.Case,
-                expressionText,
-                line,
-                children,
-                Expression: expression);
+            break;
         }
+
+        var labelTokens =
+            new List<LexerToken>();
+
+        while (!IsEnd() &&
+               !PeekText(":") &&
+               !PeekText("end") &&
+               !PeekText("else"))
+        {
+            labelTokens.Add(
+                Current());
+
+            Advance();
+        }
+
+        if (!MatchText(":"))
+        {
+            break;
+        }
+
+        string label =
+            JoinTokens(labelTokens);
+
+        string[] labels =
+            label.Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries |
+                StringSplitOptions.TrimEntries);
+
+        var armChildren =
+            new List<BehaviorStatement>();
+
+        while (!IsEnd() &&
+               !PeekText("end") &&
+               !PeekText("else"))
+        {
+            if (PeekText(";"))
+            {
+                Advance();
+                continue;
+            }
+
+            if (IsNextCaseLabel())
+            {
+                break;
+            }
+
+            BehaviorStatement? statement =
+                ParseStatement();
+
+            if (statement is not null)
+            {
+                armChildren.Add(
+                    statement);
+            }
+            else
+            {
+                Advance();
+            }
+        }
+
+        children.Add(
+            new BehaviorStatement(
+                StatementKind.Expression,
+                $"case {label}",
+                labels.Length > 0 &&
+                labelTokens.Count > 0
+                    ? labelTokens[0].Line
+                    : line,
+                armChildren,
+                CaseLabels: labels));
+    }
+
+    if (PeekText("end"))
+    {
+        Advance();
+    }
+
+    MatchText(";");
+
+    return new BehaviorStatement(
+        StatementKind.Case,
+        expressionText,
+        line,
+        children,
+        Expression: expression);
+}
+
+private bool IsNextCaseLabel()
+{
+    int position =
+        _position;
+
+    int depth = 0;
+
+    while (position < _tokens.Count)
+    {
+        string text =
+            _tokens[position].Text;
+
+        if (text == "(" ||
+            text == "[")
+        {
+            depth++;
+        }
+        else if (text == ")" ||
+                 text == "]")
+        {
+            if (depth > 0)
+            {
+                depth--;
+            }
+        }
+
+        if (depth == 0 &&
+            text == ":")
+        {
+            return true;
+        }
+
+        if (depth == 0 &&
+            (text == ";" ||
+             text == "end" ||
+             text == "else"))
+        {
+            return false;
+        }
+
+        position++;
+    }
+
+    return false;
+}
 
         private BehaviorStatement ParseRepeat()
         {

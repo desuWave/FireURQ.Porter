@@ -9,6 +9,7 @@ function CountUp(A, B: Integer): Integer;
 function SumTo(N: Integer): Integer
 function Multiply(A, B: Integer): Integer;
 procedure SetValue(A: Integer);
+function DescribeValue(A: Integer): Integer;
 
 var
   X: Integer;
@@ -79,6 +80,23 @@ end;
 procedure SetValue(A: Integer);
 begin
   X := A;
+end;
+
+function DescribeValue(A: Integer): Integer;
+begin
+  case A of
+    0:
+      Result := 10;
+
+    1:
+      Result := 20;
+
+    2, 3:
+      Result := 30;
+
+  else
+    Result := 40;
+  end;
 end;
 
 end.

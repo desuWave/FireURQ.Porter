@@ -131,6 +131,14 @@ case BehaviorAnalyzer.StatementKind.For:
         indent);
     break;
 
+case BehaviorAnalyzer.StatementKind.Case:
+    TranslateCase(
+        statement,
+        function,
+        builder,
+        indent);
+    break;
+
             case BehaviorAnalyzer.StatementKind.Block:
                 foreach (BehaviorAnalyzer.BehaviorStatement child
                          in statement.Children)
@@ -152,6 +160,73 @@ case BehaviorAnalyzer.StatementKind.For:
                 break;
         }
     }
+
+private static void TranslateCase(
+    BehaviorAnalyzer.BehaviorStatement statement,
+    SemanticFunction function,
+    StringBuilder builder,
+    int indent)
+{
+    AppendLine(
+        builder,
+        indent,
+        $"switch ({TranslateExpression(statement.Expression)})");
+
+    AppendLine(
+        builder,
+        indent,
+        "{");
+
+    foreach (
+        BehaviorAnalyzer.BehaviorStatement branch
+        in statement.Children)
+    {
+        IReadOnlyList<string> labels =
+            branch.CaseLabels ??
+            Array.Empty<string>();
+
+        foreach (string label in labels)
+        {
+            if (label.Equals(
+                    "else",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                AppendLine(
+                    builder,
+                    indent + 1,
+                    "default:");
+            }
+            else
+            {
+                AppendLine(
+                    builder,
+                    indent + 1,
+                    $"case {label}:");
+            }
+        }
+
+        foreach (
+            BehaviorAnalyzer.BehaviorStatement child
+            in branch.Children)
+        {
+            TranslateStatement(
+                child,
+                function,
+                builder,
+                indent + 2);
+        }
+
+        AppendLine(
+            builder,
+            indent + 2,
+            "break;");
+    }
+
+    AppendLine(
+        builder,
+        indent,
+        "}");
+}
 
 private static void TranslateIf(
     BehaviorAnalyzer.BehaviorStatement statement,
@@ -542,5 +617,71 @@ ExpressionParser.ExpressionKind.Identifier =>
     {
         builder.Append(' ', indent * 4);
         builder.AppendLine(text);
+    }
+
+    private void TranslateCase(
+    BehaviorAnalyzer.BehaviorStatement statement,
+    StringBuilder builder,
+    int indent)
+{
+    AppendLine(
+        builder,
+        indent,
+        $"switch ({TranslateExpression(statement.Expression)})");
+
+    AppendLine(
+        builder,
+        indent,
+        "{");
+
+    foreach (
+        BehaviorAnalyzer.BehaviorStatement branch
+        in statement.Children)
+    {
+        IReadOnlyList<string> labels =
+            branch.CaseLabels ??
+            Array.Empty<string>();
+
+        foreach (string label in labels)
+        {
+            if (label.Equals(
+                    "else",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                AppendLine(
+                    builder,
+                    indent + 1,
+                    "default:");
+
+                continue;
+            }
+
+            AppendLine(
+                builder,
+                indent + 1,
+                $"case {label}:");
+        }
+
+        foreach (
+            BehaviorAnalyzer.BehaviorStatement child
+            in branch.Children)
+        {
+            TranslateStatement(
+                child,
+                null!,
+                builder,
+                indent + 2);
+        }
+
+        AppendLine(
+            builder,
+            indent + 2,
+            "break;");
+    }
+
+    AppendLine(
+        builder,
+        indent,
+        "}");
     }
 }
