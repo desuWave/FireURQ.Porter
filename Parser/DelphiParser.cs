@@ -1995,6 +1995,53 @@ private void ParseLocalVariableSection(
             parts);
     }
 
+private string ReadQualifiedTypeExpression()
+{
+    var parts =
+        new List<string>();
+
+    while (!IsEnd())
+    {
+        if (PeekSymbol(";") ||
+            PeekKeyword("of"))
+        {
+            break;
+        }
+
+        parts.Add(
+            Current().Text);
+
+        Advance();
+    }
+
+    return string.Join(
+        " ",
+        parts);
+}
+
+private static bool IsCallingConvention(
+    string text)
+{
+    return text.Equals(
+               "stdcall",
+               StringComparison.OrdinalIgnoreCase) ||
+           text.Equals(
+               "cdecl",
+               StringComparison.OrdinalIgnoreCase) ||
+           text.Equals(
+               "register",
+               StringComparison.OrdinalIgnoreCase) ||
+           text.Equals(
+               "pascal",
+               StringComparison.OrdinalIgnoreCase) ||
+           text.Equals(
+               "safecall",
+               StringComparison.OrdinalIgnoreCase) ||
+           text.Equals(
+               "fastcall",
+               StringComparison.OrdinalIgnoreCase);
+}
+
 private DelphiProcedureType ParseProcedureType(
     string name,
     bool isProcedure)
@@ -2002,54 +2049,115 @@ private DelphiProcedureType ParseProcedureType(
     var parameters =
         new List<DelphiParameter>();
 
-    var definition =
-        ReadCallableTypeDefinition();
+    // ------------------------------------------------
+    // PARAMETERS
+    // ------------------------------------------------
 
-    // The callable definition has already been consumed
-    // completely up to the terminating semicolon.
-    //
-    // We currently preserve the complete Delphi declaration
-    // text through the AST's structural node only partially.
-    // Detailed parameter extraction can be added later without
-    // changing the parser boundary.
+    if (MatchSymbol("("))
+    {
+        while (!IsEnd() &&
+               !PeekSymbol(")"))
+        {
+            DelphiParameterKind parameterKind =
+                DelphiParameterKind.Value;
 
-    MatchSymbol(";");
+            if (MatchKeyword("const"))
+            {
+                parameterKind =
+                    DelphiParameterKind.Const;
+            }
+            else if (MatchKeyword("var"))
+            {
+                parameterKind =
+                    DelphiParameterKind.Var;
+            }
+            else if (MatchKeyword("out"))
+            {
+                parameterKind =
+                    DelphiParameterKind.Out;
+            }
+
+            var names =
+                new List<string>();
+
+            names.Add(
+                ExpectIdentifier());
+
+            while (MatchSymbol(","))
+            {
+                names.Add(
+                    ExpectIdentifier());
+            }
+
+            ExpectSymbol(":");
+
+            string type =
+                ReadParameterType();
+
+            foreach (string parameterName in names)
+            {
+                parameters.Add(
+                    new DelphiParameter(
+                        parameterName,
+                        type,
+                        parameterKind,
+                        null));
+            }
+
+            if (!MatchSymbol(";"))
+            {
+                break;
+            }
+        }
+
+        ExpectSymbol(")");
+    }
+
+    // ------------------------------------------------
+    // RETURN TYPE
+    // ------------------------------------------------
 
     string returnType = "";
 
-    if (!isProcedure)
+    if (!isProcedure &&
+        MatchSymbol(":"))
     {
-        // The return type is already contained in the callable
-        // definition. Keep it empty for now rather than trying
-        // to re-parse tokens that have already been consumed.
-        returnType = "";
+        returnType =
+            ReadQualifiedTypeExpression();
     }
 
-    bool isMethodOfObject =
-        definition.IndexOf(
-            "of object",
-            StringComparison.OrdinalIgnoreCase) >= 0;
+    // ------------------------------------------------
+    // DIRECTIVES
+    // ------------------------------------------------
 
+    bool isMethodOfObject = false;
     string? callingConvention = null;
 
-    foreach (string directive in new[]
+    while (!IsEnd() &&
+           !PeekSymbol(";"))
     {
-        "stdcall",
-        "cdecl",
-        "register",
-        "pascal",
-        "safecall",
-        "fastcall"
-    })
-    {
-        if (definition.IndexOf(
-                directive,
-                StringComparison.OrdinalIgnoreCase) >= 0)
+        if (MatchKeyword("of"))
         {
-            callingConvention = directive;
-            break;
+            if (MatchKeyword("object"))
+            {
+                isMethodOfObject = true;
+            }
+
+            continue;
         }
+
+        string text =
+            Current().Text;
+
+        if (IsCallingConvention(text))
+        {
+            callingConvention = text;
+        }
+
+        Advance();
     }
+
+    MatchSymbol(";");
 
     return new DelphiProcedureType(
         name,
