@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 namespace FireURQ.Porter.Lexer;
 
@@ -55,6 +55,7 @@ public sealed class DelphiLexer
             "procedure",
             "class",
             "record",
+            "packed",
             "object",
             "read",
             "write",
@@ -595,4 +596,5 @@ public sealed class DelphiLexer
         return _position >= _source.Length;
     }
 }
+
 
