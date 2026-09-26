@@ -1068,6 +1068,12 @@ if (MatchKeyword("interface"))
                 continue;
             }
 
+// ------------------------------------------------
+// PACKED
+// ------------------------------------------------
+
+MatchKeyword("packed");
+
             // ------------------------------------------------
             // RECORD
             // ------------------------------------------------
@@ -1202,8 +1208,9 @@ string simpleTypeDefinition =
         simpleTypeTokens);
 
 DelphiTypeKind simpleTypeKind =
-    simpleTypeTokens.Count == 1 &&
-    IsSimpleTypeName(simpleTypeTokens[0])
+    (simpleTypeTokens.Count == 1 &&
+     IsSimpleTypeName(simpleTypeTokens[0])) ||
+    IsQualifiedTypeName(simpleTypeTokens)
         ? DelphiTypeKind.Simple
         : DelphiTypeKind.Unknown;
 
@@ -1214,6 +1221,15 @@ declarations.Add(
         simpleTypeDefinition));
         }
     }
+
+private static bool IsQualifiedTypeName(
+    IReadOnlyList<string> tokens)
+{
+    return tokens.Count == 3 &&
+           !string.IsNullOrWhiteSpace(tokens[0]) &&
+           tokens[1] == "." &&
+           !string.IsNullOrWhiteSpace(tokens[2]);
+}
 
 private static bool IsSimpleTypeName(
     string typeName)
@@ -1256,6 +1272,27 @@ private static bool IsSimpleTypeName(
                StringComparison.OrdinalIgnoreCase) ||
            typeName.Equals(
                "ShortInt",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "LongWord",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "LongBool",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "WideChar",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "WideString",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "PWideChar",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "PChar",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "DWORD",
                StringComparison.OrdinalIgnoreCase);
 }
 
