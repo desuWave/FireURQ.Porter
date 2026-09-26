@@ -607,21 +607,15 @@ if (string.IsNullOrWhiteSpace(type))
             // FUNCTION TYPE
             // ------------------------------------------------
 
-            if (MatchKeyword("function"))
-            {
-                string definition =
-                    ReadUntil(";");
+if (MatchKeyword("function"))
+{
+    declarations.Add(
+        ParseProcedureType(
+            name,
+            isProcedure: false));
 
-                MatchSymbol(";");
-
-                declarations.Add(
-                    new DelphiType(
-                        name,
-                        DelphiTypeKind.Procedure,
-                        $"function {definition}"));
-
-                continue;
-            }
+    continue;
+}
 
             // ------------------------------------------------
             // CLASS REFERENCE
@@ -645,6 +639,143 @@ if (string.IsNullOrWhiteSpace(type))
 
                 continue;
             }
+
+// ------------------------------------------------
+// INTERFACE
+// ------------------------------------------------
+
+if (MatchKeyword("interface"))
+{
+    string? baseType = null;
+
+    if (MatchSymbol("("))
+    {
+        baseType =
+            ReadQualifiedIdentifier();
+
+        ExpectSymbol(")");
+    }
+
+    var members =
+        new List<DelphiClassMember>();
+
+    var visibility =
+        DelphiVisibility.Public;
+
+    while (!IsEnd())
+    {
+        // --------------------------------------------
+        // END OF INTERFACE
+        // --------------------------------------------
+
+        if (PeekKeyword("end"))
+        {
+            Advance();
+
+            MatchSymbol(";");
+
+            break;
+        }
+
+        // --------------------------------------------
+        // VISIBILITY
+        // --------------------------------------------
+
+        if (MatchKeyword("private"))
+        {
+            visibility =
+                DelphiVisibility.Private;
+
+            continue;
+        }
+
+        if (MatchKeyword("protected"))
+        {
+            visibility =
+                DelphiVisibility.Protected;
+
+            continue;
+        }
+
+        if (MatchKeyword("public"))
+        {
+            visibility =
+                DelphiVisibility.Public;
+
+            continue;
+        }
+
+        if (MatchKeyword("published"))
+        {
+            visibility =
+                DelphiVisibility.Published;
+
+            continue;
+        }
+
+        if (MatchKeyword("automated"))
+        {
+            visibility =
+                DelphiVisibility.Automated;
+
+            continue;
+        }
+
+        // --------------------------------------------
+        // PROPERTY
+        // --------------------------------------------
+
+        if (MatchKeyword("property"))
+        {
+            var propertyNode =
+                ParseProperty();
+
+            members.Add(
+                new DelphiClassMember(
+                    visibility,
+                    DelphiClassMemberKind.Property,
+                    propertyNode));
+
+            continue;
+        }
+
+        // --------------------------------------------
+        // METHOD
+        // --------------------------------------------
+
+        if (PeekKeyword("function") ||
+            PeekKeyword("procedure"))
+        {
+            bool isProcedure =
+                PeekKeyword("procedure");
+
+            Advance();
+
+            var method =
+                ParseFunction(
+                    isProcedure,
+                    readBody: false);
+
+            members.Add(
+                new DelphiClassMember(
+                    visibility,
+                    DelphiClassMemberKind.Method,
+                    method));
+
+            continue;
+        }
+
+        Advance();
+    }
+
+    declarations.Add(
+        new DelphiInterface(
+            name,
+            baseType,
+            members));
+
+    continue;
+}
 
             // ------------------------------------------------
             // CLASS / OBJECT
@@ -1023,41 +1154,29 @@ if (MatchKeyword("record"))
             // PROCEDURE TYPE
             // ------------------------------------------------
 
-            if (MatchKeyword("procedure"))
-            {
-                string definition =
-                    ReadCallableTypeDefinition();
+if (MatchKeyword("procedure"))
+{
+    declarations.Add(
+        ParseProcedureType(
+            name,
+            isProcedure: true));
 
-                MatchSymbol(";");
-
-                declarations.Add(
-                    new DelphiType(
-                        name,
-                        DelphiTypeKind.Procedure,
-                        $"procedure {definition}"));
-
-                continue;
-            }
+    continue;
+}
 
             // ------------------------------------------------
             // FUNCTION TYPE
             // ------------------------------------------------
 
-            if (MatchKeyword("function"))
-            {
-                string definition =
-                    ReadCallableTypeDefinition();
+if (MatchKeyword("function"))
+{
+    declarations.Add(
+        ParseProcedureType(
+            name,
+            isProcedure: false));
 
-                MatchSymbol(";");
-
-                declarations.Add(
-                    new DelphiType(
-                        name,
-                        DelphiTypeKind.Procedure,
-                        $"function {definition}"));
-
-                continue;
-            }
+    continue;
+}
 
 // ------------------------------------------------
 // SIMPLE / UNKNOWN TYPE
@@ -1875,6 +1994,125 @@ private void ParseLocalVariableSection(
             " ",
             parts);
     }
+
+private DelphiProcedureType ParseProcedureType(
+    string name,
+    bool isProcedure)
+{
+    var parameters =
+        new List<DelphiParameter>();
+
+    var definition =
+        ReadCallableTypeDefinition();
+
+    // The callable definition has already been consumed
+    // completely up to the terminating semicolon.
+    //
+    // We currently preserve the complete Delphi declaration
+    // text through the AST's structural node only partially.
+    // Detailed parameter extraction can be added later without
+    // changing the parser boundary.
+
+    MatchSymbol(";");
+
+    string returnType = "";
+
+    if (!isProcedure)
+    {
+        // The return type is already contained in the callable
+        // definition. Keep it empty for now rather than trying
+        // to re-parse tokens that have already been consumed.
+        returnType = "";
+    }
+
+    bool isMethodOfObject =
+        definition.IndexOf(
+            "of object",
+            StringComparison.OrdinalIgnoreCase) >= 0;
+
+    string? callingConvention = null;
+
+    foreach (string directive in new[]
+    {
+        "stdcall",
+        "cdecl",
+        "register",
+        "pascal",
+        "safecall",
+        "fastcall"
+    })
+    {
+        if (definition.IndexOf(
+                directive,
+                StringComparison.OrdinalIgnoreCase) >= 0)
+        {
+            callingConvention = directive;
+            break;
+        }
+    }
+
+    return new DelphiProcedureType(
+        name,
+        parameters,
+        returnType,
+        isProcedure,
+        isMethodOfObject,
+        callingConvention);
+}
+
+private string ReadUntilParameterTerminator()
+{
+    var parts =
+        new List<string>();
+
+    int roundDepth = 0;
+    int squareDepth = 0;
+
+    while (!IsEnd())
+    {
+        if (PeekSymbol("("))
+        {
+            roundDepth++;
+        }
+        else if (PeekSymbol(")"))
+        {
+            if (roundDepth == 0)
+            {
+                break;
+            }
+
+            roundDepth--;
+        }
+        else if (PeekSymbol("["))
+        {
+            squareDepth++;
+        }
+        else if (PeekSymbol("]"))
+        {
+            if (squareDepth > 0)
+            {
+                squareDepth--;
+            }
+        }
+
+        if (roundDepth == 0 &&
+            squareDepth == 0 &&
+            (PeekSymbol(";") ||
+             PeekSymbol(")")))
+        {
+            break;
+        }
+
+        parts.Add(
+            Current().Text);
+
+        Advance();
+    }
+
+    return string.Join(
+        " ",
+        parts);
+}
 
     private string ReadCallableTypeDefinition()
     {

@@ -86,6 +86,15 @@ public sealed record DelphiType(
     IReadOnlyList<DelphiField>? Fields = null
 ) : DelphiNode;
 
+public sealed record DelphiProcedureType(
+    string Name,
+    IReadOnlyList<DelphiParameter> Parameters,
+    string ReturnType,
+    bool IsProcedure,
+    bool IsMethodOfObject,
+    string? CallingConvention
+) : DelphiNode;
+
 public sealed record DelphiEnum(
     string Name,
     IReadOnlyList<string> Values
