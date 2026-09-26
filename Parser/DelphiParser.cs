@@ -2133,6 +2133,16 @@ private DelphiProcedureType ParseProcedureType(
     bool isMethodOfObject = false;
     string? callingConvention = null;
 
+    if (MatchSymbol(";") &&
+        !IsEnd() &&
+        IsCallingConvention(Current().Text))
+    {
+        callingConvention =
+            Current().Text;
+
+        Advance();
+    }
+
     while (!IsEnd() &&
            !PeekSymbol(";"))
     {
