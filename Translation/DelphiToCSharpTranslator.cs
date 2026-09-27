@@ -115,6 +115,14 @@ case BehaviorAnalyzer.StatementKind.If:
         indent);
     break;
 
+case BehaviorAnalyzer.StatementKind.Try:
+    TranslateTry(
+        statement,
+        function,
+        builder,
+        indent);
+    break;
+
 case BehaviorAnalyzer.StatementKind.While:
     TranslateWhile(
         statement,
@@ -137,6 +145,22 @@ case BehaviorAnalyzer.StatementKind.Case:
         function,
         builder,
         indent);
+    break;
+
+case BehaviorAnalyzer.StatementKind.Exit:
+    AppendLine(
+        builder,
+        indent,
+        function.IsProcedure
+            ? "return;"
+            : "return result;");
+    break;
+
+case BehaviorAnalyzer.StatementKind.Break:
+    AppendLine(
+        builder,
+        indent,
+        "break;");
     break;
 
             case BehaviorAnalyzer.StatementKind.Block:
@@ -297,6 +321,78 @@ if (condition.StartsWith("(") &&
             builder,
             indent,
             "}");
+    }
+}
+
+private static void TranslateTry(
+    BehaviorAnalyzer.BehaviorStatement statement,
+    SemanticFunction function,
+    StringBuilder builder,
+    int indent)
+{
+    AppendLine(
+        builder,
+        indent,
+        "try");
+
+    AppendLine(
+        builder,
+        indent,
+        "{");
+
+    foreach (
+        BehaviorAnalyzer.BehaviorStatement child
+        in statement.Children)
+    {
+        TranslateStatement(
+            child,
+            function,
+            builder,
+            indent + 1);
+    }
+
+    AppendLine(
+        builder,
+        indent,
+        "}");
+
+    if (statement.Clauses is null)
+        return;
+
+    foreach (
+        BehaviorAnalyzer.BehaviorClause clause
+        in statement.Clauses)
+    {
+        if (clause.Kind.Equals(
+                "FINALLY",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            AppendLine(
+                builder,
+                indent,
+                "finally");
+
+            AppendLine(
+                builder,
+                indent,
+                "{");
+
+            foreach (
+                BehaviorAnalyzer.BehaviorStatement child
+                in clause.Statements)
+            {
+                TranslateStatement(
+                    child,
+                    function,
+                    builder,
+                    indent + 1);
+            }
+
+            AppendLine(
+                builder,
+                indent,
+                "}");
+        }
     }
 }
 
