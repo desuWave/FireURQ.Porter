@@ -1,4 +1,4 @@
-﻿using FireURQ.Porter.AST;
+using FireURQ.Porter.AST;
 
 namespace FireURQ.Porter.Analysis;
 
@@ -43,7 +43,14 @@ foreach (var declaration in unit.Declarations)
                         new SemanticType(
                             value.Name,
                             value.Kind.ToString(),
-                            value.Definition));
+                            value.Definition,
+                            value.Fields?
+                                .Select(
+                                    field =>
+                                        new SemanticField(
+                                            field.Name,
+                                            field.Type))
+                                .ToList()));
                     break;
 
                 case DelphiConst value:
@@ -187,5 +194,3 @@ private static SemanticFunction BuildFunction(
             parameter.Kind.ToString());
     }
 }
-
-
