@@ -21,7 +21,7 @@ public static class SymbolIndexBuilder
                 index.Add(
                     new SymbolInfo(
                         type.Name,
-                        type.Name,
+                        $"{unit.Name}.{type.Name}",
                         SymbolKind.Type,
                         unit.Name));
             }
@@ -31,7 +31,7 @@ public static class SymbolIndexBuilder
                 index.Add(
                     new SymbolInfo(
                         @class.Name,
-                        @class.Name,
+                        $"{unit.Name}.{@class.Name}",
                         SymbolKind.Class,
                         unit.Name));
 
@@ -50,7 +50,7 @@ public static class SymbolIndexBuilder
                 index.Add(
                     new SymbolInfo(
                         @interface.Name,
-                        @interface.Name,
+                        $"{unit.Name}.{@interface.Name}",
                         SymbolKind.Interface,
                         unit.Name));
 
@@ -69,7 +69,7 @@ public static class SymbolIndexBuilder
                 index.Add(
                     new SymbolInfo(
                         constant.Name,
-                        constant.Name,
+                        $"{unit.Name}.{constant.Name}",
                         SymbolKind.Constant,
                         unit.Name,
                         Type: constant.Type));
@@ -80,7 +80,7 @@ public static class SymbolIndexBuilder
                 index.Add(
                     new SymbolInfo(
                         variable.Name,
-                        variable.Name,
+                        $"{unit.Name}.{variable.Name}",
                         SymbolKind.Variable,
                         unit.Name,
                         Type: variable.Type));
@@ -91,7 +91,7 @@ public static class SymbolIndexBuilder
                 index.Add(
                     new SymbolInfo(
                         function.Name,
-                        function.Name,
+                        $"{unit.Name}.{function.Name}",
                         function.IsProcedure
                             ? SymbolKind.Procedure
                             : SymbolKind.Function,

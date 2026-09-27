@@ -53,8 +53,9 @@ public static class AnalysisReportWriter
             symbolIndex);
 
         WriteResolver(
-            writer,
-            resolver);
+        writer,
+        symbolIndex,
+        resolver);
 
         WriteFailureNote(
             writer);
@@ -308,13 +309,39 @@ public static class AnalysisReportWriter
         }
     }
 
-    private static void WriteResolver(
-        TextWriter writer,
-        SemanticResolver resolver)
+private static void WriteResolver(
+    TextWriter writer,
+    SymbolIndex symbolIndex,
+    SemanticResolver resolver)
     {
-        writer.WriteLine();
-        writer.WriteLine("Semantic Resolver");
-        writer.WriteLine("--------------------------------");
+IReadOnlyList<SymbolInfo> hmusic =
+    symbolIndex.Find("HMUSIC");
+
+writer.WriteLine("Index lookup: HMUSIC");
+
+if (hmusic.Count == 0)
+{
+    writer.WriteLine("  Result: NOT FOUND");
+}
+else
+{
+    foreach (SymbolInfo symbol in hmusic)
+    {
+        writer.WriteLine(
+            $"  Name: {symbol.Name}");
+
+        writer.WriteLine(
+            $"  QualifiedName: {symbol.QualifiedName}");
+
+        writer.WriteLine(
+            $"  Kind: {symbol.Kind}");
+
+        writer.WriteLine(
+            $"  Unit: {symbol.UnitName}");
+    }
+}
+
+writer.WriteLine();
 
         foreach (string reference in new[]
         {
@@ -322,12 +349,13 @@ public static class AnalysisReportWriter
             "gD2DE.WHandle",
             "gD2DE.Input_GetEvent",
             "f_CurrentSceneObj.ProcessEvent",
-            "f_CurrentSceneObj.Frame"
+            "Dynamic_Bass.HMUSIC"
         })
         {
             ResolvedSymbol? resolved =
-                resolver.ResolveMember(
-                    reference);
+                reference == "Dynamic_Bass.HMUSIC"
+                    ? resolver.ResolveQualified(reference)
+                    : resolver.ResolveMember(reference);
 
             writer.WriteLine(
                 $"Resolve: {reference}");
@@ -335,21 +363,26 @@ public static class AnalysisReportWriter
             if (resolved is null)
             {
                 writer.WriteLine(
-                    "  <not resolved>");
+                    "  Result: NOT RESOLVED");
+            }
+            else
+            {
+                writer.WriteLine(
+                    $"  Result: {resolved.Symbol.Kind}");
 
-                continue;
+                writer.WriteLine(
+                    $"  QualifiedName: {resolved.Symbol.QualifiedName}");
+
+                writer.WriteLine(
+                    $"  Unit: {resolved.Symbol.UnitName}");
+
+                writer.WriteLine(
+                    $"  Type: {resolved.Symbol.Type ?? "<none>"}");
             }
 
-            writer.WriteLine(
-                $"  {resolved.Symbol.Kind,-12} " +
-                $"{resolved.Symbol.QualifiedName,-35} " +
-                $"Unit={resolved.Symbol.UnitName} " +
-                $"Owner={resolved.Symbol.OwnerName}");
+            writer.WriteLine();
         }
-
-        writer.WriteLine();
     }
-
     private static void WriteFailureNote(
         TextWriter writer)
     {
