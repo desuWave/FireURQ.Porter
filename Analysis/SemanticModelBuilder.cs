@@ -1,4 +1,4 @@
-using FireURQ.Porter.AST;
+﻿using FireURQ.Porter.AST;
 
 namespace FireURQ.Porter.Analysis;
 
@@ -13,13 +13,26 @@ public static class SemanticModelBuilder
         var variables = new List<SemanticVariable>();
         var functions = new List<SemanticFunction>();
 
-        foreach (var declaration in unit.Declarations)
-        {
-            switch (declaration)
+var fullClassNames =
+    unit.Declarations
+        .OfType<DelphiClass>()
+        .Where(value => value.Members.Count > 0)
+        .Select(value => value.Name)
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+foreach (var declaration in unit.Declarations)
+{
+    switch (declaration)
+    {
+        case DelphiClass value:
+            if (value.Members.Count == 0 &&
+                fullClassNames.Contains(value.Name))
             {
-                case DelphiClass value:
-                    classes.Add(BuildClass(value));
-                    break;
+                break;
+            }
+
+            classes.Add(BuildClass(value));
+            break;
 
                 case DelphiInterface value:
                     interfaces.Add(BuildInterface(value));
@@ -78,7 +91,6 @@ public static class SemanticModelBuilder
             value.BaseType,
             members);
     }
-
     private static SemanticInterface BuildInterface(
         DelphiInterface value)
     {
@@ -175,3 +187,5 @@ private static SemanticFunction BuildFunction(
             parameter.Kind.ToString());
     }
 }
+
+

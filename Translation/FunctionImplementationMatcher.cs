@@ -5,71 +5,53 @@ namespace FireURQ.Porter.Translation;
 
 public static class FunctionImplementationMatcher
 {
-    public static SemanticFunction? Match(
-        DelphiUnit unit,
-        BodyTokenAnalyzer.BodyInfo body,
-        SemanticUnit semanticUnit)
+public static SemanticFunction? Match(
+    DelphiUnit unit,
+    BodyTokenAnalyzer.BodyInfo body,
+    SemanticUnit semanticUnit)
+{
+    DelphiFunction? implementation =
+        FindImplementation(
+            unit,
+            body);
+
+    if (body.OwnerKind ==
+        BodyTokenAnalyzer.BodyOwnerKind.TopLevel)
     {
-    
-            if (body.Name.Equals(
-                "Td2dApplication.AddScene",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            Console.WriteLine(
-                $"[MATCH DEBUG] Body: {body.Name}");
-            Console.WriteLine(
-                $"[MATCH DEBUG] OwnerKind: {body.OwnerKind}");
-            Console.WriteLine(
-                $"[MATCH DEBUG] BodyTokens: {body.BodyTokens.Count}");
-            Console.WriteLine(
-                $"[MATCH DEBUG] Unit: {unit.Name}");
-        }
-    
-        DelphiFunction? implementation =
-            FindImplementation(
-                unit,
-                body);
-
-        if (implementation is null)
-            return null;
-
-        if (body.OwnerKind ==
-            BodyTokenAnalyzer.BodyOwnerKind.TopLevel)
-        {
-            return semanticUnit.Functions.FirstOrDefault(
-                candidate =>
-                    FunctionMatches(
-                        candidate,
-                        implementation));
-        }
-
-        int separator =
-            implementation.Name.LastIndexOf('.');
-
-        if (separator < 1)
-            return null;
-
-        string ownerName =
-            implementation.Name[..separator];
-
-        string methodName =
-            implementation.Name[(separator + 1)..];
-
-        SemanticMember? member =
-            FindMethodMember(
-                semanticUnit,
-                body.OwnerKind,
-                ownerName,
-                methodName,
-                implementation);
-
-        if (member is null)
-            return null;
-
-        return CreateSemanticFunction(
-            member,
-            implementation);
+        return semanticUnit.Functions.FirstOrDefault(
+            candidate =>
+                FunctionMatches(
+                    candidate,
+                    implementation!));
     }
+
+    int separator =
+        implementation?.Name.LastIndexOf('.') ?? -1;
+
+    if (separator < 1)
+        return null;
+
+    string ownerName =
+        implementation!.Name[..separator];
+
+    string methodName =
+        implementation.Name[(separator + 1)..];
+
+    SemanticMember? member =
+        FindMethodMember(
+            semanticUnit,
+            body.OwnerKind,
+            ownerName,
+            methodName,
+            implementation);
+
+    if (member is null)
+        return null;
+
+    return CreateSemanticFunction(
+        member,
+        implementation);
+}
 
     private static DelphiFunction? FindImplementation(
         DelphiUnit unit,
@@ -320,3 +302,4 @@ public static class FunctionImplementationMatcher
         return true;
     }
 }
+
