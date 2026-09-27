@@ -123,6 +123,13 @@ case BehaviorAnalyzer.StatementKind.Try:
         indent);
     break;
 
+case BehaviorAnalyzer.StatementKind.Raise:
+    TranslateRaise(
+        statement,
+        builder,
+        indent);
+    break;
+
 case BehaviorAnalyzer.StatementKind.While:
     TranslateWhile(
         statement,
@@ -154,6 +161,21 @@ case BehaviorAnalyzer.StatementKind.Exit:
         function.IsProcedure
             ? "return;"
             : "return result;");
+    break;
+
+case BehaviorAnalyzer.StatementKind.Continue:
+    AppendLine(
+        builder,
+        indent,
+        "continue;");
+    break;
+
+case BehaviorAnalyzer.StatementKind.Repeat:
+    TranslateRepeat(
+        statement,
+        function,
+        builder,
+        indent);
     break;
 
 case BehaviorAnalyzer.StatementKind.Break:
@@ -322,6 +344,50 @@ if (condition.StartsWith("(") &&
             indent,
             "}");
     }
+}
+
+private static void TranslateRepeat(
+    BehaviorAnalyzer.BehaviorStatement statement,
+    SemanticFunction function,
+    StringBuilder builder,
+    int indent)
+{
+    AppendLine(
+        builder,
+        indent,
+        "do");
+
+    AppendLine(
+        builder,
+        indent,
+        "{");
+
+    foreach (
+        BehaviorAnalyzer.BehaviorStatement child
+        in statement.Children)
+    {
+        TranslateStatement(
+            child,
+            function,
+            builder,
+            indent + 1);
+    }
+
+    AppendLine(
+        builder,
+        indent,
+        "}");
+
+    string condition =
+        statement.Expression is null
+            ? "false"
+            : TranslateExpression(
+                statement.Expression);
+
+    AppendLine(
+        builder,
+        indent,
+        $"while (!({condition}));");
 }
 
 private static void TranslateTry(
@@ -559,6 +625,69 @@ if (!function.IsProcedure &&
             indent,
             $"{target} = {value};");
     }
+
+private static void TranslateRaise(
+    BehaviorAnalyzer.BehaviorStatement statement,
+    StringBuilder builder,
+    int indent)
+{
+    ExpressionParser.ExpressionNode? expression =
+        statement.Expression;
+
+    if (expression is null)
+    {
+        AppendLine(
+            builder,
+            indent,
+            "throw;");
+        return;
+    }
+
+    if (expression.Kind ==
+            ExpressionParser.ExpressionKind.Call &&
+        expression.Children.Count >= 1)
+    {
+        ExpressionParser.ExpressionNode target =
+            expression.Children[0];
+
+        if (target.Kind ==
+                ExpressionParser.ExpressionKind.MemberAccess &&
+            target.Children.Count >= 2 &&
+            string.Equals(
+                target.Children[1].Text,
+                "Create",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            string exceptionType =
+                TranslateExpression(
+                    target.Children[0]);
+
+            var arguments =
+                new List<string>();
+
+            for (int i = 1;
+                 i < expression.Children.Count;
+                 i++)
+            {
+                arguments.Add(
+                    TranslateExpression(
+                        expression.Children[i]));
+            }
+
+            AppendLine(
+                builder,
+                indent,
+                $"throw new {exceptionType}({string.Join(", ", arguments)});");
+
+            return;
+        }
+    }
+
+    AppendLine(
+        builder,
+        indent,
+        $"throw {TranslateExpression(expression)};");
+}
 
     private static string TranslateExpression(
         ExpressionParser.ExpressionNode? expression)
