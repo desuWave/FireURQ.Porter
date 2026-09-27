@@ -74,4 +74,19 @@ public sealed class SemanticResolver
 
         return null;
     }
+    public ResolvedSymbol? ResolveQualified(
+        string reference)
+    {
+        if (string.IsNullOrWhiteSpace(reference))
+            return null;
+
+        IReadOnlyList<SymbolInfo> symbols =
+            _index.FindQualified(reference);
+
+        return symbols.Count == 1
+            ? new ResolvedSymbol(
+                reference,
+                symbols[0])
+            : null;
+    }
 }

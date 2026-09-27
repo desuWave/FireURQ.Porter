@@ -49,7 +49,8 @@ public sealed record SemanticType(
     string Name,
     string Kind,
     string Definition,
-    IReadOnlyList<SemanticField>? Fields = null
+    IReadOnlyList<SemanticField>? Fields = null,
+    string? UnitName = null
 );
 
 public sealed record SemanticConstant(

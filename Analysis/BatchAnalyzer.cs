@@ -1,8 +1,9 @@
-using System.Text;
+﻿using System.Text;
 
 using FireURQ.Porter.AST;
 using FireURQ.Porter.Lexer;
 using FireURQ.Porter.Parser;
+using FireURQ.Porter.Translation;
 
 namespace FireURQ.Porter.Analysis;
 
@@ -104,6 +105,9 @@ public static class BatchAnalyzer
         var behaviors =
             new List<BehaviorAnalyzer.BehaviorInfo>();
 
+        var translationInputs =
+            new List<ProjectTranslationInput>();
+
         foreach (var item in files)
         {
             string file =
@@ -154,6 +158,11 @@ public static class BatchAnalyzer
                         unit,
                         file);
 
+                var translationBodies =
+                    new List<(
+                        BodyTokenAnalyzer.BodyInfo Body,
+                        BehaviorAnalyzer.BehaviorInfo Behavior)>();
+
                 foreach (
                     BodyTokenAnalyzer.BodyInfo body
                     in bodies)
@@ -169,7 +178,18 @@ public static class BatchAnalyzer
 
                     behaviors.Add(
                         behavior);
+
+                    translationBodies.Add(
+                        (body, behavior));
                 }
+
+                translationInputs.Add(
+                    new ProjectTranslationInput(
+                        item.RootPath,
+                        file,
+                        unit,
+                        semanticModel,
+                        translationBodies));
 
                 totalTokens +=
                     tokens.Count;
@@ -438,6 +458,60 @@ public static class BatchAnalyzer
         Console.WriteLine();
 
         Console.WriteLine("================================");
+        Console.WriteLine(" C# Translation");
+        Console.WriteLine("================================");
+        Console.WriteLine();
+
+        string translationDirectory =
+            Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "translation-output");
+
+        var translator =
+            new ProjectTranslator();
+
+        IReadOnlyList<TranslationResult> translationResults =
+            translator.Translate(
+                translationInputs,
+                translationDirectory);
+
+        int translationSuccess =
+            translationResults.Count(
+                result => result.Success);
+
+        int translationFailed =
+            translationResults.Count(
+                result => !result.Success);
+
+        int functionsTranslated =
+            translationResults.Sum(
+                result => result.FunctionsTranslated);
+
+        int todoCount =
+            translationResults.Sum(
+                result => result.TodoCount);
+
+        Console.WriteLine(
+            $"Translation files:      {translationResults.Count}");
+
+        Console.WriteLine(
+            $"Translation succeeded:  {translationSuccess}");
+
+        Console.WriteLine(
+            $"Translation failed:     {translationFailed}");
+
+        Console.WriteLine(
+            $"Functions translated:   {functionsTranslated}");
+
+        Console.WriteLine(
+            $"TODO markers:           {todoCount}");
+
+        Console.WriteLine(
+            $"Output:                 {translationDirectory}");
+
+        Console.WriteLine();
+
+        Console.WriteLine("================================");
         Console.WriteLine(" Batch Analysis Complete");
         Console.WriteLine("================================");
         Console.WriteLine();
@@ -501,3 +575,7 @@ public static class BatchAnalyzer
         return $"{directoryName} Analysis Report";
     }
 }
+
+
+
+

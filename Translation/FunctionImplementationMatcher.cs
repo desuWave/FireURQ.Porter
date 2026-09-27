@@ -1,44 +1,75 @@
-using FireURQ.Porter.AST;
+﻿using FireURQ.Porter.AST;
 using FireURQ.Porter.Analysis;
 
 namespace FireURQ.Porter.Translation;
 
 public static class FunctionImplementationMatcher
 {
-public static SemanticFunction? Match(
-    DelphiUnit unit,
-    BodyTokenAnalyzer.BodyInfo body,
-    SemanticUnit semanticUnit)
-{
-    DelphiFunction? implementation =
-        FindImplementation(
-            unit,
-            body);
+    public static SemanticFunction? Match(
+        DelphiUnit unit,
+        BodyTokenAnalyzer.BodyInfo body,
+        SemanticUnit semanticUnit)
+    {
+    
+            if (body.Name.Equals(
+                "Td2dApplication.AddScene",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine(
+                $"[MATCH DEBUG] Body: {body.Name}");
+            Console.WriteLine(
+                $"[MATCH DEBUG] OwnerKind: {body.OwnerKind}");
+            Console.WriteLine(
+                $"[MATCH DEBUG] BodyTokens: {body.BodyTokens.Count}");
+            Console.WriteLine(
+                $"[MATCH DEBUG] Unit: {unit.Name}");
+        }
+    
+        DelphiFunction? implementation =
+            FindImplementation(
+                unit,
+                body);
 
-    if (implementation is null)
-        return null;
+        if (implementation is null)
+            return null;
 
-    return semanticUnit.Functions.FirstOrDefault(
-        candidate =>
-            candidate.Name.Equals(
-                implementation.Name,
-                StringComparison.OrdinalIgnoreCase) &&
-            candidate.IsProcedure ==
-                implementation.IsProcedure &&
-            candidate.Parameters.Count ==
-                implementation.Parameters.Count &&
-            candidate.ReturnType.Equals(
-                implementation.ReturnType,
-                StringComparison.OrdinalIgnoreCase) &&
-            ParametersMatch(
-                candidate.Parameters,
-                implementation.Parameters) &&
-            candidate.LocalVariables.Count ==
-                implementation.LocalVariables.Count &&
-            LocalVariablesMatch(
-                candidate.LocalVariables,
-                implementation.LocalVariables));
-}
+        if (body.OwnerKind ==
+            BodyTokenAnalyzer.BodyOwnerKind.TopLevel)
+        {
+            return semanticUnit.Functions.FirstOrDefault(
+                candidate =>
+                    FunctionMatches(
+                        candidate,
+                        implementation));
+        }
+
+        int separator =
+            implementation.Name.LastIndexOf('.');
+
+        if (separator < 1)
+            return null;
+
+        string ownerName =
+            implementation.Name[..separator];
+
+        string methodName =
+            implementation.Name[(separator + 1)..];
+
+        SemanticMember? member =
+            FindMethodMember(
+                semanticUnit,
+                body.OwnerKind,
+                ownerName,
+                methodName,
+                implementation);
+
+        if (member is null)
+            return null;
+
+        return CreateSemanticFunction(
+            member,
+            implementation);
+    }
 
     private static DelphiFunction? FindImplementation(
         DelphiUnit unit,
@@ -68,49 +99,195 @@ public static SemanticFunction? Match(
         return null;
     }
 
-private static bool LocalVariablesMatch(
-    IReadOnlyList<SemanticVariable> semanticVariables,
-    IReadOnlyList<DelphiVariable> delphiVariables)
-{
-    if (semanticVariables.Count !=
-        delphiVariables.Count)
+    private static SemanticMember? FindMethodMember(
+        SemanticUnit semanticUnit,
+        BodyTokenAnalyzer.BodyOwnerKind ownerKind,
+        string ownerName,
+        string methodName,
+        DelphiFunction implementation)
     {
-        return false;
+        IEnumerable<SemanticMember> members;
+
+        if (ownerKind ==
+            BodyTokenAnalyzer.BodyOwnerKind.Class)
+        {
+            SemanticClass? @class =
+                semanticUnit.Classes.FirstOrDefault(
+                    value =>
+                        value.Name.Equals(
+                            ownerName,
+                            StringComparison.OrdinalIgnoreCase));
+
+            if (@class is null)
+                return null;
+
+            members = @class.Members;
+        }
+        else if (ownerKind ==
+                 BodyTokenAnalyzer.BodyOwnerKind.Interface)
+        {
+            SemanticInterface? @interface =
+                semanticUnit.Interfaces.FirstOrDefault(
+                    value =>
+                        value.Name.Equals(
+                            ownerName,
+                            StringComparison.OrdinalIgnoreCase));
+
+            if (@interface is null)
+                return null;
+
+            members = @interface.Members;
+        }
+        else
+        {
+            return null;
+        }
+
+        foreach (SemanticMember member in members)
+        {
+            if (member.Kind !=
+                SemanticMemberKind.Method)
+            {
+                continue;
+            }
+
+            if (!member.Name.Equals(
+                    methodName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (member.Parameters.Count !=
+                implementation.Parameters.Count)
+            {
+                continue;
+            }
+
+            if (!ParametersMatch(
+                    member.Parameters,
+                    implementation.Parameters))
+            {
+                continue;
+            }
+
+            bool memberIsProcedure =
+                string.IsNullOrWhiteSpace(member.Type);
+
+            if (memberIsProcedure !=
+                implementation.IsProcedure)
+            {
+                continue;
+            }
+
+            if (!memberIsProcedure &&
+                !member.Type.Equals(
+                    implementation.ReturnType,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            return member;
+        }
+
+        return null;
     }
 
-    for (int i = 0;
-         i < semanticVariables.Count;
-         i++)
+    private static SemanticFunction? CreateSemanticFunction(
+        SemanticMember member,
+        DelphiFunction implementation)
     {
-        SemanticVariable semantic =
-            semanticVariables[i];
+        return new SemanticFunction(
+            member.Name,
+            member.Parameters,
+            member.Type,
+            implementation.IsProcedure,
+            implementation.LocalVariables
+                .Select(
+                    variable =>
+                        new SemanticVariable(
+                            variable.Name,
+                            variable.Type))
+                .ToList());
+    }
 
-        DelphiVariable delphi =
-            delphiVariables[i];
+    private static bool FunctionMatches(
+        SemanticFunction candidate,
+        DelphiFunction implementation)
+    {
+        return
+            candidate.Name.Equals(
+                implementation.Name,
+                StringComparison.OrdinalIgnoreCase) &&
+            candidate.IsProcedure ==
+                implementation.IsProcedure &&
+            candidate.Parameters.Count ==
+                implementation.Parameters.Count &&
+            candidate.ReturnType.Equals(
+                implementation.ReturnType,
+                StringComparison.OrdinalIgnoreCase) &&
+            ParametersMatch(
+                candidate.Parameters,
+                implementation.Parameters) &&
+            candidate.LocalVariables.Count ==
+                implementation.LocalVariables.Count &&
+            LocalVariablesMatch(
+                candidate.LocalVariables,
+                implementation.LocalVariables);
+    }
 
-        if (!semantic.Name.Equals(
-                delphi.Name,
-                StringComparison.OrdinalIgnoreCase))
+    private static bool LocalVariablesMatch(
+        IReadOnlyList<SemanticVariable> semanticVariables,
+        IReadOnlyList<DelphiVariable> delphiVariables)
+    {
+        if (semanticVariables.Count !=
+            delphiVariables.Count)
         {
             return false;
         }
 
-        if (!semantic.Type.Equals(
-                delphi.Type,
-                StringComparison.OrdinalIgnoreCase))
+        for (int i = 0;
+             i < semanticVariables.Count;
+             i++)
         {
-            return false;
-        }
-    }
+            SemanticVariable semantic =
+                semanticVariables[i];
 
-    return true;
-}
+            DelphiVariable delphi =
+                delphiVariables[i];
+
+            if (!semantic.Name.Equals(
+                    delphi.Name,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (!semantic.Type.Equals(
+                    delphi.Type,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static bool ParametersMatch(
         IReadOnlyList<SemanticParameter> semanticParameters,
         IReadOnlyList<DelphiParameter> delphiParameters)
     {
-        for (int i = 0; i < semanticParameters.Count; i++)
+        if (semanticParameters.Count !=
+            delphiParameters.Count)
+        {
+            return false;
+        }
+
+        for (int i = 0;
+             i < semanticParameters.Count;
+             i++)
         {
             SemanticParameter semantic =
                 semanticParameters[i];
