@@ -901,29 +901,92 @@ public sealed class DelphiToCSharpTranslator
         return $"{target}[{index}]";
     }
 
-    private string TranslateCall(
-        ExpressionParser.ExpressionNode expression)
+private string TranslateCall(
+    ExpressionParser.ExpressionNode expression)
+{
+    if (expression.Children.Count == 0)
+        return expression.Text;
+
+    ExpressionParser.ExpressionNode targetExpression =
+        expression.Children[0];
+
+    string target =
+        TranslateExpression(
+            targetExpression);
+
+    var arguments = new List<string>();
+
+    for (int i = 1;
+         i < expression.Children.Count;
+         i++)
     {
-        if (expression.Children.Count == 0)
-            return expression.Text;
-
-        string target =
+        arguments.Add(
             TranslateExpression(
-                expression.Children[0]);
-
-        var arguments = new List<string>();
-
-        for (int i = 1;
-             i < expression.Children.Count;
-             i++)
-        {
-            arguments.Add(
-                TranslateExpression(
-                    expression.Children[i]));
-        }
-
-        return $"{target}({string.Join(", ", arguments)})";
+                expression.Children[i]));
     }
+
+    if (targetExpression.Kind ==
+            ExpressionParser.ExpressionKind.Identifier &&
+        IsBuiltInDelphiType(
+            targetExpression.Text) &&
+        arguments.Count == 1)
+    {
+        string csharpType =
+            CSharpTypeMapper.Map(
+                targetExpression.Text);
+
+        return $"({csharpType})({arguments[0]})";
+    }
+
+    return $"{target}({string.Join(", ", arguments)})";
+}
+
+private static bool IsBuiltInDelphiType(
+    string typeName)
+{
+    return typeName.Equals(
+               "Integer",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Boolean",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "String",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Real",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Double",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Single",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Char",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Byte",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Word",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Cardinal",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "LongWord",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "Int64",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "LongInt",
+               StringComparison.OrdinalIgnoreCase) ||
+           typeName.Equals(
+               "ShortInt",
+               StringComparison.OrdinalIgnoreCase);
+}
 
     private string TranslateTypeTest(
         ExpressionParser.ExpressionNode expression)
