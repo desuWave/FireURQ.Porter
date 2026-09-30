@@ -23,6 +23,7 @@ public static class CSharpTypeMapper
             "byte" => "byte",
             "word" => "ushort",
             "cardinal" => "uint",
+            "longword" => "uint",
             "int64" => "long",
             "longint" => "int",
             "shortint" => "sbyte",
