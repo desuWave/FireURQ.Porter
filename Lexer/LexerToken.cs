@@ -4,16 +4,13 @@ public enum TokenKind
 {
     Identifier,
     Keyword,
-
     String,
     Number,
     Character,
-
     Symbol,
     Operator,
-
     Comment,
-
+    Directive,
     EndOfFile
 }
 

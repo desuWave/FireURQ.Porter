@@ -1552,6 +1552,17 @@ private static string InferConstantType(
 
         MatchSymbol(";");
 
+while (!IsEnd() && IsDirective())
+{
+    Advance();
+
+    if (!IsEnd() &&
+        MatchKeyword("inline"))
+    {
+        MatchSymbol(";");
+    }
+}
+
 IReadOnlyList<DelphiVariable> localVariables =
     Array.Empty<DelphiVariable>();
 
@@ -2412,6 +2423,11 @@ private string ReadUntilParameterTerminator()
             " ",
             parts);
     }
+
+private bool IsDirective()
+{
+    return Current().Kind == TokenKind.Directive;
+}
 
     private LexerToken Current()
     {

@@ -925,6 +925,23 @@ private string TranslateCall(
                 expression.Children[i]));
     }
 
+if (targetExpression.Kind ==
+        ExpressionParser.ExpressionKind.Identifier &&
+    targetExpression.Text.Equals(
+        "Inc",
+        StringComparison.OrdinalIgnoreCase))
+{
+    if (arguments.Count == 1)
+    {
+        return $"{arguments[0]}++";
+    }
+
+    if (arguments.Count == 2)
+    {
+        return $"{arguments[0]} += {arguments[1]}";
+    }
+}
+
     if (targetExpression.Kind ==
             ExpressionParser.ExpressionKind.Identifier &&
         IsBuiltInDelphiType(
@@ -940,6 +957,8 @@ private string TranslateCall(
 
     return $"{target}({string.Join(", ", arguments)})";
 }
+
+
 
 private static bool IsBuiltInDelphiType(
     string typeName)

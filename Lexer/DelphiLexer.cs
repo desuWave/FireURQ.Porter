@@ -132,23 +132,31 @@ public sealed class DelphiLexer
             // Comments
             // -------------------------------------------------
 
-            if (c == '/' && Peek(1) == '/')
-            {
-                ReadLineComment();
-                continue;
-            }
+if (c == '/' && Peek(1) == '/')
+{
+    ReadLineComment();
+    continue;
+}
 
-            if (c == '{')
-            {
-                ReadBraceComment();
-                continue;
-            }
+if (c == '{')
+{
+    if (Peek(1) == '$')
+    {
+        tokens.Add(ReadDirective());
+    }
+    else
+    {
+        ReadBraceComment();
+    }
 
-            if (c == '(' && Peek(1) == '*')
-            {
-                ReadBlockComment();
-                continue;
-            }
+    continue;
+}
+
+if (c == '(' && Peek(1) == '*')
+{
+    ReadBlockComment();
+    continue;
+}
 
             // -------------------------------------------------
             // String / character literal
@@ -450,6 +458,35 @@ public sealed class DelphiLexer
             line,
             column);
     }
+
+private LexerToken ReadDirective()
+{
+    int line = _line;
+    int column = _column;
+
+    var builder =
+        new StringBuilder();
+
+    Advance(); // {
+
+    while (!IsAtEnd() &&
+           Current() != '}')
+    {
+        builder.Append(Current());
+        Advance();
+    }
+
+    if (!IsAtEnd())
+    {
+        Advance(); // }
+    }
+
+    return new LexerToken(
+        TokenKind.Directive,
+        builder.ToString(),
+        line,
+        column);
+}
 
     private LexerToken ReadBraceComment()
     {
