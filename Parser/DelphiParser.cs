@@ -309,15 +309,24 @@ public sealed class DelphiParser
 
         while (!IsEnd())
         {
-            result.Add(
-                ReadQualifiedIdentifier());
+            if (IsDirective())
+            {
+                Advance();
+                continue;
+            }
 
             if (MatchSymbol(";"))
             {
                 break;
             }
 
-            MatchSymbol(",");
+            if (MatchSymbol(","))
+            {
+                continue;
+            }
+
+            result.Add(
+                ReadQualifiedIdentifier());
         }
 
         return result;
