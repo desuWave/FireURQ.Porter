@@ -307,11 +307,40 @@ public static class DependencyGraphBuilder
             return;
         }
 
-        if (nodes.Any(
+        int existingIndex =
+            nodes.FindIndex(
                 node => node.Id.Equals(
                     id,
-                    StringComparison.OrdinalIgnoreCase)))
+                    StringComparison.OrdinalIgnoreCase));
+
+        if (existingIndex >= 0)
         {
+            DependencyNode existing =
+                nodes[existingIndex];
+
+            bool shouldPromoteToMethod =
+                kind.Equals(
+                    "Method",
+                    StringComparison.OrdinalIgnoreCase) &&
+                (
+                    existing.Kind.Equals(
+                        "Function",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    existing.Kind.Equals(
+                        "Procedure",
+                        StringComparison.OrdinalIgnoreCase)
+                );
+
+            if (shouldPromoteToMethod)
+            {
+                nodes[existingIndex] =
+                    new DependencyNode(
+                        existing.Id,
+                        existing.Name,
+                        "Method",
+                        existing.UnitName);
+            }
+
             return;
         }
 
