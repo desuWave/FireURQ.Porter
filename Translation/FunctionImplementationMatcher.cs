@@ -93,32 +93,24 @@ public static SemanticFunction? Match(
         if (ownerKind ==
             BodyTokenAnalyzer.BodyOwnerKind.Class)
         {
-            SemanticClass? @class =
-                semanticUnit.Classes.FirstOrDefault(
-                    value =>
+            members =
+                semanticUnit.Classes
+                    .Where(value =>
                         value.Name.Equals(
                             ownerName,
-                            StringComparison.OrdinalIgnoreCase));
-
-            if (@class is null)
-                return null;
-
-            members = @class.Members;
+                            StringComparison.OrdinalIgnoreCase))
+                    .SelectMany(value => value.Members);
         }
         else if (ownerKind ==
                  BodyTokenAnalyzer.BodyOwnerKind.Interface)
         {
-            SemanticInterface? @interface =
-                semanticUnit.Interfaces.FirstOrDefault(
-                    value =>
+            members =
+                semanticUnit.Interfaces
+                    .Where(value =>
                         value.Name.Equals(
                             ownerName,
-                            StringComparison.OrdinalIgnoreCase));
-
-            if (@interface is null)
-                return null;
-
-            members = @interface.Members;
+                            StringComparison.OrdinalIgnoreCase))
+                    .SelectMany(value => value.Members);
         }
         else
         {
