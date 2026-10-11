@@ -1118,6 +1118,90 @@ if (MatchKeyword("record"))
         if (depth == 0)
             break;
 
+        // Variant records use a selector followed by one or more
+        // alternatives, e.g. "case Integer of 0: (A, B: LongInt)".
+        // The alternatives share storage in Pascal; this parser keeps
+        // their field declarations but does not model shared storage.
+        if (MatchKeyword("case"))
+        {
+            while (!IsEnd() && !MatchKeyword("of"))
+                Advance();
+
+            while (!IsEnd() && !PeekKeyword("end"))
+            {
+                if (MatchSymbol(";"))
+                    continue;
+
+                // Skip the alternative label (for example, 0 or 1)
+                // and its colon.
+                while (!IsEnd() &&
+                       !PeekKeyword("end") &&
+                       !MatchSymbol(":"))
+                {
+                    Advance();
+                }
+
+                if (IsEnd() || PeekKeyword("end"))
+                    break;
+
+                if (!MatchSymbol("("))
+                {
+                    Advance();
+                    continue;
+                }
+
+                while (!IsEnd() && !PeekSymbol(")"))
+                {
+                    var fieldNames = new List<string>();
+
+                    if (!IsIdentifier())
+                    {
+                        Advance();
+                        continue;
+                    }
+
+                    fieldNames.Add(ExpectIdentifier());
+
+                    while (MatchSymbol(","))
+                    {
+                        if (IsIdentifier())
+                            fieldNames.Add(ExpectIdentifier());
+                        else
+                            break;
+                    }
+
+                    if (!MatchSymbol(":"))
+                    {
+                        // Recover at the next field separator or
+                        // the end of this variant alternative.
+                        while (!IsEnd() &&
+                               !PeekSymbol(";") &&
+                               !PeekSymbol(")"))
+                            Advance();
+
+                        MatchSymbol(";");
+                        continue;
+                    }
+
+                    string fieldType = ReadVariantRecordFieldType();
+
+                    foreach (string fieldName in fieldNames)
+                    {
+                        fields.Add(new DelphiField(fieldName, fieldType));
+                        definition.Add($"{fieldName} : {fieldType} ;");
+                    }
+
+                    if (!MatchSymbol(";") && !PeekSymbol(")"))
+                        Advance();
+                }
+
+                MatchSymbol(")");
+                MatchSymbol(";");
+            }
+
+            continue;
+        }
+
         if (IsIdentifier())
         {
             string fieldName =
@@ -1875,6 +1959,34 @@ private void ParseLocalVariableSection(
     // ========================================================
     // TYPE HELPERS
     // ========================================================
+
+    private string ReadVariantRecordFieldType()
+    {
+        var parts = new List<string>();
+        int squareDepth = 0;
+
+        while (!IsEnd())
+        {
+            if (PeekSymbol("["))
+            {
+                squareDepth++;
+            }
+            else if (PeekSymbol("]") && squareDepth > 0)
+            {
+                squareDepth--;
+            }
+            else if (squareDepth == 0 &&
+                     (PeekSymbol(";") || PeekSymbol(")")))
+            {
+                break;
+            }
+
+            parts.Add(Current().Text);
+            Advance();
+        }
+
+        return string.Join(" ", parts);
+    }
 
     private string ReadPropertyType()
     {
