@@ -563,7 +563,7 @@ public sealed class CSharpDeclarationTranslator
             return $"using {type.Name} = IntPtr;";
 
         if (type.Kind.Equals("Set", StringComparison.OrdinalIgnoreCase))
-            return $"using {type.Name} = HashSet<int>;";
+            return $"using {type.Name} = {CSharpTypeMapper.Map(type.Definition)};";
 
         if (type.Kind.Equals("ClassReference", StringComparison.OrdinalIgnoreCase))
             return $"using {type.Name} = Type;";
