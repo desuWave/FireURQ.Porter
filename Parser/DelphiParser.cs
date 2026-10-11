@@ -1742,15 +1742,6 @@ private void ParseLocalVariableSection(
 
         while (!IsEnd())
         {
-            // Compiler directives such as {$I-} and {$I+}
-            // control the Pascal compiler and must not be
-            // forwarded to the C# statement translator.
-            if (IsDirective())
-            {
-                Advance();
-                continue;
-            }
-
             if (PeekKeyword("begin"))
             {
                 beginDepth++;
@@ -1799,6 +1790,15 @@ private void ParseLocalVariableSection(
 
         while (!IsEnd())
         {
+            // Compiler directives such as {$I-} and {$I+}
+            // control the Pascal compiler and must not be
+            // forwarded to the C# statement translator.
+            if (IsDirective())
+            {
+                Advance();
+                continue;
+            }
+
             if (PeekKeyword("begin"))
             {
                 beginDepth++;
