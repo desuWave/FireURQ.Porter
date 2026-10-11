@@ -399,7 +399,9 @@ public sealed class DelphiToCSharpTranslator
             "}");
 
         string condition =
-            statement.Expression is null
+            statement.Expression is null ||
+            statement.Expression.Kind ==
+                ExpressionParser.ExpressionKind.Empty
                 ? "false"
                 : TranslateExpression(
                     statement.Expression);
@@ -416,15 +418,27 @@ public sealed class DelphiToCSharpTranslator
         StringBuilder builder,
         int indent)
     {
-        AppendLine(
-            builder,
-            indent,
-            "try");
+        bool hasSupportedClause =
+            statement.Clauses is not null &&
+            statement.Clauses.Any(clause =>
+                clause.Kind.Equals(
+                    "EXCEPT",
+                    StringComparison.OrdinalIgnoreCase) ||
+                clause.Kind.Equals(
+                    "FINALLY",
+                    StringComparison.OrdinalIgnoreCase));
 
+        // C# does not allow a try block without catch/finally.
+        // If the analyzer could not recover a supported clause,
+        // preserve the statements as a regular scoped block rather
+        // than generating syntactically invalid C#.
         AppendLine(
             builder,
             indent,
-            "{");
+            hasSupportedClause ? "try" : "{");
+
+        if (hasSupportedClause)
+            AppendLine(builder, indent, "{");
 
         foreach (
             BehaviorAnalyzer.BehaviorStatement child
@@ -442,12 +456,12 @@ public sealed class DelphiToCSharpTranslator
             indent,
             "}");
 
-        if (statement.Clauses is null)
+        if (!hasSupportedClause)
             return;
 
         foreach (
             BehaviorAnalyzer.BehaviorClause clause
-            in statement.Clauses)
+            in statement.Clauses!)
         {
             if (clause.Kind.Equals(
                     "EXCEPT",
