@@ -1201,7 +1201,19 @@ private static bool TryTranslatePascalStringLiteral(string text, out string resu
         return false;
     }
 
-    if (characters.Count == 0) return false;
+    // In Pascal, '' is the empty string. Do not leave it unchanged:
+    // C# interprets '' as an invalid empty character literal.
+    if (characters.Count == 0)
+    {
+        if (text == "''")
+        {
+            result = "\\"\\\"";
+            return true;
+        }
+
+        return false;
+    }
+
     if (text[0] == '#' && characters.Count == 1)
     {
         result = "'" + EscapeCSharpCharacter(characters[0]) + "'";
