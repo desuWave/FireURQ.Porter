@@ -1103,12 +1103,8 @@ if (MatchKeyword("record"))
         if (PeekKeyword("record"))
         {
             depth++;
-            definition.Add(Current().Text);
-            Advance();
-            continue;
         }
-
-        if (PeekKeyword("end"))
+        else if (PeekKeyword("end"))
         {
             depth--;
 
@@ -1117,57 +1113,41 @@ if (MatchKeyword("record"))
                 Advance();
                 break;
             }
-
-            definition.Add(Current().Text);
-            Advance();
-            continue;
         }
 
-        // Variant-record selector: "case Integer of".
-        // The selector itself is not a data field.
-        if (PeekKeyword("case"))
-        {
-            Advance();
-            while (!IsEnd() && !PeekKeyword("of"))
-                Advance();
-            if (PeekKeyword("of"))
-                Advance();
-            definition.Add("case variant of");
-            continue;
-        }
+        if (depth == 0)
+            break;
 
         if (IsIdentifier())
         {
-            var fieldNames = new List<string>
-            {
-                ExpectIdentifier()
-            };
-
-            while (MatchSymbol(","))
-            {
-                if (!IsIdentifier())
-                    break;
-                fieldNames.Add(ExpectIdentifier());
-            }
+            string fieldName =
+                ExpectIdentifier();
 
             if (MatchSymbol(":"))
             {
-                string fieldType = ReadTypeExpression();
+                string fieldType =
+                    ReadTypeExpression();
+
                 MatchSymbol(";");
 
-                foreach (string fieldName in fieldNames)
-                    fields.Add(new DelphiField(fieldName, fieldType));
+                fields.Add(
+                    new DelphiField(
+                        fieldName,
+                        fieldType));
 
                 definition.Add(
-                    $"{string.Join(", ", fieldNames)} : {fieldType} ;");
+                    $"{fieldName} : {fieldType} ;");
+
                 continue;
             }
 
-            definition.AddRange(fieldNames);
+            definition.Add(fieldName);
             continue;
         }
 
-        definition.Add(Current().Text);
+        definition.Add(
+            Current().Text);
+
         Advance();
     }
 
