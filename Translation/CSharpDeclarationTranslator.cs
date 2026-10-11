@@ -5,251 +5,175 @@ namespace FireURQ.Porter.Translation;
 
 public sealed class CSharpDeclarationTranslator
 {
-public string Translate(SemanticUnit unit)
-{
-    var builder = new StringBuilder();
-
-    // C# alias directives must appear before namespace/type/member declarations.
-    // Emit Delphi type aliases first; emit concrete enum/record declarations below.
-    foreach (SemanticType type in unit.Types.Where(IsTypeAlias))
+    public string Translate(SemanticUnit unit)
     {
-        builder.AppendLine(TranslateType(type));
-    }
+        var builder = new StringBuilder();
 
-    if (unit.Types.Any(IsTypeAlias))
-        builder.AppendLine();
+        foreach (SemanticType type in unit.Types.Where(IsTypeAlias))
+            builder.AppendLine(TranslateType(type));
 
-    foreach (SemanticVariable variable in unit.Variables)
-    {
-        builder.AppendLine(
-            $"{CSharpTypeMapper.Map(variable.Type)} {variable.Name};");
-    }
+        if (unit.Types.Any(IsTypeAlias))
+            builder.AppendLine();
 
-    if (unit.Variables.Count > 0)
-        builder.AppendLine();
-
-    foreach (SemanticConstant constant in unit.Constants)
-    {
-        string type = CSharpTypeMapper.Map(constant.Type);
-        string value = TranslateConstantValue(
-            constant.Value,
-            constant.Type);
-
-        builder.AppendLine(
-            $"const {type} {constant.Name} = {value};");
-    }
-
-    if (unit.Constants.Count > 0)
-        builder.AppendLine();
-
-    foreach (SemanticType type in unit.Types.Where(type => !IsTypeAlias(type)))
-    {
-        builder.AppendLine(TranslateType(type));
-        builder.AppendLine();
-    }
-
-    foreach (SemanticClass @class in unit.Classes)
-    {
-        builder.AppendLine(TranslateClass(@class));
-        builder.AppendLine();
-    }
-
-    foreach (SemanticInterface @interface in unit.Interfaces)
-    {
-        builder.AppendLine(TranslateInterface(@interface));
-        builder.AppendLine();
-    }
-
-    return builder.ToString();
-}
-
-private static bool IsTypeAlias(SemanticType type)
-{
-    return type.Kind.Equals("Simple", StringComparison.OrdinalIgnoreCase)
-        || type.Kind.Equals("Array", StringComparison.OrdinalIgnoreCase)
-        || type.Kind.Equals("Pointer", StringComparison.OrdinalIgnoreCase)
-        || type.Kind.Equals("Set", StringComparison.OrdinalIgnoreCase)
-        || type.Kind.Equals("ClassReference", StringComparison.OrdinalIgnoreCase);
-}
-
-private static string TranslateConstantValue(
-    string value,
-    string sourceType)
-{
-    string text = value.Trim();
-
-    string mappedType = CSharpTypeMapper.Map(sourceType);
-
-    // Delphi hexadecimal integer:
-    // $626262 -> 0x626262
-    if (text.StartsWith("$", StringComparison.Ordinal))
-    {
-        string hexadecimal = text[1..];
-
-        if (hexadecimal.Length > 0 &&
-            hexadecimal.All(Uri.IsHexDigit))
+        foreach (SemanticType type in unit.Types.Where(type => !IsTypeAlias(type)))
         {
-            return "0x" + hexadecimal;
-        }
-    }
-
-    // Delphi character-code literals:
-    // #9      -> '\t' or "\t"
-    // #13#10  -> "\r\n"
-    if (TryTranslateCharacterCodes(
-            text,
-            mappedType,
-            out string characterCodeValue))
-    {
-        return characterCodeValue;
-    }
-
-    // Delphi quoted string or character:
-    // 'hello' -> "hello"
-    // 'P'     -> 'P' when the declared type is char
-    if (text.StartsWith("'") &&
-        text.EndsWith("'") &&
-        text.Length >= 2)
-    {
-        string content = text[1..^1]
-            .Replace("''", "'");
-
-        if (mappedType == "char" && content.Length == 1)
-        {
-            return "'" + EscapeCSharpCharacter(content[0]) + "'";
+            builder.AppendLine(TranslateType(type));
+            builder.AppendLine();
         }
 
-        return "\"" + EscapeCSharpString(content) + "\"";
-    }
-
-    if (text.Equals(
-            "true",
-            StringComparison.OrdinalIgnoreCase) ||
-        text.Equals(
-            "false",
-            StringComparison.OrdinalIgnoreCase))
-    {
-        return text.ToLowerInvariant();
-    }
-
-    if (text.Equals(
-            "nil",
-            StringComparison.OrdinalIgnoreCase))
-    {
-        return "null";
-    }
-
-    return text;
-}
-
-private static bool TryTranslateCharacterCodes(
-    string text,
-    string mappedType,
-    out string result)
-{
-    result = string.Empty;
-
-    if (text.Length == 0 || text[0] != '#')
-    {
-        return false;
-    }
-
-    var characters = new List<char>();
-    int position = 0;
-
-    while (position < text.Length)
-    {
-        while (position < text.Length &&
-               char.IsWhiteSpace(text[position]))
+        foreach (SemanticClass @class in unit.Classes)
         {
+            builder.AppendLine(TranslateClass(@class));
+            builder.AppendLine();
+        }
+
+        foreach (SemanticInterface @interface in unit.Interfaces)
+        {
+            builder.AppendLine(TranslateInterface(@interface));
+            builder.AppendLine();
+        }
+
+        return builder.ToString();
+    }
+
+    public string TranslateModuleMembers(SemanticUnit unit)
+    {
+        var builder = new StringBuilder();
+
+        foreach (SemanticVariable variable in unit.Variables)
+        {
+            builder.AppendLine(
+                $"public static {CSharpTypeMapper.Map(variable.Type)} {variable.Name};");
+        }
+
+        if (unit.Variables.Count > 0)
+            builder.AppendLine();
+
+        foreach (SemanticConstant constant in unit.Constants)
+        {
+            string type = CSharpTypeMapper.Map(constant.Type);
+            string value = TranslateConstantValue(constant.Value, constant.Type);
+
+            builder.AppendLine(
+                $"public const {type} {constant.Name} = {value};");
+        }
+
+        return builder.ToString();
+    }
+
+    private static bool IsTypeAlias(SemanticType type)
+    {
+        return type.Kind.Equals("Simple", StringComparison.OrdinalIgnoreCase)
+            || type.Kind.Equals("Array", StringComparison.OrdinalIgnoreCase)
+            || type.Kind.Equals("Pointer", StringComparison.OrdinalIgnoreCase)
+            || type.Kind.Equals("Set", StringComparison.OrdinalIgnoreCase)
+            || type.Kind.Equals("ClassReference", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string TranslateConstantValue(string value, string sourceType)
+    {
+        string text = value.Trim();
+        string mappedType = CSharpTypeMapper.Map(sourceType);
+
+        if (text.StartsWith("$", StringComparison.Ordinal))
+        {
+            string hexadecimal = text[1..];
+            if (hexadecimal.Length > 0 && hexadecimal.All(Uri.IsHexDigit))
+                return "0x" + hexadecimal;
+        }
+
+        if (TryTranslateCharacterCodes(text, mappedType, out string characterCodeValue))
+            return characterCodeValue;
+
+        if (text.StartsWith("'") && text.EndsWith("'") && text.Length >= 2)
+        {
+            string content = text[1..^1].Replace("''", "'");
+            if (mappedType == "char" && content.Length == 1)
+                return "'" + EscapeCSharpCharacter(content[0]) + "'";
+            return "\"" + EscapeCSharpString(content) + "\"";
+        }
+
+        if (text.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+            text.Equals("false", StringComparison.OrdinalIgnoreCase))
+            return text.ToLowerInvariant();
+
+        if (text.Equals("nil", StringComparison.OrdinalIgnoreCase))
+            return "null";
+
+        return text;
+    }
+
+    private static bool TryTranslateCharacterCodes(string text, string mappedType, out string result)
+    {
+        result = string.Empty;
+        if (text.Length == 0 || text[0] != '#')
+            return false;
+
+        var characters = new List<char>();
+        int position = 0;
+
+        while (position < text.Length)
+        {
+            while (position < text.Length && char.IsWhiteSpace(text[position]))
+                position++;
+
+            if (position >= text.Length || text[position] != '#')
+                return false;
+
             position++;
+            int digitStart = position;
+
+            while (position < text.Length && char.IsDigit(text[position]))
+                position++;
+
+            if (digitStart == position ||
+                !int.TryParse(text[digitStart..position], out int code) ||
+                code < 0 || code > char.MaxValue)
+                return false;
+
+            characters.Add((char)code);
         }
 
-        if (position >= text.Length)
-        {
-            break;
-        }
-
-        if (text[position] != '#')
-        {
+        if (characters.Count == 0)
             return false;
-        }
 
-        position++;
-
-        int digitStart = position;
-
-        while (position < text.Length &&
-               char.IsDigit(text[position]))
+        if (mappedType == "char")
         {
-            position++;
+            if (characters.Count != 1)
+                return false;
+            result = "'" + EscapeCSharpCharacter(characters[0]) + "'";
+            return true;
         }
 
-        if (digitStart == position ||
-            !int.TryParse(
-                text[digitStart..position],
-                out int code) ||
-            code < 0 ||
-            code > char.MaxValue)
-        {
-            return false;
-        }
-
-        characters.Add((char)code);
-    }
-
-    if (characters.Count == 0)
-    {
-        return false;
-    }
-
-    if (mappedType == "char")
-    {
-        if (characters.Count != 1)
-        {
-            return false;
-        }
-
-        result =
-            "'" + EscapeCSharpCharacter(characters[0]) + "'";
-
+        result = "\"" + EscapeCSharpString(new string(characters.ToArray())) + "\"";
         return true;
     }
 
-    result =
-        "\"" + EscapeCSharpString(new string(characters.ToArray())) + "\"";
-
-    return true;
-}
-
-private static string EscapeCSharpCharacter(char value)
-{
-    return value switch
+    private static string EscapeCSharpCharacter(char value)
     {
-        '\\' => "\\\\",
-        '\'' => "\\'",
-        '\0' => "\\0",
-        '\a' => "\\a",
-        '\b' => "\\b",
-        '\f' => "\\f",
-        '\n' => "\\n",
-        '\r' => "\\r",
-        '\t' => "\\t",
-        '\v' => "\\v",
-        _ when char.IsControl(value) =>
-            "\\u" + ((int)value).ToString("X4"),
-        _ => value.ToString()
-    };
-}
+        return value switch
+        {
+            '\\' => "\\\\",
+            '\'' => "\\'",
+            '\0' => "\\0",
+            '\a' => "\\a",
+            '\b' => "\\b",
+            '\f' => "\\f",
+            '\n' => "\\n",
+            '\r' => "\\r",
+            '\t' => "\\t",
+            '\v' => "\\v",
+            _ when char.IsControl(value) => "\\u" + ((int)value).ToString("X4"),
+            _ => value.ToString()
+        };
+    }
 
-private static string EscapeCSharpString(string value)
-{
-    var builder = new StringBuilder();
-
-    foreach (char character in value)
+    private static string EscapeCSharpString(string value)
     {
-        builder.Append(
-            character switch
+        var builder = new StringBuilder();
+        foreach (char character in value)
+        {
+            builder.Append(character switch
             {
                 '\\' => "\\\\",
                 '"' => "\\\"",
@@ -261,325 +185,212 @@ private static string EscapeCSharpString(string value)
                 '\r' => "\\r",
                 '\t' => "\\t",
                 '\v' => "\\v",
-                _ when char.IsControl(character) =>
-                    "\\u" + ((int)character).ToString("X4"),
+                _ when char.IsControl(character) => "\\u" + ((int)character).ToString("X4"),
                 _ => character.ToString()
             });
-    }
-
-    return builder.ToString();
-}
-
-private static string TranslateClass(SemanticClass @class)
-{
-    var builder = new StringBuilder();
-
-    string baseType = string.IsNullOrWhiteSpace(@class.BaseType)
-        ? string.Empty
-        : $" : {CSharpTypeMapper.Map(@class.BaseType)}";
-
-    builder.AppendLine($"public class {@class.Name}{baseType}");
-    builder.AppendLine("{");
-
-    AppendMembers(builder, @class.Members, isInterface: false);
-
-    builder.Append('}');
-    return builder.ToString();
-}
-
-private static string TranslateInterface(SemanticInterface @interface)
-{
-    var builder = new StringBuilder();
-
-    string baseType = string.IsNullOrWhiteSpace(@interface.BaseType)
-        ? string.Empty
-        : $" : {CSharpTypeMapper.Map(@interface.BaseType)}";
-
-    builder.AppendLine($"public interface {@interface.Name}{baseType}");
-    builder.AppendLine("{");
-
-    AppendMembers(builder, @interface.Members, isInterface: true);
-
-    builder.Append('}');
-    return builder.ToString();
-}
-
-private static void AppendMembers(
-    StringBuilder builder,
-    IReadOnlyList<SemanticMember> members,
-    bool isInterface)
-{
-    foreach (SemanticMember member in members)
-    {
-        switch (member.Kind)
-        {
-            case SemanticMemberKind.Field:
-                if (!isInterface)
-                {
-                    string visibility = MapVisibility(member.Visibility);
-                    builder.AppendLine(
-                        $"    {visibility}{CSharpTypeMapper.Map(member.Type)} " +
-                        $"{member.Name};");
-                }
-                break;
-
-            case SemanticMemberKind.Method:
-                AppendMethod(builder, member, isInterface);
-                break;
-
-            case SemanticMemberKind.Property:
-                AppendProperty(builder, member, members, isInterface);
-                break;
-
-            case SemanticMemberKind.MethodResolution:
-                builder.AppendLine(
-                    $"    // TODO: method resolution {member.Name}");
-                break;
         }
-    }
-}
-
-private static void AppendMethod(
-    StringBuilder builder,
-    SemanticMember member,
-    bool isInterface)
-{
-    string visibility = isInterface
-        ? string.Empty
-        : MapVisibility(member.Visibility);
-
-    string returnType = CSharpTypeMapper.Map(member.Type);
-    string parameters = string.Join(
-        ", ",
-        member.Parameters.Select(parameter =>
-            $"{MapParameterKind(parameter.Kind)}" +
-            $"{CSharpTypeMapper.Map(parameter.Type)} {parameter.Name}"));
-
-    builder.AppendLine(
-        $"    {visibility}{returnType} {member.Name}({parameters});");
-}
-
-private static void AppendProperty(
-    StringBuilder builder,
-    SemanticMember member,
-    IReadOnlyList<SemanticMember> members,
-    bool isInterface)
-{
-    string visibility = isInterface
-        ? string.Empty
-        : MapVisibility(member.Visibility);
-
-    string propertyType = CSharpTypeMapper.Map(member.Type);
-
-    string? readAccessor = member.ReadAccessor;
-    string? writeAccessor = member.WriteAccessor;
-
-    string getter = BuildPropertyAccessor(
-        readAccessor,
-        members,
-        isInterface,
-        isGetter: true);
-
-    string setter = BuildPropertyAccessor(
-        writeAccessor,
-        members,
-        isInterface,
-        isGetter: false);
-
-    string accessors = string.Join(
-        " ",
-        new[] { getter, setter }
-            .Where(accessor => !string.IsNullOrWhiteSpace(accessor)));
-
-    if (string.IsNullOrWhiteSpace(accessors))
-    {
-        builder.AppendLine(
-            $"    // TODO: property {member.Name} has no read/write accessor");
-        return;
+        return builder.ToString();
     }
 
-    builder.AppendLine(
-        $"    {visibility}{propertyType} {member.Name} {{ {accessors} }}");
-}
-
-private static string BuildPropertyAccessor(
-    string? accessor,
-    IReadOnlyList<SemanticMember> members,
-    bool isInterface,
-    bool isGetter)
-{
-    if (string.IsNullOrWhiteSpace(accessor))
-        return string.Empty;
-
-    string name = accessor.Trim();
-
-    SemanticMember? target = members.FirstOrDefault(
-        candidate =>
-            candidate.Name.Equals(
-                name,
-                StringComparison.OrdinalIgnoreCase) &&
-            candidate.Kind is SemanticMemberKind.Field
-                or SemanticMemberKind.Method);
-
-    if (isInterface)
+    private static string TranslateClass(SemanticClass @class)
     {
-        // Интерфейс задаёт контракт, а не реализацию аксессоров.
-        return isGetter ? "get;" : "set;";
-    }
-
-    if (target is null)
-    {
-        return isGetter
-            ? $"get => throw new NotImplementedException(/* {name} */);"
-            : $"set => throw new NotImplementedException(/* {name} */);";
-    }
-
-    if (target.Kind == SemanticMemberKind.Field)
-    {
-        return isGetter
-            ? $"get => {name};"
-            : $"set => {name} = value;";
-    }
-
-    string parameters = isGetter
-        ? string.Join(
-            ", ",
-            target.Parameters.Select(parameter => parameter.Name))
-        : string.Join(
-            ", ",
-            target.Parameters.Select(parameter => parameter.Name)
-                .Append("value"));
-
-    return isGetter
-        ? $"get => {name}({parameters});"
-        : $"set => {name}({parameters});";
-}
-
-private static string MapVisibility(string? visibility)
-{
-    if (string.IsNullOrWhiteSpace(visibility))
-        return "public ";
-
-    return visibility.Trim().ToLowerInvariant() switch
-    {
-        "private" => "private ",
-        "protected" => "protected ",
-        "public" => "public ",
-        "published" => "public ",
-        "strict private" => "private ",
-        "strict protected" => "protected ",
-        _ => "public "
-    };
-}
-
-private static string MapParameterKind(string? kind)
-{
-    if (string.IsNullOrWhiteSpace(kind))
-        return string.Empty;
-
-    return kind.Trim().ToLowerInvariant() switch
-    {
-        "var" => "ref ",
-        "out" => "out ",
-        "const" => string.Empty,
-        "value" => string.Empty,
-        _ => string.Empty
-    };
-}
-
-private static string TranslateType(SemanticType type)
-{
-    if (type.Kind.Equals(
-            "Simple",
-            StringComparison.OrdinalIgnoreCase))
-    {
-        return $"using {type.Name} = {CSharpTypeMapper.Map(type.Definition)};";
-    }
-
-    if (type.Kind.Equals(
-            "Enum",
-            StringComparison.OrdinalIgnoreCase))
-    {
-        string[] values = type.Definition.Split(
-            ',',
-            StringSplitOptions.RemoveEmptyEntries |
-            StringSplitOptions.TrimEntries);
-
         var builder = new StringBuilder();
-        builder.AppendLine($"enum {type.Name}");
+        string baseType = string.IsNullOrWhiteSpace(@class.BaseType)
+            ? string.Empty
+            : $" : {CSharpTypeMapper.Map(@class.BaseType)}";
+
+        builder.AppendLine($"public partial class {@class.Name}{baseType}");
         builder.AppendLine("{");
-
-        for (int i = 0; i < values.Length; i++)
-        {
-            string suffix = i < values.Length - 1 ? "," : string.Empty;
-            builder.AppendLine($"    {values[i]}{suffix}");
-        }
-
+        AppendMembers(builder, @class.Members, isInterface: false);
         builder.Append('}');
         return builder.ToString();
     }
 
-    if (type.Kind.Equals(
-            "Array",
-            StringComparison.OrdinalIgnoreCase))
+    private static string TranslateInterface(SemanticInterface @interface)
     {
-        string definition = type.Definition.Trim();
+        var builder = new StringBuilder();
+        string baseType = string.IsNullOrWhiteSpace(@interface.BaseType)
+            ? string.Empty
+            : $" : {CSharpTypeMapper.Map(@interface.BaseType)}";
 
-        int ofIndex = definition.IndexOf(
-            "of",
-            StringComparison.OrdinalIgnoreCase);
+        builder.AppendLine($"public interface {@interface.Name}{baseType}");
+        builder.AppendLine("{");
+        AppendMembers(builder, @interface.Members, isInterface: true);
+        builder.Append('}');
+        return builder.ToString();
+    }
 
-        if (ofIndex >= 0)
+    private static void AppendMembers(StringBuilder builder, IReadOnlyList<SemanticMember> members, bool isInterface)
+    {
+        foreach (SemanticMember member in members)
         {
-            string elementType = definition[(ofIndex + 2)..].Trim();
+            switch (member.Kind)
+            {
+                case SemanticMemberKind.Field:
+                    if (!isInterface)
+                    {
+                        string visibility = MapVisibility(member.Visibility);
+                        builder.AppendLine(
+                            $"    {visibility}{CSharpTypeMapper.Map(member.Type)} {member.Name};");
+                    }
+                    break;
 
-            return $"using {type.Name} = " +
-                   $"{CSharpTypeMapper.Map(elementType)}[];";
+                case SemanticMemberKind.Method:
+                    // Implementations are emitted into a separate partial class.
+                    // Interface methods remain declarations because the interface is a contract.
+                    if (isInterface)
+                        AppendMethod(builder, member, isInterface: true);
+                    break;
+
+                case SemanticMemberKind.Property:
+                    AppendProperty(builder, member, members, isInterface);
+                    break;
+
+                case SemanticMemberKind.MethodResolution:
+                    builder.AppendLine($"    // TODO: method resolution {member.Name}");
+                    break;
+            }
         }
     }
 
-    if (type.Kind.Equals(
-            "Pointer",
-            StringComparison.OrdinalIgnoreCase))
+    private static void AppendMethod(StringBuilder builder, SemanticMember member, bool isInterface)
     {
-        return $"using {type.Name} = IntPtr;";
+        string visibility = isInterface ? string.Empty : MapVisibility(member.Visibility);
+        string returnType = CSharpTypeMapper.Map(member.Type);
+        string parameters = string.Join(", ", member.Parameters.Select(parameter =>
+            $"{MapParameterKind(parameter.Kind)}{CSharpTypeMapper.Map(parameter.Type)} {parameter.Name}"));
+        builder.AppendLine($"    {visibility}{returnType} {member.Name}({parameters});");
     }
 
-    if (type.Kind.Equals(
-            "Set",
-            StringComparison.OrdinalIgnoreCase))
+    private static void AppendProperty(StringBuilder builder, SemanticMember member, IReadOnlyList<SemanticMember> members, bool isInterface)
     {
-        return $"using {type.Name} = HashSet<int>;";
-    }
+        string visibility = isInterface ? string.Empty : MapVisibility(member.Visibility);
+        string propertyType = CSharpTypeMapper.Map(member.Type);
 
-    if (type.Kind.Equals(
-            "ClassReference",
-            StringComparison.OrdinalIgnoreCase))
-    {
-        return $"using {type.Name} = Type;";
-    }
+        string getter = BuildPropertyAccessor(member.ReadAccessor, members, isInterface, true);
+        string setter = BuildPropertyAccessor(member.WriteAccessor, members, isInterface, false);
+        string accessors = string.Join(" ", new[] { getter, setter }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
-    if (type.Kind.Equals(
-            "Record",
-            StringComparison.OrdinalIgnoreCase))
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine($"struct {type.Name}");
-        builder.AppendLine("{");
-
-        if (type.Fields is not null)
+        if (string.IsNullOrWhiteSpace(accessors))
         {
-            foreach (SemanticField field in type.Fields)
+            builder.AppendLine($"    // TODO: property {member.Name} has no read/write accessor");
+            return;
+        }
+
+        builder.AppendLine($"    {visibility}{propertyType} {member.Name} {{ {accessors} }}");
+    }
+
+    private static string BuildPropertyAccessor(string? accessor, IReadOnlyList<SemanticMember> members, bool isInterface, bool isGetter)
+    {
+        if (string.IsNullOrWhiteSpace(accessor))
+            return string.Empty;
+
+        string name = accessor.Trim();
+        SemanticMember? target = members.FirstOrDefault(candidate =>
+            candidate.Name.Equals(name, StringComparison.OrdinalIgnoreCase) &&
+            candidate.Kind is SemanticMemberKind.Field or SemanticMemberKind.Method);
+
+        if (isInterface)
+            return isGetter ? "get;" : "set;";
+
+        if (target is null)
+            return isGetter
+                ? $"get => throw new NotImplementedException(/* {name} */);"
+                : $"set => throw new NotImplementedException(/* {name} */);";
+
+        if (target.Kind == SemanticMemberKind.Field)
+            return isGetter ? $"get => {name};" : $"set => {name} = value;";
+
+        string parameters = isGetter
+            ? string.Join(", ", target.Parameters.Select(parameter => parameter.Name))
+            : string.Join(", ", target.Parameters.Select(parameter => parameter.Name).Append("value"));
+
+        return isGetter ? $"get => {name}({parameters});" : $"set => {name}({parameters});";
+    }
+
+    private static string MapVisibility(string? visibility)
+    {
+        if (string.IsNullOrWhiteSpace(visibility))
+            return "public ";
+
+        return visibility.Trim().ToLowerInvariant() switch
+        {
+            "private" => "private ",
+            "protected" => "protected ",
+            "public" => "public ",
+            "published" => "public ",
+            "strict private" => "private ",
+            "strict protected" => "protected ",
+            _ => "public "
+        };
+    }
+
+    private static string MapParameterKind(string? kind)
+    {
+        if (string.IsNullOrWhiteSpace(kind))
+            return string.Empty;
+
+        return kind.Trim().ToLowerInvariant() switch
+        {
+            "var" => "ref ",
+            "out" => "out ",
+            "const" => string.Empty,
+            "value" => string.Empty,
+            _ => string.Empty
+        };
+    }
+
+    private static string TranslateType(SemanticType type)
+    {
+        if (type.Kind.Equals("Simple", StringComparison.OrdinalIgnoreCase))
+            return $"using {type.Name} = {CSharpTypeMapper.Map(type.Definition)};";
+
+        if (type.Kind.Equals("Enum", StringComparison.OrdinalIgnoreCase))
+        {
+            string[] values = type.Definition.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var builder = new StringBuilder();
+            builder.AppendLine($"enum {type.Name}");
+            builder.AppendLine("{");
+            for (int i = 0; i < values.Length; i++)
+                builder.AppendLine($"    {values[i]}{(i < values.Length - 1 ? "," : string.Empty)}");
+            builder.Append('}');
+            return builder.ToString();
+        }
+
+        if (type.Kind.Equals("Array", StringComparison.OrdinalIgnoreCase))
+        {
+            string definition = type.Definition.Trim();
+            int ofIndex = definition.IndexOf("of", StringComparison.OrdinalIgnoreCase);
+            if (ofIndex >= 0)
             {
-                builder.AppendLine(
-                    $"    {CSharpTypeMapper.Map(field.Type)} {field.Name};");
+                string elementType = definition[(ofIndex + 2)..].Trim();
+                return $"using {type.Name} = {CSharpTypeMapper.Map(elementType)}[];";
             }
         }
 
-        builder.Append('}');
-        return builder.ToString();
-    }
+        if (type.Kind.Equals("Pointer", StringComparison.OrdinalIgnoreCase))
+            return $"using {type.Name} = IntPtr;";
 
-    return $"// TODO: Delphi type {type.Name} ({type.Kind}): {type.Definition}";
-}
+        if (type.Kind.Equals("Set", StringComparison.OrdinalIgnoreCase))
+            return $"using {type.Name} = HashSet<int>;";
+
+        if (type.Kind.Equals("ClassReference", StringComparison.OrdinalIgnoreCase))
+            return $"using {type.Name} = Type;";
+
+        if (type.Kind.Equals("Record", StringComparison.OrdinalIgnoreCase))
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine($"struct {type.Name}");
+            builder.AppendLine("{");
+            if (type.Fields is not null)
+            {
+                foreach (SemanticField field in type.Fields)
+                    builder.AppendLine($"    {CSharpTypeMapper.Map(field.Type)} {field.Name};");
+            }
+            builder.Append('}');
+            return builder.ToString();
+        }
+
+        return $"// TODO: Delphi type {type.Name} ({type.Kind}): {type.Definition}";
+    }
 }
