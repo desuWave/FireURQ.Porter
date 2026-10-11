@@ -1162,8 +1162,11 @@ private static bool IsBuiltInDelphiType(
         if (set.Kind !=
             ExpressionParser.ExpressionKind.Set)
         {
-            return
-                $"({value} /* in */ {TranslateExpression(set)})";
+            // Named Pascal set types are translated to HashSet<int>
+            // aliases, so membership must call Contains rather than
+            // emitting the Pascal "in" operator into C#.
+            string translatedSet = TranslateExpression(set);
+            return $"{translatedSet}.Contains((int)({value}))";
         }
 
         var conditions =
