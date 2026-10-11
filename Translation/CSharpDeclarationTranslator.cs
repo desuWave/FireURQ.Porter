@@ -7,7 +7,18 @@ public sealed class CSharpDeclarationTranslator
 {
 public string Translate(SemanticUnit unit)
 {
-var builder = new StringBuilder();
+    var builder = new StringBuilder();
+
+    // C# alias directives must appear before namespace/type/member declarations.
+    // Emit Delphi type aliases first; emit concrete enum/record declarations below.
+    foreach (SemanticType type in unit.Types.Where(IsTypeAlias))
+    {
+        builder.AppendLine(TranslateType(type));
+    }
+
+    if (unit.Types.Any(IsTypeAlias))
+        builder.AppendLine();
+
     foreach (SemanticVariable variable in unit.Variables)
     {
         builder.AppendLine(
@@ -17,21 +28,21 @@ var builder = new StringBuilder();
     if (unit.Variables.Count > 0)
         builder.AppendLine();
 
-foreach (SemanticConstant constant in unit.Constants)
-{
-    string type = CSharpTypeMapper.Map(constant.Type);
-    string value = TranslateConstantValue(
-        constant.Value,
-        constant.Type);
+    foreach (SemanticConstant constant in unit.Constants)
+    {
+        string type = CSharpTypeMapper.Map(constant.Type);
+        string value = TranslateConstantValue(
+            constant.Value,
+            constant.Type);
 
-    builder.AppendLine(
-        $"const {type} {constant.Name} = {value};");
-}
+        builder.AppendLine(
+            $"const {type} {constant.Name} = {value};");
+    }
 
     if (unit.Constants.Count > 0)
         builder.AppendLine();
 
-    foreach (SemanticType type in unit.Types)
+    foreach (SemanticType type in unit.Types.Where(type => !IsTypeAlias(type)))
     {
         builder.AppendLine(TranslateType(type));
         builder.AppendLine();
@@ -50,6 +61,15 @@ foreach (SemanticConstant constant in unit.Constants)
     }
 
     return builder.ToString();
+}
+
+private static bool IsTypeAlias(SemanticType type)
+{
+    return type.Kind.Equals("Simple", StringComparison.OrdinalIgnoreCase)
+        || type.Kind.Equals("Array", StringComparison.OrdinalIgnoreCase)
+        || type.Kind.Equals("Pointer", StringComparison.OrdinalIgnoreCase)
+        || type.Kind.Equals("Set", StringComparison.OrdinalIgnoreCase)
+        || type.Kind.Equals("ClassReference", StringComparison.OrdinalIgnoreCase);
 }
 
 private static string TranslateConstantValue(
