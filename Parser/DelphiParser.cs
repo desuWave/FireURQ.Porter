@@ -1354,6 +1354,16 @@ private static string InferConstantType(
         return "Real";
     }
 
+    if (text.StartsWith("#", StringComparison.Ordinal))
+    {
+        int codeCount = System.Text.RegularExpressions.Regex.Matches(text, @"#\d+").Count;
+        if (codeCount > 0 &&
+            System.Text.RegularExpressions.Regex.Replace(text, @"#\d+", "").Length == 0)
+        {
+            return codeCount == 1 ? "Char" : "String";
+        }
+    }
+
     if (text.StartsWith("[", StringComparison.Ordinal) &&
         text.EndsWith("]", StringComparison.Ordinal))
     {
