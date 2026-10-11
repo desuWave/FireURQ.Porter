@@ -9,6 +9,15 @@ public static string Map(string? delphiType)
 
     string type = delphiType.Trim();
 
+    if (type.StartsWith("set of ", StringComparison.OrdinalIgnoreCase))
+    {
+        string elementType = type[7..].Trim();
+        string mappedElementType = elementType.Equals("Byte", StringComparison.OrdinalIgnoreCase)
+            ? "byte"
+            : Map(elementType);
+        return $"HashSet<{mappedElementType}>";
+    }
+
     // Delphi array declarations:
     // array [0 .. MAX_PATH] of Char -> char[]
     // array [1 .. 2] of TPlaceArea -> TPlaceArea[]

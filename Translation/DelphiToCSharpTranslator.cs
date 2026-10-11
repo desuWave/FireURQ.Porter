@@ -753,6 +753,14 @@ public sealed class DelphiToCSharpTranslator
             ExpressionParser.ExpressionKind.Set =>
                 TranslateSet(expression),
 
+            ExpressionParser.ExpressionKind.AddressOf =>
+                TranslateAddressOf(expression),
+
+            ExpressionParser.ExpressionKind.Dereference =>
+                expression.Children.Count == 0
+                    ? expression.Text
+                    : TranslateExpression(expression.Children[0]),
+
             _ =>
                 expression.Text
         };
@@ -1123,53 +1131,137 @@ private string TranslateLiteral(
 {
     string value = text.Trim();
 
-    if (value.StartsWith("'") &&
-        value.EndsWith("'") &&
-        value.Length >= 2)
-    {
-        string content =
-            value[1..^1]
-                .Replace("''", "'")
-                .Replace("\\", "\\\\")
-                .Replace("\"", "\\\"")
-                .Replace("\r", "\\r")
-                .Replace("\n", "\\n")
-                .Replace("\t", "\\t");
-
-        return $"\"{content}\"";
-    }
+    if (TryTranslatePascalStringLiteral(value, out string literal))
+        return literal;
 
     if (value.StartsWith("$", StringComparison.Ordinal))
     {
-        string hexadecimal =
-            value[1..];
-
-        if (hexadecimal.Length > 0 &&
-            hexadecimal.All(
-                c => Uri.IsHexDigit(c)))
-        {
+        string hexadecimal = value[1..];
+        if (hexadecimal.Length > 0 && hexadecimal.All(c => Uri.IsHexDigit(c)))
             return $"0x{hexadecimal}";
-        }
     }
 
-    if (value.Equals(
-            "nil",
-            StringComparison.OrdinalIgnoreCase))
-    {
+    if (value.Equals("nil", StringComparison.OrdinalIgnoreCase))
         return "null";
-    }
 
-    if (value.Equals(
-            "true",
-            StringComparison.OrdinalIgnoreCase) ||
-        value.Equals(
-            "false",
-            StringComparison.OrdinalIgnoreCase))
-    {
+    if (value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+        value.Equals("false", StringComparison.OrdinalIgnoreCase))
         return value.ToLowerInvariant();
-    }
 
     return value;
+}
+
+private static bool TryTranslatePascalStringLiteral(string text, out string result)
+{
+    result = string.Empty;
+    if (text.Length == 0 || (text[0] != '#' && text[0] != '\''))
+        return false;
+
+    var characters = new List<char>();
+    int position = 0;
+    while (position < text.Length)
+    {
+        if (char.IsWhiteSpace(text[position])) { position++; continue; }
+        if (text[position] == '#')
+        {
+            position++;
+            int digitStart = position;
+            while (position < text.Length && char.IsDigit(text[position])) position++;
+            if (digitStart == position ||
+                !int.TryParse(text[digitStart..position], out int code) ||
+                code < 0 || code > char.MaxValue)
+                return false;
+            characters.Add((char)code);
+            continue;
+        }
+
+        if (text[position] == '\'')
+        {
+            position++;
+            bool closed = false;
+            while (position < text.Length)
+            {
+                char current = text[position++];
+                if (current == '\'')
+                {
+                    if (position < text.Length && text[position] == '\'')
+                    {
+                        characters.Add('\'');
+                        position++;
+                        continue;
+                    }
+                    closed = true;
+                    break;
+                }
+                characters.Add(current);
+            }
+            if (!closed) return false;
+            continue;
+        }
+        return false;
+    }
+
+    if (characters.Count == 0) return false;
+    if (text[0] == '#' && characters.Count == 1)
+    {
+        result = "'" + EscapeCSharpCharacter(characters[0]) + "'";
+        return true;
+    }
+    result = "\"" + EscapeCSharpString(new string(characters.ToArray())) + "\"";
+    return true;
+}
+
+private static string EscapeCSharpCharacter(char value)
+{
+    return value switch
+    {
+        '\\' => "\\\\",
+        '\'' => "\\'",
+        '\0' => "\\0",
+        '\a' => "\\a",
+        '\b' => "\\b",
+        '\f' => "\\f",
+        '\n' => "\\n",
+        '\r' => "\\r",
+        '\t' => "\\t",
+        '\v' => "\\v",
+        _ when char.IsControl(value) => "\\u" + ((int)value).ToString("X4"),
+        _ => value.ToString()
+    };
+}
+
+private static string EscapeCSharpString(string value)
+{
+    var builder = new StringBuilder();
+    foreach (char character in value)
+    {
+        builder.Append(character switch
+        {
+            '\\' => "\\\\",
+            '"' => "\\\"",
+            '\0' => "\\0",
+            '\a' => "\\a",
+            '\b' => "\\b",
+            '\f' => "\\f",
+            '\n' => "\\n",
+            '\r' => "\\r",
+            '\t' => "\\t",
+            '\v' => "\\v",
+            _ when char.IsControl(character) => "\\u" + ((int)character).ToString("X4"),
+            _ => character.ToString()
+        });
+    }
+    return builder.ToString();
+}
+
+private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
+{
+    if (expression.Children.Count == 0)
+        return "default /* TODO: Delphi address-of operand missing */";
+
+    // Delphi address-of has no general safe C# equivalent. Preserve the operand
+    // and flag pointer/API adaptation rather than emitting a bare '@'.
+    return "/* TODO: Delphi address-of */ " + TranslateExpression(expression.Children[0]);
 }
 
     private static string MapParameterKind(

@@ -53,9 +53,11 @@ public sealed class CSharpDeclarationTranslator
         {
             string type = CSharpTypeMapper.Map(constant.Type);
             string value = TranslateConstantValue(constant.Value, constant.Type);
-
-            builder.AppendLine(
-                $"public const {type} {constant.Name} = {value};");
+            bool requiresStaticReadonly =
+                type.EndsWith("[]", StringComparison.Ordinal) ||
+                type.StartsWith("HashSet<", StringComparison.Ordinal);
+            string modifier = requiresStaticReadonly ? "public static readonly" : "public const";
+            builder.AppendLine($"{modifier} {type} {constant.Name} = {value};");
         }
 
         return builder.ToString();
@@ -74,6 +76,9 @@ public sealed class CSharpDeclarationTranslator
     {
         string text = value.Trim();
         string mappedType = CSharpTypeMapper.Map(sourceType);
+        if (mappedType.EndsWith("[]", StringComparison.Ordinal) &&
+            TryTranslateArrayConstant(text, mappedType, out string arrayValue))
+            return arrayValue;
 
         if (text.StartsWith("$", StringComparison.Ordinal))
         {
@@ -96,11 +101,91 @@ public sealed class CSharpDeclarationTranslator
         if (text.Equals("true", StringComparison.OrdinalIgnoreCase) ||
             text.Equals("false", StringComparison.OrdinalIgnoreCase))
             return text.ToLowerInvariant();
-
         if (text.Equals("nil", StringComparison.OrdinalIgnoreCase))
             return "null";
-
         return text;
+    }
+
+    private static bool TryTranslateArrayConstant(string text, string arrayType, out string result)
+    {
+        result = string.Empty;
+        if (text.Length < 2 || text[0] != '(' || text[^1] != ')') return false;
+        string elementType = arrayType[..^2].Trim();
+        List<string> elements = SplitTopLevel(text[1..^1], ',');
+        if (elements.Count == 0) return false;
+
+        var translated = new List<string>();
+        foreach (string element in elements)
+        {
+            string item = element.Trim();
+            if (item.Length == 0) return false;
+            if (item.StartsWith("(") && item.EndsWith(")") && item.Contains(':'))
+            {
+                if (!TryTranslateRecordInitializer(item, out string recordValue)) return false;
+                translated.Add($"new {elementType} {recordValue}");
+            }
+            else
+                translated.Add(TranslateConstantValue(item, elementType));
+        }
+        result = $"new {arrayType} {{ {string.Join(", ", translated)} }}";
+        return true;
+    }
+
+    private static bool TryTranslateRecordInitializer(string text, out string result)
+    {
+        result = string.Empty;
+        if (text.Length < 2 || text[0] != '(' || text[^1] != ')') return false;
+        var assignments = new List<string>();
+        foreach (string field in SplitTopLevel(text[1..^1], ';'))
+        {
+            List<string> pair = SplitTopLevel(field, ':');
+            if (pair.Count < 2) return false;
+            string name = pair[0].Trim();
+            string value = string.Join(":", pair.Skip(1)).Trim();
+            if (name.Length == 0 || value.Length == 0) return false;
+            assignments.Add($"{name} = {TranslateConstantValue(value, "string")}");
+        }
+        result = $"{{ {string.Join(", ", assignments)} }}";
+        return assignments.Count > 0;
+    }
+
+    private static List<string> SplitTopLevel(string text, char separator)
+    {
+        var parts = new List<string>();
+        int roundDepth = 0, squareDepth = 0;
+        bool inString = false;
+        var current = new StringBuilder();
+        for (int i = 0; i < text.Length; i++)
+        {
+            char c = text[i];
+            if (c == '\'')
+            {
+                current.Append(c);
+                if (inString && i + 1 < text.Length && text[i + 1] == '\'')
+                {
+                    current.Append(text[++i]);
+                    continue;
+                }
+                inString = !inString;
+                continue;
+            }
+            if (!inString)
+            {
+                if (c == '(') roundDepth++;
+                else if (c == ')') roundDepth--;
+                else if (c == '[') squareDepth++;
+                else if (c == ']') squareDepth--;
+                if (c == separator && roundDepth == 0 && squareDepth == 0)
+                {
+                    parts.Add(current.ToString().Trim());
+                    current.Clear();
+                    continue;
+                }
+            }
+            current.Append(c);
+        }
+        if (current.Length > 0) parts.Add(current.ToString().Trim());
+        return parts;
     }
 
     private static bool TryTranslateCharacterCodes(string text, string mappedType, out string result)
@@ -385,7 +470,7 @@ public sealed class CSharpDeclarationTranslator
             if (type.Fields is not null)
             {
                 foreach (SemanticField field in type.Fields)
-                    builder.AppendLine($"    {CSharpTypeMapper.Map(field.Type)} {field.Name};");
+                    builder.AppendLine($"    public {CSharpTypeMapper.Map(field.Type)} {field.Name};");
             }
             builder.Append('}');
             return builder.ToString();
