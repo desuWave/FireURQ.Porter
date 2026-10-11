@@ -1207,7 +1207,7 @@ private static bool TryTranslatePascalStringLiteral(string text, out string resu
     {
         if (text == "''")
         {
-            result = "\\"\\\"";
+            result = "\"\"";
             return true;
         }
 
