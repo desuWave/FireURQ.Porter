@@ -1103,8 +1103,12 @@ if (MatchKeyword("record"))
         if (PeekKeyword("record"))
         {
             depth++;
+            definition.Add(Current().Text);
+            Advance();
+            continue;
         }
-        else if (PeekKeyword("end"))
+
+        if (PeekKeyword("end"))
         {
             depth--;
 
@@ -1113,41 +1117,139 @@ if (MatchKeyword("record"))
                 Advance();
                 break;
             }
-        }
 
-        if (depth == 0)
-            break;
-
-        if (IsIdentifier())
-        {
-            string fieldName =
-                ExpectIdentifier();
-
-            if (MatchSymbol(":"))
-            {
-                string fieldType =
-                    ReadTypeExpression();
-
-                MatchSymbol(";");
-
-                fields.Add(
-                    new DelphiField(
-                        fieldName,
-                        fieldType));
-
-                definition.Add(
-                    $"{fieldName} : {fieldType} ;");
-
-                continue;
-            }
-
-            definition.Add(fieldName);
+            definition.Add(Current().Text);
+            Advance();
             continue;
         }
 
-        definition.Add(
-            Current().Text);
+        // Variant records contain labelled, parenthesized field alternatives.
+        if (PeekKeyword("case"))
+        {
+            Advance();
+            while (!IsEnd() && !PeekKeyword("of"))
+                Advance();
 
+            if (MatchKeyword("of"))
+            {
+                while (!IsEnd() && !PeekKeyword("end"))
+                {
+                    if (MatchSymbol(";"))
+                        continue;
+
+                    while (!IsEnd() && !PeekSymbol(":") && !PeekKeyword("end"))
+                        Advance();
+
+                    if (PeekKeyword("end"))
+                        break;
+
+                    MatchSymbol(":");
+                    if (!MatchSymbol("("))
+                    {
+                        if (!IsEnd())
+                            Advance();
+                        continue;
+                    }
+
+                    while (!IsEnd() && !PeekSymbol(")"))
+                    {
+                        if (MatchSymbol(";") || MatchSymbol(","))
+                            continue;
+
+                        if (!IsIdentifier())
+                        {
+                            Advance();
+                            continue;
+                        }
+
+                        var fieldNames = new List<string> { ExpectIdentifier() };
+                        while (MatchSymbol(","))
+                        {
+                            if (!IsIdentifier())
+                                break;
+                            fieldNames.Add(ExpectIdentifier());
+                        }
+
+                        if (!MatchSymbol(":"))
+                            continue;
+
+                        var fieldTypeParts = new List<string>();
+                        int squareDepth = 0;
+                        while (!IsEnd())
+                        {
+                            if (PeekSymbol("["))
+                                squareDepth++;
+                            else if (PeekSymbol("]") && squareDepth > 0)
+                                squareDepth--;
+                            else if (squareDepth == 0 &&
+                                     (PeekSymbol(";") || PeekSymbol(")")))
+                                break;
+
+                            fieldTypeParts.Add(Current().Text);
+                            Advance();
+                        }
+
+                        string fieldType = string.Join(" ", fieldTypeParts);
+                        foreach (string fieldName in fieldNames)
+                        {
+                            fields.Add(new DelphiField(fieldName, fieldType));
+                            definition.Add($"{fieldName} : {fieldType} ;");
+                        }
+
+                        MatchSymbol(";");
+                    }
+
+                    MatchSymbol(")");
+                    MatchSymbol(";");
+                }
+            }
+
+            continue;
+        }
+
+        if (IsIdentifier())
+        {
+            var fieldNames = new List<string> { ExpectIdentifier() };
+            while (MatchSymbol(","))
+            {
+                if (!IsIdentifier())
+                    break;
+                fieldNames.Add(ExpectIdentifier());
+            }
+
+            if (MatchSymbol(":"))
+            {
+                var fieldTypeParts = new List<string>();
+                int squareDepth = 0;
+                while (!IsEnd())
+                {
+                    if (PeekSymbol("["))
+                        squareDepth++;
+                    else if (PeekSymbol("]") && squareDepth > 0)
+                        squareDepth--;
+                    else if (squareDepth == 0 && PeekSymbol(";"))
+                        break;
+
+                    fieldTypeParts.Add(Current().Text);
+                    Advance();
+                }
+
+                string fieldType = string.Join(" ", fieldTypeParts);
+                foreach (string fieldName in fieldNames)
+                {
+                    fields.Add(new DelphiField(fieldName, fieldType));
+                    definition.Add($"{fieldName} : {fieldType} ;");
+                }
+
+                MatchSymbol(";");
+                continue;
+            }
+
+            definition.AddRange(fieldNames);
+            continue;
+        }
+
+        definition.Add(Current().Text);
         Advance();
     }
 
