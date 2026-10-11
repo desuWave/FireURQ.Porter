@@ -37,7 +37,9 @@ public sealed record SemanticMember(
     string Type,
     string? Visibility,
     IReadOnlyList<SemanticParameter> Parameters,
-    bool IsDefault
+    bool IsDefault,
+    string? ReadAccessor = null,
+    string? WriteAccessor = null
 );
 
 public sealed record SemanticField(

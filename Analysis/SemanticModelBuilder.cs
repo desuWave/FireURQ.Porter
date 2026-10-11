@@ -148,7 +148,9 @@ foreach (var declaration in unit.Declarations)
                     property.Parameters
                         .Select(BuildParameter)
                         .ToList(),
-                    property.IsDefault),
+                    property.IsDefault,
+                    property.ReadAccessor,
+                    property.WriteAccessor),
 
             DelphiMethodResolution resolution =>
                 new SemanticMember(

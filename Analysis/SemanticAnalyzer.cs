@@ -145,7 +145,9 @@ case DelphiType value:
                                 parameter.Type,
                                 parameter.Kind.ToString()))
                         .ToList(),
-                        property.IsDefault),
+                        property.IsDefault,
+                        property.ReadAccessor,
+                        property.WriteAccessor),
 
 
             DelphiMethodResolution resolution =>
