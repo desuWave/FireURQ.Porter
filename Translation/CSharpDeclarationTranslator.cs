@@ -51,8 +51,16 @@ public sealed class CSharpDeclarationTranslator
 
         foreach (SemanticConstant constant in unit.Constants)
         {
-            string type = CSharpTypeMapper.Map(constant.Type);
-            string value = TranslateConstantValue(constant.Value, constant.Type);
+            string sourceType = constant.Type;
+            SemanticType? setAlias = unit.Types.FirstOrDefault(type =>
+                type.Name.Equals(sourceType, StringComparison.OrdinalIgnoreCase) &&
+                type.Kind.Equals("Set", StringComparison.OrdinalIgnoreCase));
+
+            if (setAlias is not null)
+                sourceType = setAlias.Definition;
+
+            string type = CSharpTypeMapper.Map(sourceType);
+            string value = TranslateConstantValue(constant.Value, sourceType);
             bool requiresStaticReadonly =
                 type.EndsWith("[]", StringComparison.Ordinal) ||
                 type.StartsWith("HashSet<", StringComparison.Ordinal);
@@ -207,6 +215,8 @@ public sealed class CSharpDeclarationTranslator
         List<string> elements = SplitTopLevel(text[1..^1], ',');
         var values = new List<int>();
 
+        var translatedElements = new List<string>();
+
         foreach (string rawElement in elements)
         {
             string element = rawElement.Trim();
@@ -222,24 +232,39 @@ public sealed class CSharpDeclarationTranslator
                     return false;
 
                 for (int value = first; value <= last; value++)
-                    values.Add(value);
+                    translatedElements.Add(FormatSetElement(value, elementType));
 
                 continue;
             }
 
-            if (!TryParsePascalSetValue(element, out int scalar))
-                return false;
+            if (TryParsePascalSetValue(element, out int scalar))
+            {
+                translatedElements.Add(FormatSetElement(scalar, elementType));
+                continue;
+            }
 
-            values.Add(scalar);
+            // Pascal set literals may refer to previously declared character constants,
+            // e.g. [' ', chTAB, #0]. Preserve a simple identifier as a C# expression.
+            if (System.Text.RegularExpressions.Regex.IsMatch(element, @"^[A-Za-z_][A-Za-z0-9_]*$"))
+            {
+                translatedElements.Add(element);
+                continue;
+            }
+
+            return false;
         }
 
-        string initializer = string.Join(", ", values.Select(value =>
-            elementType.Equals("byte", StringComparison.OrdinalIgnoreCase)
-                ? $"(byte){value}"
-                : value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-
-        result = $"new {setType} {{ {initializer} }}";
+        result = $"new {setType} {{ {string.Join(", ", translatedElements)} }}";
         return true;
+    }
+
+    private static string FormatSetElement(int value, string elementType)
+    {
+        if (elementType.Equals("byte", StringComparison.OrdinalIgnoreCase))
+            return $"(byte){value}";
+        if (elementType.Equals("char", StringComparison.OrdinalIgnoreCase))
+            return $"(char){value}";
+        return value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     private static bool TryParsePascalSetValue(string text, out int value)
