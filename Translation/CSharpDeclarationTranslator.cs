@@ -80,6 +80,10 @@ public sealed class CSharpDeclarationTranslator
             TryTranslateArrayConstant(text, mappedType, out string arrayValue))
             return arrayValue;
 
+        if (mappedType.StartsWith("HashSet<", StringComparison.Ordinal) &&
+            TryTranslateSetConstant(text, mappedType, out string setValue))
+            return setValue;
+
         if (text.StartsWith("$", StringComparison.Ordinal))
         {
             string hexadecimal = text[1..];
@@ -186,6 +190,83 @@ public sealed class CSharpDeclarationTranslator
         }
         if (current.Length > 0) parts.Add(current.ToString().Trim());
         return parts;
+    }
+
+    private static bool TryTranslateSetConstant(string text, string setType, out string result)
+    {
+        result = string.Empty;
+        if (text.Length < 2 || text[0] != '[' || text[^1] != ']')
+            return false;
+
+        int genericStart = setType.IndexOf('<');
+        int genericEnd = setType.LastIndexOf('>');
+        if (genericStart < 0 || genericEnd <= genericStart)
+            return false;
+
+        string elementType = setType[(genericStart + 1)..genericEnd].Trim();
+        List<string> elements = SplitTopLevel(text[1..^1], ',');
+        var values = new List<int>();
+
+        foreach (string rawElement in elements)
+        {
+            string element = rawElement.Trim();
+            if (element.Length == 0)
+                return false;
+
+            List<string> range = SplitTopLevel(element, '.');
+            if (range.Count == 3 && range[1].Length == 0)
+            {
+                if (!TryParsePascalSetValue(range[0], out int first) ||
+                    !TryParsePascalSetValue(range[2], out int last) ||
+                    last < first || last - first > 4096)
+                    return false;
+
+                for (int value = first; value <= last; value++)
+                    values.Add(value);
+
+                continue;
+            }
+
+            if (!TryParsePascalSetValue(element, out int scalar))
+                return false;
+
+            values.Add(scalar);
+        }
+
+        string initializer = string.Join(", ", values.Select(value =>
+            elementType.Equals("byte", StringComparison.OrdinalIgnoreCase)
+                ? $"(byte){value}"
+                : value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+        result = $"new {setType} {{ {initializer} }}";
+        return true;
+    }
+
+    private static bool TryParsePascalSetValue(string text, out int value)
+    {
+        string token = text.Trim();
+        value = 0;
+
+        if (token.Length >= 3 && token[0] == '\'' && token[^1] == '\'')
+        {
+            string character = token[1..^1].Replace("''", "'");
+            if (character.Length != 1)
+                return false;
+
+            value = character[0];
+            return true;
+        }
+
+        if (token.StartsWith("#", StringComparison.Ordinal))
+            return int.TryParse(token[1..], System.Globalization.NumberStyles.Integer,
+                System.Globalization.CultureInfo.InvariantCulture, out value);
+
+        if (token.StartsWith("$", StringComparison.Ordinal))
+            return int.TryParse(token[1..], System.Globalization.NumberStyles.HexNumber,
+                System.Globalization.CultureInfo.InvariantCulture, out value);
+
+        return int.TryParse(token, System.Globalization.NumberStyles.Integer,
+            System.Globalization.CultureInfo.InvariantCulture, out value);
     }
 
     private static bool TryTranslateCharacterCodes(string text, string mappedType, out string result)
