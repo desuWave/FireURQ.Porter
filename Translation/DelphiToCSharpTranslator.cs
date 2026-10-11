@@ -450,8 +450,54 @@ public sealed class DelphiToCSharpTranslator
             in statement.Clauses)
         {
             if (clause.Kind.Equals(
-                    "FINALLY",
+                    "EXCEPT",
                     StringComparison.OrdinalIgnoreCase))
+            {
+                AppendLine(
+                    builder,
+                    indent,
+                    "catch (Exception)");
+
+                AppendLine(
+                    builder,
+                    indent,
+                    "{");
+
+                foreach (
+                    BehaviorAnalyzer.BehaviorStatement handler
+                    in clause.Statements)
+                {
+                    // Delphi "on E: TException do ..." handlers are
+                    // represented as wrapper statements. Until typed
+                    // exception dispatch is implemented, emit their
+                    // bodies inside a compilable catch-all block.
+                    IReadOnlyList<BehaviorAnalyzer.BehaviorStatement> children =
+                        handler.Text.StartsWith(
+                            "on ",
+                            StringComparison.OrdinalIgnoreCase)
+                            ? handler.Children
+                            : new[] { handler };
+
+                    foreach (
+                        BehaviorAnalyzer.BehaviorStatement child
+                        in children)
+                    {
+                        TranslateStatement(
+                            child,
+                            function,
+                            builder,
+                            indent + 1);
+                    }
+                }
+
+                AppendLine(
+                    builder,
+                    indent,
+                    "}");
+            }
+            else if (clause.Kind.Equals(
+                         "FINALLY",
+                         StringComparison.OrdinalIgnoreCase))
             {
                 AppendLine(
                     builder,
