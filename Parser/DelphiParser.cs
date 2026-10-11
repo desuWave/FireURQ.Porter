@@ -1118,10 +1118,144 @@ if (MatchKeyword("record"))
         if (depth == 0)
             break;
 
+        // Variant record fields use a different declaration form:
+        // case Integer of
+        //   0: (A, B, C, D: LongInt);
+        //   1: (v: array [0..15] of Byte);
+        if (PeekKeyword("case"))
+        {
+            Advance();
+
+            while (!IsEnd() &&
+                   !PeekKeyword("of") &&
+                   !PeekKeyword("end"))
+            {
+                Advance();
+            }
+
+            MatchKeyword("of");
+
+            while (!IsEnd() &&
+                   !PeekKeyword("end"))
+            {
+                if (!MatchSymbol("("))
+                {
+                    Advance();
+                    continue;
+                }
+
+                while (!IsEnd() &&
+                       !PeekSymbol(")") &&
+                       !PeekKeyword("end"))
+                {
+                    if (!IsIdentifier())
+                    {
+                        Advance();
+                        continue;
+                    }
+
+                    var fieldNames =
+                        new List<string>
+                        {
+                            ExpectIdentifier()
+                        };
+
+                    while (MatchSymbol(","))
+                    {
+                        if (!IsIdentifier())
+                            break;
+
+                        fieldNames.Add(
+                            ExpectIdentifier());
+                    }
+
+                    if (!MatchSymbol(":"))
+                        continue;
+
+                    var fieldTypeTokens =
+                        new List<string>();
+
+                    int squareDepth = 0;
+                    int roundDepth = 0;
+
+                    while (!IsEnd())
+                    {
+                        if (PeekSymbol("["))
+                        {
+                            squareDepth++;
+                        }
+                        else if (PeekSymbol("]"))
+                        {
+                            if (squareDepth > 0)
+                                squareDepth--;
+                        }
+                        else if (PeekSymbol("("))
+                        {
+                            roundDepth++;
+                        }
+                        else if (PeekSymbol(")"))
+                        {
+                            if (roundDepth == 0 &&
+                                squareDepth == 0)
+                            {
+                                break;
+                            }
+
+                            if (roundDepth > 0)
+                                roundDepth--;
+                        }
+
+                        if (squareDepth == 0 &&
+                            roundDepth == 0 &&
+                            PeekSymbol(";"))
+                        {
+                            break;
+                        }
+
+                        fieldTypeTokens.Add(
+                            Current().Text);
+
+                        Advance();
+                    }
+
+                    string fieldType =
+                        string.Join(
+                            " ",
+                            fieldTypeTokens);
+
+                    foreach (string fieldName in fieldNames)
+                    {
+                        fields.Add(
+                            new DelphiField(
+                                fieldName,
+                                fieldType));
+
+                        definition.Add(
+                            $"{fieldName} : {fieldType} ;");
+                    }
+
+                    MatchSymbol(";");
+                }
+
+                MatchSymbol(")");
+            }
+
+            continue;
+        }
+
         if (IsIdentifier())
         {
-            string fieldName =
-                ExpectIdentifier();
+            var fieldNames =
+                new List<string>
+                {
+                    ExpectIdentifier()
+                };
+
+            while (MatchSymbol(","))
+            {
+                fieldNames.Add(
+                    ExpectIdentifier());
+            }
 
             if (MatchSymbol(":"))
             {
@@ -1130,18 +1264,23 @@ if (MatchKeyword("record"))
 
                 MatchSymbol(";");
 
-                fields.Add(
-                    new DelphiField(
-                        fieldName,
-                        fieldType));
+                foreach (string fieldName in fieldNames)
+                {
+                    fields.Add(
+                        new DelphiField(
+                            fieldName,
+                            fieldType));
 
-                definition.Add(
-                    $"{fieldName} : {fieldType} ;");
+                    definition.Add(
+                        $"{fieldName} : {fieldType} ;");
+                }
 
                 continue;
             }
 
-            definition.Add(fieldName);
+            foreach (string fieldName in fieldNames)
+                definition.Add(fieldName);
+
             continue;
         }
 
