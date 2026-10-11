@@ -1118,43 +1118,59 @@ private static bool IsBuiltInDelphiType(
             : $"({string.Join(" || ", conditions)})";
     }
 
-    private string TranslateLiteral(
-        string text)
+private string TranslateLiteral(
+    string text)
+{
+    string value = text.Trim();
+
+    if (value.StartsWith("'") &&
+        value.EndsWith("'") &&
+        value.Length >= 2)
     {
-        if (text.StartsWith("'") &&
-            text.EndsWith("'"))
-        {
-            string content =
-                text[1..^1];
+        string content =
+            value[1..^1]
+                .Replace("''", "'")
+                .Replace("\\", "\\\\")
+                .Replace("\"", "\\\"")
+                .Replace("\r", "\\r")
+                .Replace("\n", "\\n")
+                .Replace("\t", "\\t");
 
-            content =
-                content.Replace(
-                    "''",
-                    "'");
-
-            return
-                $"\"{content.Replace("\"", "\\\"")}\"";
-        }
-
-        if (text.Equals(
-                "nil",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return "null";
-        }
-
-        if (text.Equals(
-                "true",
-                StringComparison.OrdinalIgnoreCase) ||
-            text.Equals(
-                "false",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            return text.ToLowerInvariant();
-        }
-
-        return text;
+        return $"\"{content}\"";
     }
+
+    if (value.StartsWith("$", StringComparison.Ordinal))
+    {
+        string hexadecimal =
+            value[1..];
+
+        if (hexadecimal.Length > 0 &&
+            hexadecimal.All(
+                c => Uri.IsHexDigit(c)))
+        {
+            return $"0x{hexadecimal}";
+        }
+    }
+
+    if (value.Equals(
+            "nil",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        return "null";
+    }
+
+    if (value.Equals(
+            "true",
+            StringComparison.OrdinalIgnoreCase) ||
+        value.Equals(
+            "false",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        return value.ToLowerInvariant();
+    }
+
+    return value;
+}
 
     private static string MapParameterKind(
         string kind)

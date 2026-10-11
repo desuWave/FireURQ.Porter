@@ -17,12 +17,16 @@ var builder = new StringBuilder();
     if (unit.Variables.Count > 0)
         builder.AppendLine();
 
-    foreach (SemanticConstant constant in unit.Constants)
-    {
-        builder.AppendLine(
-            $"const {CSharpTypeMapper.Map(constant.Type)} " +
-            $"{constant.Name} = {TranslateConstantValue(constant.Value)};");
-    }
+foreach (SemanticConstant constant in unit.Constants)
+{
+    string type = CSharpTypeMapper.Map(constant.Type);
+    string value = TranslateConstantValue(
+        constant.Value,
+        constant.Type);
+
+    builder.AppendLine(
+        $"const {type} {constant.Name} = {value};");
+}
 
     if (unit.Constants.Count > 0)
         builder.AppendLine();
@@ -48,36 +52,202 @@ var builder = new StringBuilder();
     return builder.ToString();
 }
 
-private static string TranslateConstantValue(string value)
+private static string TranslateConstantValue(
+    string value,
+    string sourceType)
 {
     string text = value.Trim();
 
-    if (text.StartsWith("'") && text.EndsWith("'") && text.Length >= 2)
+    string mappedType = CSharpTypeMapper.Map(sourceType);
+
+    // Delphi hexadecimal integer:
+    // $626262 -> 0x626262
+    if (text.StartsWith("$", StringComparison.Ordinal))
     {
-        string content = text[1..^1].Replace("''", "'");
+        string hexadecimal = text[1..];
 
-        content = content
-            .Replace("\\", "\\\\")
-            .Replace("\"", "\\\"")
-            .Replace("\r", "\\r")
-            .Replace("\n", "\\n")
-            .Replace("\t", "\\t");
-
-        return $"\"{content}\"";
+        if (hexadecimal.Length > 0 &&
+            hexadecimal.All(Uri.IsHexDigit))
+        {
+            return "0x" + hexadecimal;
+        }
     }
 
-    if (text.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-        text.Equals("false", StringComparison.OrdinalIgnoreCase))
+    // Delphi character-code literals:
+    // #9      -> '\t' or "\t"
+    // #13#10  -> "\r\n"
+    if (TryTranslateCharacterCodes(
+            text,
+            mappedType,
+            out string characterCodeValue))
+    {
+        return characterCodeValue;
+    }
+
+    // Delphi quoted string or character:
+    // 'hello' -> "hello"
+    // 'P'     -> 'P' when the declared type is char
+    if (text.StartsWith("'") &&
+        text.EndsWith("'") &&
+        text.Length >= 2)
+    {
+        string content = text[1..^1]
+            .Replace("''", "'");
+
+        if (mappedType == "char" && content.Length == 1)
+        {
+            return "'" + EscapeCSharpCharacter(content[0]) + "'";
+        }
+
+        return "\"" + EscapeCSharpString(content) + "\"";
+    }
+
+    if (text.Equals(
+            "true",
+            StringComparison.OrdinalIgnoreCase) ||
+        text.Equals(
+            "false",
+            StringComparison.OrdinalIgnoreCase))
     {
         return text.ToLowerInvariant();
     }
 
-    if (text.Equals("nil", StringComparison.OrdinalIgnoreCase))
+    if (text.Equals(
+            "nil",
+            StringComparison.OrdinalIgnoreCase))
     {
         return "null";
     }
 
     return text;
+}
+
+private static bool TryTranslateCharacterCodes(
+    string text,
+    string mappedType,
+    out string result)
+{
+    result = string.Empty;
+
+    if (text.Length == 0 || text[0] != '#')
+    {
+        return false;
+    }
+
+    var characters = new List<char>();
+    int position = 0;
+
+    while (position < text.Length)
+    {
+        while (position < text.Length &&
+               char.IsWhiteSpace(text[position]))
+        {
+            position++;
+        }
+
+        if (position >= text.Length)
+        {
+            break;
+        }
+
+        if (text[position] != '#')
+        {
+            return false;
+        }
+
+        position++;
+
+        int digitStart = position;
+
+        while (position < text.Length &&
+               char.IsDigit(text[position]))
+        {
+            position++;
+        }
+
+        if (digitStart == position ||
+            !int.TryParse(
+                text[digitStart..position],
+                out int code) ||
+            code < 0 ||
+            code > char.MaxValue)
+        {
+            return false;
+        }
+
+        characters.Add((char)code);
+    }
+
+    if (characters.Count == 0)
+    {
+        return false;
+    }
+
+    if (mappedType == "char")
+    {
+        if (characters.Count != 1)
+        {
+            return false;
+        }
+
+        result =
+            "'" + EscapeCSharpCharacter(characters[0]) + "'";
+
+        return true;
+    }
+
+    result =
+        "\"" + EscapeCSharpString(new string(characters.ToArray())) + "\"";
+
+    return true;
+}
+
+private static string EscapeCSharpCharacter(char value)
+{
+    return value switch
+    {
+        '\\' => "\\\\",
+        '\'' => "\\'",
+        '\0' => "\\0",
+        '\a' => "\\a",
+        '\b' => "\\b",
+        '\f' => "\\f",
+        '\n' => "\\n",
+        '\r' => "\\r",
+        '\t' => "\\t",
+        '\v' => "\\v",
+        _ when char.IsControl(value) =>
+            "\\u" + ((int)value).ToString("X4"),
+        _ => value.ToString()
+    };
+}
+
+private static string EscapeCSharpString(string value)
+{
+    var builder = new StringBuilder();
+
+    foreach (char character in value)
+    {
+        builder.Append(
+            character switch
+            {
+                '\\' => "\\\\",
+                '"' => "\\\"",
+                '\0' => "\\0",
+                '\a' => "\\a",
+                '\b' => "\\b",
+                '\f' => "\\f",
+                '\n' => "\\n",
+                '\r' => "\\r",
+                '\t' => "\\t",
+                '\v' => "\\v",
+                _ when char.IsControl(character) =>
+                    "\\u" + ((int)character).ToString("X4"),
+                _ => character.ToString()
+            });
+    }
+
+    return builder.ToString();
 }
 
 private static string TranslateClass(SemanticClass @class)

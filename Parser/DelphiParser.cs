@@ -1308,8 +1308,7 @@ private static bool IsSimpleTypeName(
 private static string InferConstantType(
     string value)
 {
-    string text =
-        value.Trim();
+    string text = value.Trim();
 
     if (text.Equals(
             "true",
@@ -1322,13 +1321,25 @@ private static string InferConstantType(
     }
 
     if (text.StartsWith("'") &&
-        text.EndsWith("'"))
+        text.EndsWith("'") &&
+        text.Length >= 2)
     {
-        return "String";
+        return text.Length == 3
+            ? "Char"
+            : "String";
+    }
+
+    if (text.StartsWith("$", StringComparison.Ordinal) &&
+        text.Length > 1 &&
+        text[1..].All(Uri.IsHexDigit))
+    {
+        return "Integer";
     }
 
     if (int.TryParse(
             text,
+            System.Globalization.NumberStyles.Integer,
+            System.Globalization.CultureInfo.InvariantCulture,
             out _))
     {
         return "Integer";
@@ -1341,6 +1352,12 @@ private static string InferConstantType(
             out _))
     {
         return "Real";
+    }
+
+    if (text.StartsWith("[", StringComparison.Ordinal) &&
+        text.EndsWith("]", StringComparison.Ordinal))
+    {
+        return "set of Byte";
     }
 
     return "";
