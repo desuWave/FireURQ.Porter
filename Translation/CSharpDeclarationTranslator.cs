@@ -160,7 +160,7 @@ public sealed class CSharpDeclarationTranslator
 
         string[] translatedValues = values
             .Select(value => elementType.Equals("byte", StringComparison.OrdinalIgnoreCase)
-                ? $"(byte){value}"
+                ? $"unchecked((byte){value})"
                 : elementType.Equals("char", StringComparison.OrdinalIgnoreCase)
                     ? $"(char){value}"
                     : elementType.Equals("sbyte", StringComparison.OrdinalIgnoreCase)
