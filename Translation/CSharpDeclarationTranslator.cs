@@ -87,6 +87,9 @@ public sealed class CSharpDeclarationTranslator
                 return "0x" + hexadecimal;
         }
 
+        if (TryTranslateSetConstant(text, mappedType, out string setValue))
+            return setValue;
+
         if (TryTranslateCharacterCodes(text, mappedType, out string characterCodeValue))
             return characterCodeValue;
 
@@ -104,6 +107,108 @@ public sealed class CSharpDeclarationTranslator
         if (text.Equals("nil", StringComparison.OrdinalIgnoreCase))
             return "null";
         return text;
+    }
+
+    private static bool TryTranslateSetConstant(string text, string mappedType, out string result)
+    {
+        result = string.Empty;
+        if (text.Length < 2 || text[0] != '[' || text[^1] != ']')
+            return false;
+
+        string elementType = "int";
+        if (mappedType.StartsWith("HashSet<", StringComparison.Ordinal) &&
+            mappedType.EndsWith(">", StringComparison.Ordinal))
+        {
+            elementType = mappedType[8..^1].Trim();
+        }
+
+        List<string> elements = SplitTopLevel(text[1..^1], ',');
+        var values = new SortedSet<int>();
+
+        foreach (string rawElement in elements)
+        {
+            string element = rawElement.Trim();
+            if (element.Length == 0)
+                continue;
+
+            int rangeIndex = element.IndexOf("..", StringComparison.Ordinal);
+            if (rangeIndex >= 0)
+            {
+                string lowerText = element[..rangeIndex].Trim();
+                string upperText = element[(rangeIndex + 2)..].Trim();
+                if (!TryParsePascalOrdinal(lowerText, out int lower) ||
+                    !TryParsePascalOrdinal(upperText, out int upper))
+                    return false;
+
+                int step = lower <= upper ? 1 : -1;
+                for (int value = lower; ; value += step)
+                {
+                    values.Add(value);
+                    if (value == upper)
+                        break;
+                    if (values.Count > 65536)
+                        return false;
+                }
+
+                continue;
+            }
+
+            if (!TryParsePascalOrdinal(element, out int scalar))
+                return false;
+            values.Add(scalar);
+        }
+
+        string[] translatedValues = values
+            .Select(value => elementType.Equals("byte", StringComparison.OrdinalIgnoreCase)
+                ? $"(byte){value}"
+                : elementType.Equals("char", StringComparison.OrdinalIgnoreCase)
+                    ? $"(char){value}"
+                    : elementType.Equals("sbyte", StringComparison.OrdinalIgnoreCase)
+                        ? $"(sbyte){value}"
+                        : elementType.Equals("ushort", StringComparison.OrdinalIgnoreCase)
+                            ? $"(ushort){value}"
+                            : elementType.Equals("uint", StringComparison.OrdinalIgnoreCase)
+                                ? $"(uint){value}"
+                                : elementType.Equals("long", StringComparison.OrdinalIgnoreCase)
+                                    ? $"(long){value}"
+                                    : value.ToString(System.Globalization.CultureInfo.InvariantCulture))
+            .ToArray();
+
+        string inferredType = mappedType.StartsWith("HashSet<", StringComparison.Ordinal)
+            ? mappedType
+            : "HashSet<int>";
+        string arrayElementType = inferredType[8..^1].Trim();
+        result = $"new {inferredType}(new {arrayElementType}[] {{ {string.Join(", ", translatedValues)} }})";
+        return true;
+    }
+
+    private static bool TryParsePascalOrdinal(string text, out int value)
+    {
+        value = 0;
+        if (text.StartsWith("#", StringComparison.Ordinal) &&
+            int.TryParse(text[1..], out value))
+            return value >= 0 && value <= char.MaxValue;
+
+        if (text.StartsWith("'", StringComparison.Ordinal) &&
+            text.EndsWith("'", StringComparison.Ordinal) &&
+            text.Length >= 3)
+        {
+            string inner = text[1..^1].Replace("''", "'");
+            if (inner.Length == 1)
+            {
+                value = inner[0];
+                return true;
+            }
+            return false;
+        }
+
+        if (text.StartsWith("$", StringComparison.Ordinal) &&
+            int.TryParse(text[1..], System.Globalization.NumberStyles.HexNumber,
+                System.Globalization.CultureInfo.InvariantCulture, out value))
+            return true;
+
+        return int.TryParse(text, System.Globalization.NumberStyles.Integer,
+            System.Globalization.CultureInfo.InvariantCulture, out value);
     }
 
     private static bool TryTranslateArrayConstant(string text, string arrayType, out string result)
