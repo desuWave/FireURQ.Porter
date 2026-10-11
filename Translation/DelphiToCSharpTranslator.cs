@@ -1099,14 +1099,37 @@ private static bool IsBuiltInDelphiType(
         ExpressionParser.ExpressionNode expression)
     {
         if (expression.Children.Count == 0)
-            return "[]";
+            return "new HashSet<int>()";
 
-        var elements =
-            expression.Children
-                .Select(TranslateExpression)
-                .ToList();
+        var scalarElements = new List<string>();
+        var ranges = new List<string>();
 
-        return $"[{string.Join(", ", elements)}]";
+        foreach (ExpressionParser.ExpressionNode element in expression.Children)
+        {
+            if (element.Kind == ExpressionParser.ExpressionKind.Binary &&
+                string.Equals(element.Text, "..", StringComparison.Ordinal) &&
+                element.Children.Count >= 2)
+            {
+                string lower = TranslateExpression(element.Children[0]);
+                string upper = TranslateExpression(element.Children[1]);
+
+                ranges.Add(
+                    $"Enumerable.Range((int)({lower}), (int)({upper}) - (int)({lower}) + 1)");
+                continue;
+            }
+
+            string value = TranslateExpression(element);
+            scalarElements.Add($"(int)({value})");
+        }
+
+        string values = scalarElements.Count > 0
+            ? $"new int[] {{ {string.Join(", ", scalarElements)} }}"
+            : "Enumerable.Empty<int>()";
+
+        foreach (string range in ranges)
+            values += $".Concat({range})";
+
+        return $"new HashSet<int>({values})";
     }
 
     private string TranslateSetMembership(

@@ -43,6 +43,7 @@ public sealed class ProjectTranslator
             builder.AppendLine();
             builder.AppendLine("using System;");
             builder.AppendLine("using System.Collections.Generic;");
+            builder.AppendLine("using System.Linq;");
             builder.AppendLine();
 
             string declarations = _declarationTranslator.Translate(input.SemanticModel);
