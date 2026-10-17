@@ -686,13 +686,26 @@ public sealed class DelphiToCSharpTranslator
             return;
         }
 
-        string target =
-            TranslateExpression(
-                statement.Assignment.Target);
+        ExpressionParser.ExpressionNode assignmentTarget = statement.Assignment.Target;
+        ExpressionParser.ExpressionNode assignmentValue = statement.Assignment.Value;
 
-        string value =
-            TranslateExpression(
-                statement.Assignment.Value);
+        if (assignmentTarget.Kind == ExpressionParser.ExpressionKind.AddressOf &&
+            assignmentTarget.Children.Count > 0 &&
+            assignmentTarget.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            assignmentValue.Kind == ExpressionParser.ExpressionKind.Call &&
+            assignmentValue.Children.Count > 0 &&
+            assignmentValue.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            assignmentValue.Children[0].Text.Equals("GetProcAddress", StringComparison.OrdinalIgnoreCase))
+        {
+            string variableName = assignmentTarget.Children[0].Text;
+            string lookup = TranslateCall(assignmentValue);
+            AppendLine(builder, indent,
+                $"{variableName} = Marshal.GetDelegateForFunctionPointer<{variableName}Delegate>({lookup});");
+            return;
+        }
+
+        string target = TranslateExpression(assignmentTarget);
+        string value = TranslateExpression(assignmentValue);
 
         if (!function.IsProcedure &&
             target.Equals(
@@ -832,13 +845,29 @@ public sealed class DelphiToCSharpTranslator
         if (expression.Children.Count < 2)
             return expression.Text;
 
-        string left =
-            TranslateExpression(
-                expression.Children[0]);
+        ExpressionParser.ExpressionNode leftExpression = expression.Children[0];
+        ExpressionParser.ExpressionNode rightExpression = expression.Children[1];
 
-        string right =
-            TranslateExpression(
-                expression.Children[1]);
+        if (leftExpression.Kind == ExpressionParser.ExpressionKind.AddressOf &&
+            leftExpression.Children.Count > 0 &&
+            leftExpression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            rightExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            rightExpression.Text.Equals("nil", StringComparison.OrdinalIgnoreCase))
+        {
+            return TranslateExpression(leftExpression.Children[0]) + " == null";
+        }
+
+        if (rightExpression.Kind == ExpressionParser.ExpressionKind.AddressOf &&
+            rightExpression.Children.Count > 0 &&
+            rightExpression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            leftExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            leftExpression.Text.Equals("nil", StringComparison.OrdinalIgnoreCase))
+        {
+            return TranslateExpression(rightExpression.Children[0]) + " == null";
+        }
+
+        string left = TranslateExpression(leftExpression);
+        string right = TranslateExpression(rightExpression);
 
         if (string.Equals(
                 expression.Text,
