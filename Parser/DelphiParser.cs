@@ -342,10 +342,6 @@ public sealed class DelphiParser
                 PeekKeyword("procedure") ||
                 PeekKeyword("constructor") ||
                 PeekKeyword("destructor") ||
-                PeekKeyword("constructor") ||
-                PeekKeyword("destructor") ||
-                PeekKeyword("constructor") ||
-                PeekKeyword("destructor") ||
                 PeekKeyword("implementation"))
             {
                 return;
@@ -401,6 +397,8 @@ if (string.IsNullOrWhiteSpace(type))
                 PeekKeyword("type") ||
                 PeekKeyword("function") ||
                 PeekKeyword("procedure") ||
+                PeekKeyword("constructor") ||
+                PeekKeyword("destructor") ||
                 PeekKeyword("implementation") ||
                 PeekKeyword("begin"))
             {
@@ -462,6 +460,8 @@ if (string.IsNullOrWhiteSpace(type))
                 PeekKeyword("var") ||
                 PeekKeyword("function") ||
                 PeekKeyword("procedure") ||
+                PeekKeyword("constructor") ||
+                PeekKeyword("destructor") ||
                 PeekKeyword("implementation"))
             {
                 return;
