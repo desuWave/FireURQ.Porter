@@ -14,6 +14,12 @@ public sealed class CSharpDeclarationTranslator
     {
         var builder = new StringBuilder();
 
+        foreach (SemanticType type in unit.Types.Where(IsTypeAlias))
+            builder.AppendLine(TranslateType(type));
+
+        if (unit.Types.Any(IsTypeAlias))
+            builder.AppendLine();
+
         foreach (SemanticVariable variable in unit.Variables.Where(variable => variable.ProcedureType is not null))
         {
             SemanticProcedureType procedure = variable.ProcedureType!;
@@ -29,12 +35,6 @@ public sealed class CSharpDeclarationTranslator
         }
 
         if (unit.Variables.Any(variable => variable.ProcedureType is not null))
-            builder.AppendLine();
-
-        foreach (SemanticType type in unit.Types.Where(IsTypeAlias))
-            builder.AppendLine(TranslateType(type));
-
-        if (unit.Types.Any(IsTypeAlias))
             builder.AppendLine();
 
         foreach (SemanticType type in unit.Types.Where(type => !IsTypeAlias(type)))
