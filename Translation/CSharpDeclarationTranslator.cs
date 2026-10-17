@@ -66,9 +66,16 @@ public sealed class CSharpDeclarationTranslator
 
             string type = CSharpTypeMapper.Map(sourceType);
             string value = TranslateConstantValue(constant.Value, sourceType);
+            string constantText = constant.Value.Trim();
+            bool isRecordInitializer =
+                constantText.Length >= 2 &&
+                constantText[0] == '(' &&
+                constantText[^1] == ')' &&
+                constantText.Contains(':', StringComparison.Ordinal);
             bool requiresStaticReadonly =
                 type.EndsWith("[]", StringComparison.Ordinal) ||
-                type.StartsWith("HashSet<", StringComparison.Ordinal);
+                type.StartsWith("HashSet<", StringComparison.Ordinal) ||
+                isRecordInitializer;
             string modifier = requiresStaticReadonly ? "public static readonly" : "public const";
             builder.AppendLine($"{modifier} {type} {constant.Name} = {value};");
         }
@@ -96,6 +103,13 @@ public sealed class CSharpDeclarationTranslator
         if (mappedType.StartsWith("HashSet<", StringComparison.Ordinal) &&
             TryTranslateSetConstant(text, mappedType, out string setValue))
             return setValue;
+
+        if (text.Length >= 2 &&
+            text[0] == '(' &&
+            text[^1] == ')' &&
+            text.Contains(':', StringComparison.Ordinal) &&
+            TryTranslateRecordInitializer(text, out string recordInitializer))
+            return $"new {mappedType} {recordInitializer}";
 
         if (text.StartsWith("$", StringComparison.Ordinal))
         {
@@ -160,10 +174,27 @@ public sealed class CSharpDeclarationTranslator
             string name = pair[0].Trim();
             string value = string.Join(":", pair.Skip(1)).Trim();
             if (name.Length == 0 || value.Length == 0) return false;
-            assignments.Add($"{name} = {TranslateConstantValue(value, "string")}");
+            assignments.Add($"{name} = {TranslateUntypedRecordValue(value)}");
         }
         result = $"{{ {string.Join(", ", assignments)} }}";
         return assignments.Count > 0;
+    }
+
+    private static string TranslateUntypedRecordValue(string value)
+    {
+        string text = value.Trim();
+
+        if (text.StartsWith("'", StringComparison.Ordinal) &&
+            text.EndsWith("'", StringComparison.Ordinal) &&
+            text.Length >= 2)
+        {
+            string content = text[1..^1].Replace("''", "'");
+            if (content.Length == 1)
+                return "'" + EscapeCSharpCharacter(content[0]) + "'";
+            return "\"" + EscapeCSharpString(content) + "\"";
+        }
+
+        return TranslateConstantValue(text, "int");
     }
 
     private static List<string> SplitTopLevel(string text, char separator)
