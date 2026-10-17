@@ -14,6 +14,23 @@ public sealed class CSharpDeclarationTranslator
     {
         var builder = new StringBuilder();
 
+        foreach (SemanticVariable variable in unit.Variables.Where(variable => variable.ProcedureType is not null))
+        {
+            SemanticProcedureType procedure = variable.ProcedureType!;
+            string returnType = procedure.IsProcedure ? "void" : CSharpTypeMapper.Map(procedure.ReturnType);
+            string parameters = string.Join(", ", procedure.Parameters.Select(parameter =>
+                $"{MapDelegateParameterKind(parameter.Kind)}{CSharpTypeMapper.Map(parameter.Type)} {parameter.Name}"));
+            string convention = MapCallingConvention(procedure.CallingConvention);
+
+            if (convention is not null)
+                builder.AppendLine($"[UnmanagedFunctionPointer(CallingConvention.{convention})]");
+
+            builder.AppendLine($"public delegate {returnType} {variable.Name}Delegate({parameters});");
+        }
+
+        if (unit.Variables.Any(variable => variable.ProcedureType is not null))
+            builder.AppendLine();
+
         foreach (SemanticType type in unit.Types.Where(IsTypeAlias))
             builder.AppendLine(TranslateType(type));
 
@@ -48,7 +65,7 @@ public sealed class CSharpDeclarationTranslator
         foreach (SemanticVariable variable in unit.Variables)
         {
             builder.AppendLine(
-                $"public static {CSharpTypeMapper.Map(variable.Type)} {variable.Name};");
+                $"public static {(variable.ProcedureType is null ? CSharpTypeMapper.Map(variable.Type) : variable.Name + "Delegate")} {variable.Name};");
         }
 
         if (unit.Variables.Count > 0)
@@ -87,6 +104,31 @@ public sealed class CSharpDeclarationTranslator
         }
 
         return builder.ToString();
+    }
+
+    private static string MapDelegateParameterKind(string kind)
+    {
+        return kind.ToLowerInvariant() switch
+        {
+            "var" => "ref ",
+            "out" => "out ",
+            "const" => "in ",
+            _ => string.Empty
+        };
+    }
+
+    private static string? MapCallingConvention(string? convention)
+    {
+        return convention?.ToLowerInvariant() switch
+        {
+            "stdcall" => "StdCall",
+            "cdecl" => "Cdecl",
+            "fastcall" => "FastCall",
+            "safecall" => "StdCall",
+            "pascal" => "Winapi",
+            "register" => "Winapi",
+            _ => null
+        };
     }
 
     private static bool IsTypeAlias(SemanticType type)
