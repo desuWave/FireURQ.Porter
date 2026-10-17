@@ -231,6 +231,122 @@ if (args.Length >= 3 &&
 }
 
 // ========================================================
+// VARIANT RECORD STRUCTURE PROBE
+// ========================================================
+
+if (args.Length >= 2 &&
+    args[0].Equals(
+        "--probe-variant-records",
+        StringComparison.OrdinalIgnoreCase))
+{
+    string variantFile = args[1];
+
+    if (!File.Exists(variantFile))
+    {
+        Console.WriteLine($"ERROR: File not found: {variantFile}");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    string variantSource =
+        File.ReadAllText(
+            variantFile,
+            Encoding.GetEncoding(1251));
+
+    var variantLexer = new DelphiLexer(variantSource);
+    var variantTokens = variantLexer.Tokenize();
+    var variantParser = new DelphiParser(variantTokens);
+    DelphiUnit variantUnit = variantParser.ParseUnit();
+
+    var astVariantTypes =
+        variantUnit.Declarations
+            .OfType<DelphiType>()
+            .Where(type => type.VariantPart is not null)
+            .ToList();
+
+    Console.WriteLine($"Source: {variantFile}");
+    Console.WriteLine($"AST variant-record types: {astVariantTypes.Count}");
+    Console.WriteLine();
+
+    foreach (DelphiType type in astVariantTypes)
+    {
+        Console.WriteLine($"AST VARIANT RECORD: {type.Name}");
+        Console.WriteLine($"  TAG FIELD: {type.VariantPart!.TagFieldName ?? "<none>"}");
+        Console.WriteLine($"  TAG TYPE: {type.VariantPart.TagType}");
+        Console.WriteLine($"  VARIANTS: {type.VariantPart.Variants.Count}");
+
+        for (int i = 0; i < type.VariantPart.Variants.Count; i++)
+        {
+            DelphiVariant variant = type.VariantPart.Variants[i];
+            Console.WriteLine($"  VARIANT {i}");
+            Console.WriteLine($"    LABELS: {string.Join(", ", variant.Labels)}");
+
+            foreach (DelphiField field in variant.Fields)
+                Console.WriteLine($"    {field.Name}: {field.Type}");
+        }
+
+        Console.WriteLine();
+    }
+
+    SemanticUnit variantSemanticModel =
+        SemanticModelBuilder.Build(variantUnit);
+
+    var semanticVariantTypes =
+        variantSemanticModel.Types
+            .Where(type => type.VariantPart is not null)
+            .ToList();
+
+    Console.WriteLine($"SEMANTIC variant-record types: {semanticVariantTypes.Count}");
+    Console.WriteLine();
+
+    foreach (SemanticType type in semanticVariantTypes)
+    {
+        Console.WriteLine($"SEMANTIC VARIANT RECORD: {type.Name}");
+        Console.WriteLine($"  TAG FIELD: {type.VariantPart!.TagFieldName ?? "<none>"}");
+        Console.WriteLine($"  TAG TYPE: {type.VariantPart.TagType}");
+        Console.WriteLine($"  VARIANTS: {type.VariantPart.Variants.Count}");
+
+        for (int i = 0; i < type.VariantPart.Variants.Count; i++)
+        {
+            SemanticVariant variant = type.VariantPart.Variants[i];
+            Console.WriteLine($"  VARIANT {i}");
+            Console.WriteLine($"    LABELS: {string.Join(", ", variant.Labels)}");
+
+            foreach (SemanticField field in variant.Fields)
+                Console.WriteLine($"    {field.Name}: {field.Type}");
+        }
+
+        Console.WriteLine();
+    }
+
+    bool astValid =
+        astVariantTypes.Any(type =>
+            type.Name.Equals("TMD5Digest", StringComparison.OrdinalIgnoreCase) &&
+            type.VariantPart!.Variants.Count == 2 &&
+            type.VariantPart.Variants[0].Fields.Select(field => field.Name)
+                .SequenceEqual(new[] { "A", "B", "C", "D" }) &&
+            type.VariantPart.Variants[1].Fields.Any(field =>
+                field.Name.Equals("v", StringComparison.OrdinalIgnoreCase)));
+
+    bool semanticValid =
+        semanticVariantTypes.Any(type =>
+            type.Name.Equals("TMD5Digest", StringComparison.OrdinalIgnoreCase) &&
+            type.VariantPart!.Variants.Count == 2 &&
+            type.VariantPart.Variants[0].Fields.Select(field => field.Name)
+                .SequenceEqual(new[] { "A", "B", "C", "D" }) &&
+            type.VariantPart.Variants[1].Fields.Any(field =>
+                field.Name.Equals("v", StringComparison.OrdinalIgnoreCase)));
+
+    Console.WriteLine($"AST STRUCTURE CHECK: {(astValid ? "PASS" : "FAIL")}");
+    Console.WriteLine($"SEMANTIC STRUCTURE CHECK: {(semanticValid ? "PASS" : "FAIL")}");
+
+    if (!astValid || !semanticValid)
+        Environment.ExitCode = 1;
+
+    return;
+}
+
+// ========================================================
 // TRANSLATION TEST
 // ========================================================
 
@@ -492,6 +608,9 @@ static string? GetOptionValue(
 
 static void PrintUsage()
 {
+    Console.WriteLine(
+        "  FireURQ.Porter --probe-variant-records <file.pas>");
+
     Console.WriteLine(
         "  FireURQ.Porter --translate-test");
 
