@@ -851,7 +851,7 @@ public sealed class DelphiToCSharpTranslator
         if (leftExpression.Kind == ExpressionParser.ExpressionKind.AddressOf &&
             leftExpression.Children.Count > 0 &&
             leftExpression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
-            rightExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            (rightExpression.Kind == ExpressionParser.ExpressionKind.Identifier || rightExpression.Kind == ExpressionParser.ExpressionKind.Literal) &&
             rightExpression.Text.Equals("nil", StringComparison.OrdinalIgnoreCase))
         {
             return TranslateExpression(leftExpression.Children[0]) + " == null";
@@ -860,7 +860,7 @@ public sealed class DelphiToCSharpTranslator
         if (rightExpression.Kind == ExpressionParser.ExpressionKind.AddressOf &&
             rightExpression.Children.Count > 0 &&
             rightExpression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
-            leftExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            (leftExpression.Kind == ExpressionParser.ExpressionKind.Identifier || leftExpression.Kind == ExpressionParser.ExpressionKind.Literal) &&
             leftExpression.Text.Equals("nil", StringComparison.OrdinalIgnoreCase))
         {
             return TranslateExpression(rightExpression.Children[0]) + " == null";
