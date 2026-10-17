@@ -270,14 +270,15 @@ if (args.Length >= 2 &&
 
     foreach (DelphiType type in astVariantTypes)
     {
+        DelphiVariantPart part = type.VariantPart!;
         Console.WriteLine($"AST VARIANT RECORD: {type.Name}");
-        Console.WriteLine($"  TAG FIELD: {type.VariantPart!.TagFieldName ?? "<none>"}");
-        Console.WriteLine($"  TAG TYPE: {type.VariantPart.TagType}");
-        Console.WriteLine($"  VARIANTS: {type.VariantPart.Variants.Count}");
+        Console.WriteLine($"  TAG FIELD: {part.TagFieldName ?? "<none>"}");
+        Console.WriteLine($"  TAG TYPE: {part.TagType}");
+        Console.WriteLine($"  VARIANTS: {part.Variants.Count}");
 
-        for (int i = 0; i < type.VariantPart.Variants.Count; i++)
+        for (int i = 0; i < part.Variants.Count; i++)
         {
-            DelphiVariant variant = type.VariantPart.Variants[i];
+            DelphiVariant variant = part.Variants[i];
             Console.WriteLine($"  VARIANT {i}");
             Console.WriteLine($"    LABELS: {string.Join(", ", variant.Labels)}");
 
@@ -301,14 +302,15 @@ if (args.Length >= 2 &&
 
     foreach (SemanticType type in semanticVariantTypes)
     {
+        SemanticVariantPart part = type.VariantPart!;
         Console.WriteLine($"SEMANTIC VARIANT RECORD: {type.Name}");
-        Console.WriteLine($"  TAG FIELD: {type.VariantPart!.TagFieldName ?? "<none>"}");
-        Console.WriteLine($"  TAG TYPE: {type.VariantPart.TagType}");
-        Console.WriteLine($"  VARIANTS: {type.VariantPart.Variants.Count}");
+        Console.WriteLine($"  TAG FIELD: {part.TagFieldName ?? "<none>"}");
+        Console.WriteLine($"  TAG TYPE: {part.TagType}");
+        Console.WriteLine($"  VARIANTS: {part.Variants.Count}");
 
-        for (int i = 0; i < type.VariantPart.Variants.Count; i++)
+        for (int i = 0; i < part.Variants.Count; i++)
         {
-            SemanticVariant variant = type.VariantPart.Variants[i];
+            SemanticVariant variant = part.Variants[i];
             Console.WriteLine($"  VARIANT {i}");
             Console.WriteLine($"    LABELS: {string.Join(", ", variant.Labels)}");
 
