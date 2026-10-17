@@ -424,25 +424,38 @@ if (string.IsNullOrWhiteSpace(type))
             }
 
             string type = "";
+            DelphiProcedureType? procedureType = null;
 
             if (MatchSymbol(":"))
             {
-                type =
-                    ReadTypeExpression();
+                if (MatchKeyword("function"))
+                {
+                    procedureType = ParseProcedureType(names[0], isProcedure: false);
+                    type = "function";
+                }
+                else if (MatchKeyword("procedure"))
+                {
+                    procedureType = ParseProcedureType(names[0], isProcedure: true);
+                    type = "procedure";
+                }
+                else
+                {
+                    type = ReadTypeExpression();
+                    MatchSymbol(";");
+                }
             }
             else
             {
                 continue;
             }
 
-            MatchSymbol(";");
-
             foreach (string name in names)
             {
                 declarations.Add(
                     new DelphiVariable(
                         name,
-                        type));
+                        type,
+                        procedureType is null ? null : procedureType with { Name = name }));
             }
         }
     }
