@@ -570,6 +570,9 @@ public sealed class CSharpDeclarationTranslator
 
         if (type.Kind.Equals("Record", StringComparison.OrdinalIgnoreCase))
         {
+            if (type.VariantPart is not null)
+                return TranslateVariantRecord(type);
+
             var builder = new StringBuilder();
             builder.AppendLine($"struct {type.Name}");
             builder.AppendLine("{");
@@ -583,5 +586,111 @@ public sealed class CSharpDeclarationTranslator
         }
 
         return $"// TODO: Delphi type {type.Name} ({type.Kind}): {type.Definition}";
+    }
+
+    private static string TranslateVariantRecord(SemanticType type)
+    {
+        SemanticVariantPart variantPart = type.VariantPart!;
+
+        // Variant fields overlay each other at the start of a Pascal record.
+        // This initial implementation deliberately supports records whose
+        // entire storage is the variant part; mixed common/variant fields
+        // need target-specific field-offset calculation.
+        if (type.Fields is { Count: > 0 })
+            return $"// TODO: Variant record {type.Name} has common fields; explicit layout is not yet supported.";
+
+        var fields = variantPart.Variants
+            .SelectMany(variant => variant.Fields)
+            .ToList();
+
+        if (fields.Count == 0)
+            return $"// TODO: Variant record {type.Name} has no variant fields.";
+
+        var duplicateNames = fields
+            .GroupBy(field => field.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToList();
+
+        if (duplicateNames.Count > 0)
+            return $"// TODO: Variant record {type.Name} repeats field names across alternatives: {string.Join(", ", duplicateNames)}.";
+
+        var declarations = new List<string>();
+
+        foreach (SemanticField field in fields)
+        {
+            string fieldType = field.Type.Trim();
+
+            if (TryGetFixedBuffer(fieldType, out string elementType, out int length))
+            {
+                declarations.Add(
+                    $"    [FieldOffset(0)] public fixed {elementType} {field.Name}[{length}];");
+                continue;
+            }
+
+            string mappedType = CSharpTypeMapper.Map(fieldType);
+
+            if (!IsExplicitLayoutScalar(mappedType))
+            {
+                return $"// TODO: Variant record {type.Name} contains unsupported overlay field type '{field.Type}' ({field.Name}).";
+            }
+
+            declarations.Add(
+                $"    [FieldOffset(0)] public {mappedType} {field.Name};");
+        }
+
+        var builder = new StringBuilder();
+        builder.AppendLine("[StructLayout(LayoutKind.Explicit)]");
+        builder.AppendLine($"public unsafe struct {type.Name}");
+        builder.AppendLine("{");
+
+        foreach (string declaration in declarations)
+            builder.AppendLine(declaration);
+
+        builder.Append('}');
+        return builder.ToString();
+    }
+
+    private static bool IsExplicitLayoutScalar(string mappedType)
+    {
+        return mappedType is
+            "bool" or "byte" or "sbyte" or
+            "short" or "ushort" or
+            "int" or "uint" or
+            "long" or "ulong" or
+            "char" or "float" or "double";
+    }
+
+    private static bool TryGetFixedBuffer(
+        string delphiType,
+        out string elementType,
+        out int length)
+    {
+        elementType = string.Empty;
+        length = 0;
+
+        var match = System.Text.RegularExpressions.Regex.Match(
+            delphiType,
+            @"^array\\s*\\[\\s*0\\s*\\.\\.\\s*(\\d+)\\s*\\]\\s*of\\s+([A-Za-z_][A-Za-z0-9_]*)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (!match.Success ||
+            !int.TryParse(match.Groups[1].Value, out int upperBound) ||
+            upperBound < 0 ||
+            upperBound >= 65536)
+            return false;
+
+        string mappedElementType =
+            CSharpTypeMapper.Map(match.Groups[2].Value);
+
+        if (!IsExplicitLayoutScalar(mappedElementType) ||
+            mappedElementType == "bool" ||
+            mappedElementType == "float" ||
+            mappedElementType == "double")
+            return false;
+
+        elementType = mappedElementType;
+        length = upperBound + 1;
+        return true;
     }
 }
