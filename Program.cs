@@ -419,22 +419,20 @@ if (args.Length >= 2 &&
 
                     byte[] expectedBytes = BitConverter.GetBytes(digest.A);
 
-                    fixed (byte* bytes = digest.v)
+                    byte* bytes = digest.v;
+                    for (int i = 0; i < 4; i++)
                     {
-                        for (int i = 0; i < 4; i++)
+                        if (bytes[i] != expectedBytes[i])
                         {
-                            if (bytes[i] != expectedBytes[i])
-                            {
-                                Console.Error.WriteLine($"FAIL: byte overlay mismatch at index {i}; expected={expectedBytes[i]}, actual={bytes[i]}.");
-                                return 1;
-                            }
+                            Console.Error.WriteLine($"FAIL: byte overlay mismatch at index {i}; expected={expectedBytes[i]}, actual={bytes[i]}.");
+                            return 1;
                         }
-
-                        bytes[0] = 0x78;
-                        bytes[1] = 0x56;
-                        bytes[2] = 0x34;
-                        bytes[3] = 0x12;
                     }
+
+                    bytes[0] = 0x78;
+                    bytes[1] = 0x56;
+                    bytes[2] = 0x34;
+                    bytes[3] = 0x12;
 
                     int expectedInteger = BitConverter.ToInt32(new byte[] { 0x78, 0x56, 0x34, 0x12 }, 0);
 
