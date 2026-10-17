@@ -399,7 +399,9 @@ public sealed class DelphiToCSharpTranslator
             "}");
 
         string condition =
-            statement.Expression is null
+            statement.Expression is null ||
+            statement.Expression.Kind ==
+                ExpressionParser.ExpressionKind.Empty
                 ? "false"
                 : TranslateExpression(
                     statement.Expression);
@@ -416,15 +418,27 @@ public sealed class DelphiToCSharpTranslator
         StringBuilder builder,
         int indent)
     {
-        AppendLine(
-            builder,
-            indent,
-            "try");
+        bool hasSupportedClause =
+            statement.Clauses is not null &&
+            statement.Clauses.Any(clause =>
+                clause.Kind.Equals(
+                    "EXCEPT",
+                    StringComparison.OrdinalIgnoreCase) ||
+                clause.Kind.Equals(
+                    "FINALLY",
+                    StringComparison.OrdinalIgnoreCase));
 
+        // C# does not allow a try block without catch/finally.
+        // If the analyzer could not recover a supported clause,
+        // preserve the statements as a regular scoped block rather
+        // than generating syntactically invalid C#.
         AppendLine(
             builder,
             indent,
-            "{");
+            hasSupportedClause ? "try" : "{");
+
+        if (hasSupportedClause)
+            AppendLine(builder, indent, "{");
 
         foreach (
             BehaviorAnalyzer.BehaviorStatement child
@@ -442,16 +456,62 @@ public sealed class DelphiToCSharpTranslator
             indent,
             "}");
 
-        if (statement.Clauses is null)
+        if (!hasSupportedClause)
             return;
 
         foreach (
             BehaviorAnalyzer.BehaviorClause clause
-            in statement.Clauses)
+            in statement.Clauses!)
         {
             if (clause.Kind.Equals(
-                    "FINALLY",
+                    "EXCEPT",
                     StringComparison.OrdinalIgnoreCase))
+            {
+                AppendLine(
+                    builder,
+                    indent,
+                    "catch (Exception)");
+
+                AppendLine(
+                    builder,
+                    indent,
+                    "{");
+
+                foreach (
+                    BehaviorAnalyzer.BehaviorStatement handler
+                    in clause.Statements)
+                {
+                    // Delphi "on E: TException do ..." handlers are
+                    // represented as wrapper statements. Until typed
+                    // exception dispatch is implemented, emit their
+                    // bodies inside a compilable catch-all block.
+                    IReadOnlyList<BehaviorAnalyzer.BehaviorStatement> children =
+                        handler.Text.StartsWith(
+                            "on ",
+                            StringComparison.OrdinalIgnoreCase)
+                            ? handler.Children
+                            : new[] { handler };
+
+                    foreach (
+                        BehaviorAnalyzer.BehaviorStatement child
+                        in children)
+                    {
+                        TranslateStatement(
+                            child,
+                            function,
+                            builder,
+                            indent + 1);
+                    }
+                }
+
+                AppendLine(
+                    builder,
+                    indent,
+                    "}");
+            }
+            else if (clause.Kind.Equals(
+                         "FINALLY",
+                         StringComparison.OrdinalIgnoreCase))
             {
                 AppendLine(
                     builder,
@@ -753,6 +813,14 @@ public sealed class DelphiToCSharpTranslator
             ExpressionParser.ExpressionKind.Set =>
                 TranslateSet(expression),
 
+            ExpressionParser.ExpressionKind.AddressOf =>
+                TranslateAddressOf(expression),
+
+            ExpressionParser.ExpressionKind.Dereference =>
+                expression.Children.Count == 0
+                    ? expression.Text
+                    : TranslateExpression(expression.Children[0]),
+
             _ =>
                 expression.Text
         };
@@ -1045,14 +1113,37 @@ private static bool IsBuiltInDelphiType(
         ExpressionParser.ExpressionNode expression)
     {
         if (expression.Children.Count == 0)
-            return "[]";
+            return "new HashSet<int>()";
 
-        var elements =
-            expression.Children
-                .Select(TranslateExpression)
-                .ToList();
+        var scalarElements = new List<string>();
+        var ranges = new List<string>();
 
-        return $"[{string.Join(", ", elements)}]";
+        foreach (ExpressionParser.ExpressionNode element in expression.Children)
+        {
+            if (element.Kind == ExpressionParser.ExpressionKind.Binary &&
+                string.Equals(element.Text, "..", StringComparison.Ordinal) &&
+                element.Children.Count >= 2)
+            {
+                string lower = TranslateExpression(element.Children[0]);
+                string upper = TranslateExpression(element.Children[1]);
+
+                ranges.Add(
+                    $"Enumerable.Range((int)({lower}), (int)({upper}) - (int)({lower}) + 1)");
+                continue;
+            }
+
+            string value = TranslateExpression(element);
+            scalarElements.Add($"(int)({value})");
+        }
+
+        string values = scalarElements.Count > 0
+            ? $"new int[] {{ {string.Join(", ", scalarElements)} }}"
+            : "Enumerable.Empty<int>()";
+
+        foreach (string range in ranges)
+            values += $".Concat({range})";
+
+        return $"new HashSet<int>({values})";
     }
 
     private string TranslateSetMembership(
@@ -1071,8 +1162,11 @@ private static bool IsBuiltInDelphiType(
         if (set.Kind !=
             ExpressionParser.ExpressionKind.Set)
         {
-            return
-                $"({value} /* in */ {TranslateExpression(set)})";
+            // Named Pascal set types are translated to HashSet<int>
+            // aliases, so membership must call Contains rather than
+            // emitting the Pascal "in" operator into C#.
+            string translatedSet = TranslateExpression(set);
+            return $"{translatedSet}.Contains((int)({value}))";
         }
 
         var conditions =
@@ -1123,53 +1217,149 @@ private string TranslateLiteral(
 {
     string value = text.Trim();
 
-    if (value.StartsWith("'") &&
-        value.EndsWith("'") &&
-        value.Length >= 2)
-    {
-        string content =
-            value[1..^1]
-                .Replace("''", "'")
-                .Replace("\\", "\\\\")
-                .Replace("\"", "\\\"")
-                .Replace("\r", "\\r")
-                .Replace("\n", "\\n")
-                .Replace("\t", "\\t");
-
-        return $"\"{content}\"";
-    }
+    if (TryTranslatePascalStringLiteral(value, out string literal))
+        return literal;
 
     if (value.StartsWith("$", StringComparison.Ordinal))
     {
-        string hexadecimal =
-            value[1..];
-
-        if (hexadecimal.Length > 0 &&
-            hexadecimal.All(
-                c => Uri.IsHexDigit(c)))
-        {
+        string hexadecimal = value[1..];
+        if (hexadecimal.Length > 0 && hexadecimal.All(c => Uri.IsHexDigit(c)))
             return $"0x{hexadecimal}";
-        }
     }
 
-    if (value.Equals(
-            "nil",
-            StringComparison.OrdinalIgnoreCase))
-    {
+    if (value.Equals("nil", StringComparison.OrdinalIgnoreCase))
         return "null";
-    }
 
-    if (value.Equals(
-            "true",
-            StringComparison.OrdinalIgnoreCase) ||
-        value.Equals(
-            "false",
-            StringComparison.OrdinalIgnoreCase))
-    {
+    if (value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+        value.Equals("false", StringComparison.OrdinalIgnoreCase))
         return value.ToLowerInvariant();
-    }
 
     return value;
+}
+
+private static bool TryTranslatePascalStringLiteral(string text, out string result)
+{
+    result = string.Empty;
+    if (text.Length == 0 || (text[0] != '#' && text[0] != '\''))
+        return false;
+
+    var characters = new List<char>();
+    int position = 0;
+    while (position < text.Length)
+    {
+        if (char.IsWhiteSpace(text[position])) { position++; continue; }
+        if (text[position] == '#')
+        {
+            position++;
+            int digitStart = position;
+            while (position < text.Length && char.IsDigit(text[position])) position++;
+            if (digitStart == position ||
+                !int.TryParse(text[digitStart..position], out int code) ||
+                code < 0 || code > char.MaxValue)
+                return false;
+            characters.Add((char)code);
+            continue;
+        }
+
+        if (text[position] == '\'')
+        {
+            position++;
+            bool closed = false;
+            while (position < text.Length)
+            {
+                char current = text[position++];
+                if (current == '\'')
+                {
+                    if (position < text.Length && text[position] == '\'')
+                    {
+                        characters.Add('\'');
+                        position++;
+                        continue;
+                    }
+                    closed = true;
+                    break;
+                }
+                characters.Add(current);
+            }
+            if (!closed) return false;
+            continue;
+        }
+        return false;
+    }
+
+    // In Pascal, '' is the empty string. Do not leave it unchanged:
+    // C# interprets '' as an invalid empty character literal.
+    if (characters.Count == 0)
+    {
+        if (text == "''")
+        {
+            result = "\"\"";
+            return true;
+        }
+
+        return false;
+    }
+
+    if (text[0] == '#' && characters.Count == 1)
+    {
+        result = "'" + EscapeCSharpCharacter(characters[0]) + "'";
+        return true;
+    }
+    result = "\"" + EscapeCSharpString(new string(characters.ToArray())) + "\"";
+    return true;
+}
+
+private static string EscapeCSharpCharacter(char value)
+{
+    return value switch
+    {
+        '\\' => "\\\\",
+        '\'' => "\\'",
+        '\0' => "\\0",
+        '\a' => "\\a",
+        '\b' => "\\b",
+        '\f' => "\\f",
+        '\n' => "\\n",
+        '\r' => "\\r",
+        '\t' => "\\t",
+        '\v' => "\\v",
+        _ when char.IsControl(value) => "\\u" + ((int)value).ToString("X4"),
+        _ => value.ToString()
+    };
+}
+
+private static string EscapeCSharpString(string value)
+{
+    var builder = new StringBuilder();
+    foreach (char character in value)
+    {
+        builder.Append(character switch
+        {
+            '\\' => "\\\\",
+            '"' => "\\\"",
+            '\0' => "\\0",
+            '\a' => "\\a",
+            '\b' => "\\b",
+            '\f' => "\\f",
+            '\n' => "\\n",
+            '\r' => "\\r",
+            '\t' => "\\t",
+            '\v' => "\\v",
+            _ when char.IsControl(character) => "\\u" + ((int)character).ToString("X4"),
+            _ => character.ToString()
+        });
+    }
+    return builder.ToString();
+}
+
+private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
+{
+    if (expression.Children.Count == 0)
+        return "default /* TODO: Delphi address-of operand missing */";
+
+    // Delphi address-of has no general safe C# equivalent. Preserve the operand
+    // and flag pointer/API adaptation rather than emitting a bare '@'.
+    return "/* TODO: Delphi address-of */ " + TranslateExpression(expression.Children[0]);
 }
 
     private static string MapParameterKind(

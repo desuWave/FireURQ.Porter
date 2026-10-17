@@ -231,6 +231,305 @@ if (args.Length >= 3 &&
 }
 
 // ========================================================
+// VARIANT RECORD STRUCTURE PROBE
+// ========================================================
+
+if (args.Length >= 2 &&
+    args[0].Equals(
+        "--probe-variant-records",
+        StringComparison.OrdinalIgnoreCase))
+{
+    string variantFile = args[1];
+
+    if (!File.Exists(variantFile))
+    {
+        Console.WriteLine($"ERROR: File not found: {variantFile}");
+        Environment.ExitCode = 1;
+        return;
+    }
+
+    string variantSource =
+        File.ReadAllText(
+            variantFile,
+            Encoding.GetEncoding(1251));
+
+    var variantLexer = new DelphiLexer(variantSource);
+    var variantTokens = variantLexer.Tokenize();
+    var variantParser = new DelphiParser(variantTokens);
+    DelphiUnit variantUnit = variantParser.ParseUnit();
+
+    var astVariantTypes =
+        variantUnit.Declarations
+            .OfType<DelphiType>()
+            .Where(type => type.VariantPart is not null)
+            .ToList();
+
+    Console.WriteLine($"Source: {variantFile}");
+    Console.WriteLine($"AST variant-record types: {astVariantTypes.Count}");
+    Console.WriteLine();
+
+    foreach (DelphiType type in astVariantTypes)
+    {
+        DelphiVariantPart part = type.VariantPart!;
+        Console.WriteLine($"AST VARIANT RECORD: {type.Name}");
+        Console.WriteLine($"  TAG FIELD: {part.TagFieldName ?? "<none>"}");
+        Console.WriteLine($"  TAG TYPE: {part.TagType}");
+        Console.WriteLine($"  VARIANTS: {part.Variants.Count}");
+
+        for (int i = 0; i < part.Variants.Count; i++)
+        {
+            DelphiVariant variant = part.Variants[i];
+            Console.WriteLine($"  VARIANT {i}");
+            Console.WriteLine($"    LABELS: {string.Join(", ", variant.Labels)}");
+
+            foreach (DelphiField field in variant.Fields)
+                Console.WriteLine($"    {field.Name}: {field.Type}");
+        }
+
+        Console.WriteLine();
+    }
+
+    SemanticUnit variantSemanticModel =
+        SemanticModelBuilder.Build(variantUnit);
+
+    var semanticVariantTypes =
+        variantSemanticModel.Types
+            .Where(type => type.VariantPart is not null)
+            .ToList();
+
+    Console.WriteLine($"SEMANTIC variant-record types: {semanticVariantTypes.Count}");
+    Console.WriteLine();
+
+    foreach (SemanticType type in semanticVariantTypes)
+    {
+        SemanticVariantPart part = type.VariantPart!;
+        Console.WriteLine($"SEMANTIC VARIANT RECORD: {type.Name}");
+        Console.WriteLine($"  TAG FIELD: {part.TagFieldName ?? "<none>"}");
+        Console.WriteLine($"  TAG TYPE: {part.TagType}");
+        Console.WriteLine($"  VARIANTS: {part.Variants.Count}");
+
+        for (int i = 0; i < part.Variants.Count; i++)
+        {
+            SemanticVariant variant = part.Variants[i];
+            Console.WriteLine($"  VARIANT {i}");
+            Console.WriteLine($"    LABELS: {string.Join(", ", variant.Labels)}");
+
+            foreach (SemanticField field in variant.Fields)
+                Console.WriteLine($"    {field.Name}: {field.Type}");
+        }
+
+        Console.WriteLine();
+    }
+
+    bool astValid =
+        astVariantTypes.Any(type =>
+            type.Name.Equals("TMD5Digest", StringComparison.OrdinalIgnoreCase) &&
+            type.VariantPart!.Variants.Count == 2 &&
+            type.VariantPart.Variants[0].Fields.Select(field => field.Name)
+                .SequenceEqual(new[] { "A", "B", "C", "D" }) &&
+            type.VariantPart.Variants[1].Fields.Any(field =>
+                field.Name.Equals("v", StringComparison.OrdinalIgnoreCase)));
+
+    bool semanticValid =
+        semanticVariantTypes.Any(type =>
+            type.Name.Equals("TMD5Digest", StringComparison.OrdinalIgnoreCase) &&
+            type.VariantPart!.Variants.Count == 2 &&
+            type.VariantPart.Variants[0].Fields.Select(field => field.Name)
+                .SequenceEqual(new[] { "A", "B", "C", "D" }) &&
+            type.VariantPart.Variants[1].Fields.Any(field =>
+                field.Name.Equals("v", StringComparison.OrdinalIgnoreCase)));
+
+    Console.WriteLine($"AST STRUCTURE CHECK: {(astValid ? "PASS" : "FAIL")}");
+    Console.WriteLine($"SEMANTIC STRUCTURE CHECK: {(semanticValid ? "PASS" : "FAIL")}");
+
+    SemanticType? md5SemanticType =
+        semanticVariantTypes.FirstOrDefault(type =>
+            type.Name.Equals("TMD5Digest", StringComparison.OrdinalIgnoreCase));
+
+    string translatedVariantType = md5SemanticType is null
+        ? string.Empty
+        : new CSharpDeclarationTranslator().TranslateTypeDeclaration(md5SemanticType);
+
+    Console.WriteLine();
+    Console.WriteLine("=== GENERATED C# VARIANT TYPE ===");
+    Console.WriteLine(translatedVariantType);
+
+    bool translationValid =
+        translatedVariantType.Contains("[StructLayout(LayoutKind.Explicit)]", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("public unsafe struct TMD5Digest", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(0)] public int A;", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(0)] public int B;", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(0)] public int C;", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(0)] public int D;", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(0)] public fixed byte v[16];", StringComparison.Ordinal);
+
+    Console.WriteLine($"C# VARIANT LAYOUT CHECK: {(translationValid ? "PASS" : "FAIL")}");
+
+    bool runtimeLayoutValid = false;
+
+    if (translationValid)
+    {
+        string temporaryDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"FireURQ.Porter.VariantLayout.{Guid.NewGuid():N}");
+
+        try
+        {
+            Directory.CreateDirectory(temporaryDirectory);
+
+            string testProject = Path.Combine(temporaryDirectory, "VariantLayoutProbe.csproj");
+            string testProgram = Path.Combine(temporaryDirectory, "Program.cs");
+
+            File.WriteAllText(
+                testProject,
+                """
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup>
+                    <OutputType>Exe</OutputType>
+                    <TargetFramework>net8.0</TargetFramework>
+                    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+                    <ImplicitUsings>enable</ImplicitUsings>
+                    <Nullable>enable</Nullable>
+                  </PropertyGroup>
+                </Project>
+                """,
+                Encoding.UTF8);
+
+            string runtimeProbe = """
+                using System;
+                using System.Runtime.InteropServices;
+
+                unsafe
+                {
+                    TMD5Digest digest = default;
+
+                    if (sizeof(TMD5Digest) != 16 || Marshal.SizeOf<TMD5Digest>() != 16)
+                    {
+                        Console.Error.WriteLine($"FAIL: expected 16-byte layout; sizeof={sizeof(TMD5Digest)}, Marshal.SizeOf={Marshal.SizeOf<TMD5Digest>()}");
+                        return 1;
+                    }
+
+                    digest.A = 0x01020304;
+
+                    if (digest.B != digest.A || digest.C != digest.A || digest.D != digest.A)
+                    {
+                        Console.Error.WriteLine("FAIL: integer fields do not share the same storage.");
+                        return 1;
+                    }
+
+                    byte[] expectedBytes = BitConverter.GetBytes(digest.A);
+
+                    byte* bytes = digest.v;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        if (bytes[i] != expectedBytes[i])
+                        {
+                            Console.Error.WriteLine($"FAIL: byte overlay mismatch at index {i}; expected={expectedBytes[i]}, actual={bytes[i]}.");
+                            return 1;
+                        }
+                    }
+
+                    bytes[0] = 0x78;
+                    bytes[1] = 0x56;
+                    bytes[2] = 0x34;
+                    bytes[3] = 0x12;
+
+                    int expectedInteger = BitConverter.ToInt32(new byte[] { 0x78, 0x56, 0x34, 0x12 }, 0);
+
+                    if (digest.A != expectedInteger ||
+                        digest.B != expectedInteger ||
+                        digest.C != expectedInteger ||
+                        digest.D != expectedInteger)
+                    {
+                        Console.Error.WriteLine($"FAIL: writing through v did not update overlaid integer fields; expected={expectedInteger}, A={digest.A}, B={digest.B}, C={digest.C}, D={digest.D}.");
+                        return 1;
+                    }
+
+                    Console.WriteLine("VARIANT MEMORY OVERLAY CHECK: PASS");
+                    Console.WriteLine($"STRUCT SIZE CHECK: PASS (sizeof={sizeof(TMD5Digest)}, Marshal.SizeOf={Marshal.SizeOf<TMD5Digest>()})");
+                    Console.WriteLine($"ENDIAN-AWARE BYTE VIEW CHECK: PASS (BitConverter.IsLittleEndian={BitConverter.IsLittleEndian})");
+                    return 0;
+                }
+
+                """ + Environment.NewLine + translatedVariantType + Environment.NewLine;
+
+            File.WriteAllText(testProgram, runtimeProbe, new UTF8Encoding(false));
+
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "dotnet",
+                WorkingDirectory = temporaryDirectory,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            startInfo.ArgumentList.Add("run");
+            startInfo.ArgumentList.Add("--project");
+            startInfo.ArgumentList.Add(testProject);
+            startInfo.ArgumentList.Add("--configuration");
+            startInfo.ArgumentList.Add("Release");
+            startInfo.ArgumentList.Add("--verbosity");
+            startInfo.ArgumentList.Add("quiet");
+            startInfo.Environment["DOTNET_NOLOGO"] = "1";
+            startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
+
+            using var process = System.Diagnostics.Process.Start(startInfo);
+
+            if (process is null)
+            {
+                Console.WriteLine("RUNTIME VARIANT LAYOUT CHECK: FAIL (could not start dotnet).");
+            }
+            else
+            {
+                string standardOutput = process.StandardOutput.ReadToEnd();
+                string standardError = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+
+                if (!string.IsNullOrWhiteSpace(standardOutput))
+                    Console.WriteLine(standardOutput.TrimEnd());
+
+                if (!string.IsNullOrWhiteSpace(standardError))
+                    Console.WriteLine(standardError.TrimEnd());
+
+                runtimeLayoutValid =
+                    process.ExitCode == 0 &&
+                    standardOutput.Contains("VARIANT MEMORY OVERLAY CHECK: PASS", StringComparison.Ordinal) &&
+                    standardOutput.Contains("STRUCT SIZE CHECK: PASS", StringComparison.Ordinal);
+
+                Console.WriteLine($"RUNTIME VARIANT LAYOUT CHECK: {(runtimeLayoutValid ? "PASS" : "FAIL")} (exit code {process.ExitCode})");
+            }
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"RUNTIME VARIANT LAYOUT CHECK: FAIL ({exception.GetType().Name}: {exception.Message})");
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(temporaryDirectory))
+                    Directory.Delete(temporaryDirectory, recursive: true);
+            }
+            catch (Exception cleanupException)
+            {
+                Console.WriteLine($"WARNING: temporary probe cleanup failed: {cleanupException.Message}");
+            }
+        }
+    }
+    else
+    {
+        Console.WriteLine("RUNTIME VARIANT LAYOUT CHECK: SKIPPED (generated declaration check failed).");
+    }
+
+    if (!astValid || !semanticValid || !translationValid || !runtimeLayoutValid)
+        Environment.ExitCode = 1;
+
+    return;
+}
+
+// ========================================================
 // TRANSLATION TEST
 // ========================================================
 
@@ -492,6 +791,9 @@ static string? GetOptionValue(
 
 static void PrintUsage()
 {
+    Console.WriteLine(
+        "  FireURQ.Porter --probe-variant-records <file.pas>");
+
     Console.WriteLine(
         "  FireURQ.Porter --translate-test");
 

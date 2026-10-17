@@ -47,12 +47,24 @@ public sealed record SemanticField(
     string Type
 );
 
+public sealed record SemanticVariant(
+    IReadOnlyList<string> Labels,
+    IReadOnlyList<SemanticField> Fields
+);
+
+public sealed record SemanticVariantPart(
+    string? TagFieldName,
+    string TagType,
+    IReadOnlyList<SemanticVariant> Variants
+);
+
 public sealed record SemanticType(
     string Name,
     string Kind,
     string Definition,
     IReadOnlyList<SemanticField>? Fields = null,
-    string? UnitName = null
+    string? UnitName = null,
+    SemanticVariantPart? VariantPart = null
 );
 
 public sealed record SemanticConstant(
