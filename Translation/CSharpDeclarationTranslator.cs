@@ -71,7 +71,7 @@ public sealed class CSharpDeclarationTranslator
                 constantText.Length >= 2 &&
                 constantText[0] == '(' &&
                 constantText[^1] == ')' &&
-                constantText.Contains(':', StringComparison.Ordinal);
+                constantText.Contains(':');
             bool requiresStaticReadonly =
                 type.EndsWith("[]", StringComparison.Ordinal) ||
                 type.StartsWith("HashSet<", StringComparison.Ordinal) ||
@@ -107,7 +107,7 @@ public sealed class CSharpDeclarationTranslator
         if (text.Length >= 2 &&
             text[0] == '(' &&
             text[^1] == ')' &&
-            text.Contains(':', StringComparison.Ordinal) &&
+            text.Contains(':') &&
             TryTranslateRecordInitializer(text, out string recordInitializer))
             return $"new {mappedType} {recordInitializer}";
 
