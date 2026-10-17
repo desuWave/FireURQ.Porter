@@ -671,7 +671,7 @@ public sealed class CSharpDeclarationTranslator
 
         var match = System.Text.RegularExpressions.Regex.Match(
             delphiType,
-            @"^array\\s*\\[\\s*0\\s*\\.\\.\\s*(\\d+)\\s*\\]\\s*of\\s+([A-Za-z_][A-Za-z0-9_]*)$",
+            @"^array\s*\[\s*0\s*\.\.\s*(\d+)\s*\]\s*of\s+([A-Za-z_][A-Za-z0-9_]*)$",
             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
         if (!match.Success ||
