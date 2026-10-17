@@ -93,15 +93,6 @@ public sealed class DelphiParser
                 return;
             }
 
-            if (readBodies &&
-                (PeekKeyword("function") ||
-                 PeekKeyword("procedure") ||
-                 PeekKeyword("constructor") ||
-                 PeekKeyword("destructor")))
-            {
-                // Callable implementation.
-            }
-
             if (MatchKeyword("const"))
             {
                 ParseConstSection(
@@ -125,7 +116,9 @@ public sealed class DelphiParser
             }
 
             if (PeekKeyword("function") ||
-                PeekKeyword("procedure"))
+                PeekKeyword("procedure") ||
+                PeekKeyword("constructor") ||
+                PeekKeyword("destructor"))
             {
                 DelphiNode callable =
                     ParseCallableDeclaration(
@@ -156,13 +149,15 @@ public sealed class DelphiParser
         bool readBody)
     {
         bool isProcedure =
-            PeekKeyword("procedure");
+            PeekKeyword("procedure") ||
+            PeekKeyword("constructor") ||
+            PeekKeyword("destructor");
 
         if (!isProcedure &&
             !PeekKeyword("function"))
         {
             throw ParserError(
-                "Expected function or procedure.");
+                "Expected function, procedure, constructor, or destructor.");
         }
 
         // Delphi method resolution:
@@ -345,6 +340,12 @@ public sealed class DelphiParser
                 PeekKeyword("var") ||
                 PeekKeyword("function") ||
                 PeekKeyword("procedure") ||
+                PeekKeyword("constructor") ||
+                PeekKeyword("destructor") ||
+                PeekKeyword("constructor") ||
+                PeekKeyword("destructor") ||
+                PeekKeyword("constructor") ||
+                PeekKeyword("destructor") ||
                 PeekKeyword("implementation"))
             {
                 return;
