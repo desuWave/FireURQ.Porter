@@ -30,6 +30,17 @@ public sealed record DelphiField(
     string Type
 ) : DelphiNode;
 
+public sealed record DelphiVariant(
+    IReadOnlyList<string> Labels,
+    IReadOnlyList<DelphiField> Fields
+) : DelphiNode;
+
+public sealed record DelphiVariantPart(
+    string? TagFieldName,
+    string TagType,
+    IReadOnlyList<DelphiVariant> Variants
+) : DelphiNode;
+
 public sealed record DelphiVariable(
     string Name,
     string Type
@@ -83,7 +94,8 @@ public sealed record DelphiType(
     string Name,
     DelphiTypeKind Kind,
     string Definition,
-    IReadOnlyList<DelphiField>? Fields = null
+    IReadOnlyList<DelphiField>? Fields = null,
+    DelphiVariantPart? VariantPart = null
 ) : DelphiNode;
 
 public sealed record DelphiProcedureType(
