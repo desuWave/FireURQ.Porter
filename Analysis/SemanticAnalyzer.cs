@@ -25,20 +25,35 @@ public static class SemanticAnalyzer
                     interfaces.Add(AnalyzeInterface(value));
                     break;
 
-case DelphiType value:
-    types.Add(
-        new SemanticType(
-            value.Name,
-            value.Kind.ToString(),
-            value.Definition,
-            value.Fields?
-                .Select(
-                    field =>
-                        new SemanticField(
-                            field.Name,
-                            field.Type))
-                .ToList()));
-    break;
+                case DelphiType value:
+                    types.Add(
+                        new SemanticType(
+                            value.Name,
+                            value.Kind.ToString(),
+                            value.Definition,
+                            value.Fields?
+                                .Select(field =>
+                                    new SemanticField(
+                                        field.Name,
+                                        field.Type))
+                                .ToList(),
+                            VariantPart: value.VariantPart is null
+                                ? null
+                                : new SemanticVariantPart(
+                                    value.VariantPart.TagFieldName,
+                                    value.VariantPart.TagType,
+                                    value.VariantPart.Variants
+                                        .Select(variant =>
+                                            new SemanticVariant(
+                                                variant.Labels,
+                                                variant.Fields
+                                                    .Select(field =>
+                                                        new SemanticField(
+                                                            field.Name,
+                                                            field.Type))
+                                                    .ToList()))
+                                        .ToList())));
+                    break;
 
                 case DelphiConst value:
                     constants.Add(
@@ -56,8 +71,7 @@ case DelphiType value:
                     break;
 
                 case DelphiFunction value:
-                    functions.Add(
-                        AnalyzeFunction(value));
+                    functions.Add(AnalyzeFunction(value));
                     break;
             }
         }
@@ -73,13 +87,9 @@ case DelphiType value:
             functions);
     }
 
-    private static SemanticClass AnalyzeClass(
-        DelphiClass value)
+    private static SemanticClass AnalyzeClass(DelphiClass value)
     {
-        var members =
-            value.Members
-                .Select(AnalyzeMember)
-                .ToList();
+        var members = value.Members.Select(AnalyzeMember).ToList();
 
         return new SemanticClass(
             value.Name,
@@ -87,13 +97,9 @@ case DelphiType value:
             members);
     }
 
-    private static SemanticInterface AnalyzeInterface(
-        DelphiInterface value)
+    private static SemanticInterface AnalyzeInterface(DelphiInterface value)
     {
-        var members =
-            value.Members
-                .Select(AnalyzeMember)
-                .ToList();
+        var members = value.Members.Select(AnalyzeMember).ToList();
 
         return new SemanticInterface(
             value.Name,
@@ -101,8 +107,7 @@ case DelphiType value:
             members);
     }
 
-    private static SemanticMember AnalyzeMember(
-        DelphiClassMember member)
+    private static SemanticMember AnalyzeMember(DelphiClassMember member)
     {
         return member.Node switch
         {
@@ -119,9 +124,7 @@ case DelphiType value:
                 new SemanticMember(
                     function.Name,
                     SemanticMemberKind.Method,
-                    function.IsProcedure
-                        ? string.Empty
-                        : function.ReturnType,
+                    function.IsProcedure ? string.Empty : function.ReturnType,
                     member.Visibility.ToString(),
                     function.Parameters
                         .Select(parameter =>
@@ -130,7 +133,7 @@ case DelphiType value:
                                 parameter.Type,
                                 parameter.Kind.ToString()))
                         .ToList(),
-                        false),
+                    false),
 
             DelphiProperty property =>
                 new SemanticMember(
@@ -145,10 +148,9 @@ case DelphiType value:
                                 parameter.Type,
                                 parameter.Kind.ToString()))
                         .ToList(),
-                        property.IsDefault,
-                        property.ReadAccessor,
-                        property.WriteAccessor),
-
+                    property.IsDefault,
+                    property.ReadAccessor,
+                    property.WriteAccessor),
 
             DelphiMethodResolution resolution =>
                 new SemanticMember(
@@ -159,38 +161,34 @@ case DelphiType value:
                     Array.Empty<SemanticParameter>(),
                     false),
 
-            _ =>
-                throw new InvalidOperationException(
-                    $"Unsupported Delphi class member: " +
-                    member.Node.GetType().Name)
+            _ => throw new InvalidOperationException(
+                "Unsupported Delphi class member: " +
+                member.Node.GetType().Name)
         };
     }
 
-    private static SemanticFunction AnalyzeFunction(
-        DelphiFunction function)
+    private static SemanticFunction AnalyzeFunction(DelphiFunction function)
     {
-        var parameters =
-            function.Parameters
-                .Select(parameter =>
-                    new SemanticParameter(
-                        parameter.Name,
-                        parameter.Type,
-                        parameter.Kind.ToString()))
-                .ToList();
+        var parameters = function.Parameters
+            .Select(parameter =>
+                new SemanticParameter(
+                    parameter.Name,
+                    parameter.Type,
+                    parameter.Kind.ToString()))
+            .ToList();
 
-var localVariables =
-    function.LocalVariables
-        .Select(variable =>
-            new SemanticVariable(
-                variable.Name,
-                variable.Type))
-        .ToList();
+        var localVariables = function.LocalVariables
+            .Select(variable =>
+                new SemanticVariable(
+                    variable.Name,
+                    variable.Type))
+            .ToList();
 
-return new SemanticFunction(
-    function.Name,
-    parameters,
-    function.ReturnType,
-    function.IsProcedure,
-    localVariables);
+        return new SemanticFunction(
+            function.Name,
+            parameters,
+            function.ReturnType,
+            function.IsProcedure,
+            localVariables);
     }
 }
