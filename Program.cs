@@ -365,7 +365,167 @@ if (args.Length >= 2 &&
 
     Console.WriteLine($"C# VARIANT LAYOUT CHECK: {(translationValid ? "PASS" : "FAIL")}");
 
-    if (!astValid || !semanticValid || !translationValid)
+    bool runtimeLayoutValid = false;
+
+    if (translationValid)
+    {
+        string temporaryDirectory = Path.Combine(
+            Path.GetTempPath(),
+            $"FireURQ.Porter.VariantLayout.{Guid.NewGuid():N}");
+
+        try
+        {
+            Directory.CreateDirectory(temporaryDirectory);
+
+            string testProject = Path.Combine(temporaryDirectory, "VariantLayoutProbe.csproj");
+            string testProgram = Path.Combine(temporaryDirectory, "Program.cs");
+
+            File.WriteAllText(
+                testProject,
+                """
+                <Project Sdk="Microsoft.NET.Sdk">
+                  <PropertyGroup>
+                    <OutputType>Exe</OutputType>
+                    <TargetFramework>net8.0</TargetFramework>
+                    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+                    <ImplicitUsings>enable</ImplicitUsings>
+                    <Nullable>enable</Nullable>
+                  </PropertyGroup>
+                </Project>
+                """,
+                Encoding.UTF8);
+
+            string runtimeProbe = """
+                using System;
+                using System.Runtime.InteropServices;
+
+                unsafe
+                {
+                    TMD5Digest digest = default;
+
+                    if (sizeof(TMD5Digest) != 16 || Marshal.SizeOf<TMD5Digest>() != 16)
+                    {
+                        Console.Error.WriteLine($"FAIL: expected 16-byte layout; sizeof={sizeof(TMD5Digest)}, Marshal.SizeOf={Marshal.SizeOf<TMD5Digest>()}");
+                        return 1;
+                    }
+
+                    digest.A = 0x01020304;
+
+                    if (digest.B != digest.A || digest.C != digest.A || digest.D != digest.A)
+                    {
+                        Console.Error.WriteLine("FAIL: integer fields do not share the same storage.");
+                        return 1;
+                    }
+
+                    byte[] expectedBytes = BitConverter.GetBytes(digest.A);
+
+                    fixed (byte* bytes = digest.v)
+                    {
+                        for (int i = 0; i < 4; i++)
+                        {
+                            if (bytes[i] != expectedBytes[i])
+                            {
+                                Console.Error.WriteLine($"FAIL: byte overlay mismatch at index {i}; expected={expectedBytes[i]}, actual={bytes[i]}.");
+                                return 1;
+                            }
+                        }
+
+                        bytes[0] = 0x78;
+                        bytes[1] = 0x56;
+                        bytes[2] = 0x34;
+                        bytes[3] = 0x12;
+                    }
+
+                    int expectedInteger = BitConverter.ToInt32(new byte[] { 0x78, 0x56, 0x34, 0x12 }, 0);
+
+                    if (digest.A != expectedInteger ||
+                        digest.B != expectedInteger ||
+                        digest.C != expectedInteger ||
+                        digest.D != expectedInteger)
+                    {
+                        Console.Error.WriteLine($"FAIL: writing through v did not update overlaid integer fields; expected={expectedInteger}, A={digest.A}, B={digest.B}, C={digest.C}, D={digest.D}.");
+                        return 1;
+                    }
+
+                    Console.WriteLine("VARIANT MEMORY OVERLAY CHECK: PASS");
+                    Console.WriteLine($"STRUCT SIZE CHECK: PASS (sizeof={sizeof(TMD5Digest)}, Marshal.SizeOf={Marshal.SizeOf<TMD5Digest>()})");
+                    Console.WriteLine($"ENDIAN-AWARE BYTE VIEW CHECK: PASS (BitConverter.IsLittleEndian={BitConverter.IsLittleEndian})");
+                    return 0;
+                }
+
+                """ + Environment.NewLine + translatedVariantType + Environment.NewLine;
+
+            File.WriteAllText(testProgram, runtimeProbe, new UTF8Encoding(false));
+
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "dotnet",
+                WorkingDirectory = temporaryDirectory,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            startInfo.ArgumentList.Add("run");
+            startInfo.ArgumentList.Add("--project");
+            startInfo.ArgumentList.Add(testProject);
+            startInfo.ArgumentList.Add("--configuration");
+            startInfo.ArgumentList.Add("Release");
+            startInfo.ArgumentList.Add("--verbosity");
+            startInfo.ArgumentList.Add("quiet");
+            startInfo.Environment["DOTNET_NOLOGO"] = "1";
+            startInfo.Environment["DOTNET_CLI_TELEMETRY_OPTOUT"] = "1";
+
+            using var process = System.Diagnostics.Process.Start(startInfo);
+
+            if (process is null)
+            {
+                Console.WriteLine("RUNTIME VARIANT LAYOUT CHECK: FAIL (could not start dotnet).");
+            }
+            else
+            {
+                string standardOutput = process.StandardOutput.ReadToEnd();
+                string standardError = process.StandardError.ReadToEnd();
+                process.WaitForExit();
+
+                if (!string.IsNullOrWhiteSpace(standardOutput))
+                    Console.WriteLine(standardOutput.TrimEnd());
+
+                if (!string.IsNullOrWhiteSpace(standardError))
+                    Console.WriteLine(standardError.TrimEnd());
+
+                runtimeLayoutValid =
+                    process.ExitCode == 0 &&
+                    standardOutput.Contains("VARIANT MEMORY OVERLAY CHECK: PASS", StringComparison.Ordinal) &&
+                    standardOutput.Contains("STRUCT SIZE CHECK: PASS", StringComparison.Ordinal);
+
+                Console.WriteLine($"RUNTIME VARIANT LAYOUT CHECK: {(runtimeLayoutValid ? "PASS" : "FAIL")} (exit code {process.ExitCode})");
+            }
+        }
+        catch (Exception exception)
+        {
+            Console.WriteLine($"RUNTIME VARIANT LAYOUT CHECK: FAIL ({exception.GetType().Name}: {exception.Message})");
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(temporaryDirectory))
+                    Directory.Delete(temporaryDirectory, recursive: true);
+            }
+            catch (Exception cleanupException)
+            {
+                Console.WriteLine($"WARNING: temporary probe cleanup failed: {cleanupException.Message}");
+            }
+        }
+    }
+    else
+    {
+        Console.WriteLine("RUNTIME VARIANT LAYOUT CHECK: SKIPPED (generated declaration check failed).");
+    }
+
+    if (!astValid || !semanticValid || !translationValid || !runtimeLayoutValid)
         Environment.ExitCode = 1;
 
     return;
