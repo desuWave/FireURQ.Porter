@@ -75,7 +75,16 @@ public sealed record SemanticConstant(
 
 public sealed record SemanticVariable(
     string Name,
-    string Type
+    string Type,
+    SemanticProcedureType? ProcedureType = null
+);
+
+public sealed record SemanticProcedureType(
+    IReadOnlyList<SemanticParameter> Parameters,
+    string ReturnType,
+    bool IsProcedure,
+    bool IsMethodOfObject,
+    string? CallingConvention
 );
 
 public sealed record SemanticFunction(
