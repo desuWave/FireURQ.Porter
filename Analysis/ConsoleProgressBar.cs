@@ -53,6 +53,15 @@ public sealed class ConsoleProgressBar
                 $" {label}";
         }
 
+        // Console.WindowWidth can throw when stdout is redirected
+        // (for example, when batch diagnostics are captured to a log).
+        // In that mode, emit one progress line instead of using cursor positioning.
+        if (Console.IsOutputRedirected)
+        {
+            Console.WriteLine(text.TrimEnd());
+            return;
+        }
+
         int consoleWidth =
             Math.Max(
                 1,
