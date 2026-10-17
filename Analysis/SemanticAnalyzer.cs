@@ -67,7 +67,16 @@ public static class SemanticAnalyzer
                     variables.Add(
                         new SemanticVariable(
                             value.Name,
-                            value.Type));
+                            value.Type,
+                            value.ProcedureType is null ? null : new SemanticProcedureType(
+                                value.ProcedureType.Parameters.Select(parameter => new SemanticParameter(
+                                    parameter.Name,
+                                    parameter.Type,
+                                    parameter.Kind.ToString())).ToList(),
+                                value.ProcedureType.ReturnType,
+                                value.ProcedureType.IsProcedure,
+                                value.ProcedureType.IsMethodOfObject,
+                                value.ProcedureType.CallingConvention)));
                     break;
 
                 case DelphiFunction value:
