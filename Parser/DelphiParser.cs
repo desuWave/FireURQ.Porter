@@ -1095,6 +1095,7 @@ if (MatchKeyword("record"))
     var fields =
         new List<DelphiField>();
 
+    DelphiVariantPart? variantPart = null;
     int depth = 1;
 
     while (!IsEnd() &&
@@ -1118,10 +1119,31 @@ if (MatchKeyword("record"))
         if (depth == 0)
             break;
 
+        if (PeekKeyword("case"))
+        {
+            Advance();
+
+            variantPart =
+                ParseVariantRecordPart(
+                    out string variantDefinition);
+
+            definition.Add(variantDefinition);
+            continue;
+        }
+
         if (IsIdentifier())
         {
-            string fieldName =
-                ExpectIdentifier();
+            var fieldNames =
+                new List<string>
+                {
+                    ExpectIdentifier()
+                };
+
+            while (MatchSymbol(","))
+            {
+                fieldNames.Add(
+                    ExpectIdentifier());
+            }
 
             if (MatchSymbol(":"))
             {
@@ -1130,18 +1152,21 @@ if (MatchKeyword("record"))
 
                 MatchSymbol(";");
 
-                fields.Add(
-                    new DelphiField(
-                        fieldName,
-                        fieldType));
+                foreach (string fieldName in fieldNames)
+                {
+                    fields.Add(
+                        new DelphiField(
+                            fieldName,
+                            fieldType));
 
-                definition.Add(
-                    $"{fieldName} : {fieldType} ;");
+                    definition.Add(
+                        $"{fieldName} : {fieldType} ;");
+                }
 
                 continue;
             }
 
-            definition.Add(fieldName);
+            definition.AddRange(fieldNames);
             continue;
         }
 
@@ -1160,7 +1185,8 @@ if (MatchKeyword("record"))
             string.Join(
                 " ",
                 definition),
-            fields));
+            fields,
+            variantPart));
 
     continue;
 }
@@ -1230,6 +1256,222 @@ declarations.Add(
         simpleTypeDefinition));
         }
     }
+
+private DelphiVariantPart ParseVariantRecordPart(
+    out string definition)
+{
+    var tagTokens = new List<string>();
+
+    while (!IsEnd() &&
+           !PeekKeyword("of"))
+    {
+        tagTokens.Add(Current().Text);
+        Advance();
+    }
+
+    if (tagTokens.Count == 0)
+    {
+        throw ParserError(
+            "Expected variant-record tag type before 'of'.");
+    }
+
+    string? tagFieldName = null;
+    int colonIndex = tagTokens.IndexOf(":");
+    string tagType;
+
+    if (colonIndex >= 0)
+    {
+        tagFieldName = string.Join(
+            " ",
+            tagTokens.Take(colonIndex));
+
+        tagType = string.Join(
+            " ",
+            tagTokens.Skip(colonIndex + 1));
+    }
+    else
+    {
+        tagType = string.Join(" ", tagTokens);
+    }
+
+    if (string.IsNullOrWhiteSpace(tagType))
+    {
+        throw ParserError(
+            "Expected variant-record tag type.");
+    }
+
+    ExpectKeyword("of");
+
+    var variants = new List<DelphiVariant>();
+    var definitionParts = new List<string>
+    {
+        "case",
+        string.Join(" ", tagTokens),
+        "of"
+    };
+
+    while (!IsEnd() &&
+           !PeekKeyword("end"))
+    {
+        var labelTokens = new List<string>();
+
+        while (!IsEnd() &&
+               !PeekSymbol(":"))
+        {
+            labelTokens.Add(Current().Text);
+            Advance();
+        }
+
+        if (labelTokens.Count == 0)
+        {
+            throw ParserError(
+                "Expected variant label before ':'.");
+        }
+
+        ExpectSymbol(":");
+        ExpectSymbol("(");
+
+        var variantFields =
+            ParseVariantRecordFields();
+
+        ExpectSymbol(")");
+        MatchSymbol(";");
+
+        var labels = string.Join(
+                "",
+                labelTokens)
+            .Split(
+                ',',
+                StringSplitOptions.RemoveEmptyEntries |
+                StringSplitOptions.TrimEntries)
+            .ToList();
+
+        if (labels.Count == 0)
+        {
+            throw ParserError(
+                "Expected at least one variant label.");
+        }
+
+        variants.Add(
+            new DelphiVariant(
+                labels,
+                variantFields));
+
+        definitionParts.Add(
+            string.Join(
+                " ",
+                labelTokens) +
+            " : ( " +
+            string.Join(
+                " ",
+                variantFields.Select(
+                    field => $"{field.Name} : {field.Type} ;")) +
+            " ) ;");
+    }
+
+    if (variants.Count == 0)
+    {
+        throw ParserError(
+            "Expected at least one variant-record alternative.");
+    }
+
+    definition = string.Join(" ", definitionParts);
+
+    return new DelphiVariantPart(
+        tagFieldName,
+        tagType,
+        variants);
+}
+
+private List<DelphiField> ParseVariantRecordFields()
+{
+    var fields = new List<DelphiField>();
+
+    while (!IsEnd() &&
+           !PeekSymbol(")"))
+    {
+        var names = new List<string>();
+
+        if (!IsIdentifier())
+        {
+            throw ParserError(
+                "Expected variant-record field name.");
+        }
+
+        names.Add(ExpectIdentifier());
+
+        while (MatchSymbol(","))
+        {
+            names.Add(ExpectIdentifier());
+        }
+
+        ExpectSymbol(":");
+
+        var typeParts = new List<string>();
+        int squareDepth = 0;
+        int roundDepth = 0;
+
+        while (!IsEnd())
+        {
+            if (PeekSymbol("["))
+            {
+                squareDepth++;
+            }
+            else if (PeekSymbol("]") && squareDepth > 0)
+            {
+                squareDepth--;
+            }
+            else if (PeekSymbol("("))
+            {
+                roundDepth++;
+            }
+            else if (PeekSymbol(")") && roundDepth > 0)
+            {
+                roundDepth--;
+            }
+
+            if (squareDepth == 0 &&
+                roundDepth == 0 &&
+                (PeekSymbol(";") || PeekSymbol(")")))
+            {
+                break;
+            }
+
+            typeParts.Add(Current().Text);
+            Advance();
+        }
+
+        string fieldType = string.Join(" ", typeParts);
+
+        if (string.IsNullOrWhiteSpace(fieldType))
+        {
+            throw ParserError(
+                "Expected variant-record field type.");
+        }
+
+        foreach (string fieldName in names)
+        {
+            fields.Add(
+                new DelphiField(
+                    fieldName,
+                    fieldType));
+        }
+
+        if (MatchSymbol(";"))
+        {
+            if (PeekSymbol(")"))
+            {
+                break;
+            }
+
+            continue;
+        }
+
+        break;
+    }
+
+    return fields;
+}
 
 private static bool IsQualifiedTypeName(
     IReadOnlyList<string> tokens)
