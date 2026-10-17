@@ -342,7 +342,30 @@ if (args.Length >= 2 &&
     Console.WriteLine($"AST STRUCTURE CHECK: {(astValid ? "PASS" : "FAIL")}");
     Console.WriteLine($"SEMANTIC STRUCTURE CHECK: {(semanticValid ? "PASS" : "FAIL")}");
 
-    if (!astValid || !semanticValid)
+    SemanticType? md5SemanticType =
+        semanticVariantTypes.FirstOrDefault(type =>
+            type.Name.Equals("TMD5Digest", StringComparison.OrdinalIgnoreCase));
+
+    string translatedVariantType = md5SemanticType is null
+        ? string.Empty
+        : new CSharpDeclarationTranslator().TranslateTypeDeclaration(md5SemanticType);
+
+    Console.WriteLine();
+    Console.WriteLine("=== GENERATED C# VARIANT TYPE ===");
+    Console.WriteLine(translatedVariantType);
+
+    bool translationValid =
+        translatedVariantType.Contains("[StructLayout(LayoutKind.Explicit)]", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("public unsafe struct TMD5Digest", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(0)] public int A;", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(0)] public int B;", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(0)] public int C;", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(0)] public int D;", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(0)] public fixed byte v[16];", StringComparison.Ordinal);
+
+    Console.WriteLine($"C# VARIANT LAYOUT CHECK: {(translationValid ? "PASS" : "FAIL")}");
+
+    if (!astValid || !semanticValid || !translationValid)
         Environment.ExitCode = 1;
 
     return;
