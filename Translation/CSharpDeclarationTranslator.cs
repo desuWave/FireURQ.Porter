@@ -5,6 +5,11 @@ namespace FireURQ.Porter.Translation;
 
 public sealed class CSharpDeclarationTranslator
 {
+    public string TranslateTypeDeclaration(SemanticType type)
+    {
+        return TranslateType(type);
+    }
+
     public string Translate(SemanticUnit unit)
     {
         var builder = new StringBuilder();
