@@ -253,7 +253,9 @@ public sealed class CSharpDeclarationTranslator
             }
             current.Append(c);
         }
-        if (current.Length > 0) parts.Add(current.ToString().Trim());
+        string remainder = current.ToString().Trim();
+        if (remainder.Length > 0)
+            parts.Add(remainder);
         return parts;
     }
 
