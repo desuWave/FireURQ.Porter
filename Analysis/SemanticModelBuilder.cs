@@ -13,26 +13,25 @@ public static class SemanticModelBuilder
         var variables = new List<SemanticVariable>();
         var functions = new List<SemanticFunction>();
 
-var fullClassNames =
-    unit.Declarations
-        .OfType<DelphiClass>()
-        .Where(value => value.Members.Count > 0)
-        .Select(value => value.Name)
-        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var fullClassNames = unit.Declarations
+            .OfType<DelphiClass>()
+            .Where(value => value.Members.Count > 0)
+            .Select(value => value.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-foreach (var declaration in unit.Declarations)
-{
-    switch (declaration)
-    {
-        case DelphiClass value:
-            if (value.Members.Count == 0 &&
-                fullClassNames.Contains(value.Name))
+        foreach (var declaration in unit.Declarations)
+        {
+            switch (declaration)
             {
-                break;
-            }
+                case DelphiClass value:
+                    if (value.Members.Count == 0 &&
+                        fullClassNames.Contains(value.Name))
+                    {
+                        break;
+                    }
 
-            classes.Add(BuildClass(value));
-            break;
+                    classes.Add(BuildClass(value));
+                    break;
 
                 case DelphiInterface value:
                     interfaces.Add(BuildInterface(value));
@@ -45,12 +44,27 @@ foreach (var declaration in unit.Declarations)
                             value.Kind.ToString(),
                             value.Definition,
                             value.Fields?
-                                .Select(
-                                    field =>
-                                        new SemanticField(
-                                            field.Name,
-                                            field.Type))
-                                .ToList()));
+                                .Select(field =>
+                                    new SemanticField(
+                                        field.Name,
+                                        field.Type))
+                                .ToList(),
+                            VariantPart: value.VariantPart is null
+                                ? null
+                                : new SemanticVariantPart(
+                                    value.VariantPart.TagFieldName,
+                                    value.VariantPart.TagType,
+                                    value.VariantPart.Variants
+                                        .Select(variant =>
+                                            new SemanticVariant(
+                                                variant.Labels,
+                                                variant.Fields
+                                                    .Select(field =>
+                                                        new SemanticField(
+                                                            field.Name,
+                                                            field.Type))
+                                                    .ToList()))
+                                        .ToList())));
                     break;
 
                 case DelphiConst value:
@@ -85,26 +99,19 @@ foreach (var declaration in unit.Declarations)
             functions);
     }
 
-    private static SemanticClass BuildClass(
-        DelphiClass value)
+    private static SemanticClass BuildClass(DelphiClass value)
     {
-        var members =
-            value.Members
-                .Select(BuildMember)
-                .ToList();
+        var members = value.Members.Select(BuildMember).ToList();
 
         return new SemanticClass(
             value.Name,
             value.BaseType,
             members);
     }
-    private static SemanticInterface BuildInterface(
-        DelphiInterface value)
+
+    private static SemanticInterface BuildInterface(DelphiInterface value)
     {
-        var members =
-            value.Members
-                .Select(BuildMember)
-                .ToList();
+        var members = value.Members.Select(BuildMember).ToList();
 
         return new SemanticInterface(
             value.Name,
@@ -112,8 +119,7 @@ foreach (var declaration in unit.Declarations)
             members);
     }
 
-    private static SemanticMember BuildMember(
-        DelphiClassMember member)
+    private static SemanticMember BuildMember(DelphiClassMember member)
     {
         return member.Node switch
         {
@@ -130,14 +136,10 @@ foreach (var declaration in unit.Declarations)
                 new SemanticMember(
                     function.Name,
                     SemanticMemberKind.Method,
-                    function.IsProcedure
-                        ? string.Empty
-                        : function.ReturnType,
+                    function.IsProcedure ? string.Empty : function.ReturnType,
                     member.Visibility.ToString(),
-                    function.Parameters
-                        .Select(BuildParameter)
-                        .ToList(),
-                        false),
+                    function.Parameters.Select(BuildParameter).ToList(),
+                    false),
 
             DelphiProperty property =>
                 new SemanticMember(
@@ -145,9 +147,7 @@ foreach (var declaration in unit.Declarations)
                     SemanticMemberKind.Property,
                     property.Type,
                     member.Visibility.ToString(),
-                    property.Parameters
-                        .Select(BuildParameter)
-                        .ToList(),
+                    property.Parameters.Select(BuildParameter).ToList(),
                     property.IsDefault,
                     property.ReadAccessor,
                     property.WriteAccessor),
@@ -161,34 +161,28 @@ foreach (var declaration in unit.Declarations)
                     Array.Empty<SemanticParameter>(),
                     false),
 
-            _ =>
-                throw new InvalidOperationException(
-                    $"Unsupported Delphi class member: " +
-                    member.Node.GetType().Name)
+            _ => throw new InvalidOperationException(
+                "Unsupported Delphi class member: " +
+                member.Node.GetType().Name)
         };
     }
 
-private static SemanticFunction BuildFunction(
-    DelphiFunction function)
-{
-    return new SemanticFunction(
-        function.Name,
-        function.Parameters
-            .Select(BuildParameter)
-            .ToList(),
-        function.ReturnType,
-        function.IsProcedure,
-        function.LocalVariables
-            .Select(
-                variable =>
+    private static SemanticFunction BuildFunction(DelphiFunction function)
+    {
+        return new SemanticFunction(
+            function.Name,
+            function.Parameters.Select(BuildParameter).ToList(),
+            function.ReturnType,
+            function.IsProcedure,
+            function.LocalVariables
+                .Select(variable =>
                     new SemanticVariable(
                         variable.Name,
                         variable.Type))
-            .ToList());
-}
+                .ToList());
+    }
 
-    private static SemanticParameter BuildParameter(
-        DelphiParameter parameter)
+    private static SemanticParameter BuildParameter(DelphiParameter parameter)
     {
         return new SemanticParameter(
             parameter.Name,
