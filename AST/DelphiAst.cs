@@ -43,7 +43,8 @@ public sealed record DelphiVariantPart(
 
 public sealed record DelphiVariable(
     string Name,
-    string Type
+    string Type,
+    DelphiProcedureType? ProcedureType = null
 ) : DelphiNode;
 
 public sealed record DelphiProperty(
