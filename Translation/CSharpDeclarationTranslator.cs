@@ -65,7 +65,13 @@ public sealed class CSharpDeclarationTranslator
                 sourceType = setAlias.Definition;
 
             string type = CSharpTypeMapper.Map(sourceType);
-            string value = TranslateConstantValue(constant.Value, sourceType);
+            SemanticType? recordType = unit.Types.FirstOrDefault(candidate =>
+                candidate.Name.Equals(sourceType, StringComparison.OrdinalIgnoreCase) &&
+                candidate.Kind.Equals("Record", StringComparison.OrdinalIgnoreCase));
+            string value = TranslateConstantValue(
+                constant.Value,
+                sourceType,
+                recordType?.Fields);
             string constantText = constant.Value.Trim();
             bool isRecordInitializer =
                 constantText.Length >= 2 &&
@@ -92,7 +98,10 @@ public sealed class CSharpDeclarationTranslator
             || type.Kind.Equals("ClassReference", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string TranslateConstantValue(string value, string sourceType)
+    private static string TranslateConstantValue(
+        string value,
+        string sourceType,
+        IReadOnlyList<SemanticField>? recordFields = null)
     {
         string text = value.Trim();
         string mappedType = CSharpTypeMapper.Map(sourceType);
@@ -108,7 +117,7 @@ public sealed class CSharpDeclarationTranslator
             text[0] == '(' &&
             text[^1] == ')' &&
             text.Contains(':') &&
-            TryTranslateRecordInitializer(text, out string recordInitializer))
+            TryTranslateRecordInitializer(text, out string recordInitializer, recordFields))
             return $"new {mappedType} {recordInitializer}";
 
         if (text.StartsWith("$", StringComparison.Ordinal))
@@ -162,7 +171,10 @@ public sealed class CSharpDeclarationTranslator
         return true;
     }
 
-    private static bool TryTranslateRecordInitializer(string text, out string result)
+    private static bool TryTranslateRecordInitializer(
+        string text,
+        out string result,
+        IReadOnlyList<SemanticField>? recordFields = null)
     {
         result = string.Empty;
         if (text.Length < 2 || text[0] != '(' || text[^1] != ')') return false;
@@ -174,7 +186,16 @@ public sealed class CSharpDeclarationTranslator
             string name = pair[0].Trim();
             string value = string.Join(":", pair.Skip(1)).Trim();
             if (name.Length == 0 || value.Length == 0) return false;
-            assignments.Add($"{name} = {TranslateUntypedRecordValue(value)}");
+            string? fieldType = recordFields?
+                .FirstOrDefault(field =>
+                    field.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                ?.Type;
+
+            string translatedValue = fieldType is not null
+                ? TranslateConstantValue(value, fieldType)
+                : TranslateUntypedRecordValue(value);
+
+            assignments.Add($"{name} = {translatedValue}");
         }
         result = $"{{ {string.Join(", ", assignments)} }}";
         return assignments.Count > 0;
