@@ -129,7 +129,12 @@ public sealed class ProjectTranslator
                 continue;
             }
 
-            string translated = _functionTranslator.TranslateFunction(function, body.Behavior);
+            string translated = _functionTranslator.TranslateFunction(
+                function,
+                body.Behavior,
+                input.SemanticModel.Variables
+                    .Where(variable => variable.ProcedureType is not null)
+                    .Select(variable => variable.Name));
             builder.Append(IndentAndModifySignature(translated, "public static ", 1));
             builder.AppendLine();
             translatedCount++;
@@ -165,7 +170,12 @@ public sealed class ProjectTranslator
                     continue;
                 }
 
-                string translated = _functionTranslator.TranslateFunction(function, body.Behavior);
+                string translated = _functionTranslator.TranslateFunction(
+                function,
+                body.Behavior,
+                input.SemanticModel.Variables
+                    .Where(variable => variable.ProcedureType is not null)
+                    .Select(variable => variable.Name));
                 builder.Append(IndentAndModifySignature(translated, "public ", 1));
                 builder.AppendLine();
                 translatedCount++;
