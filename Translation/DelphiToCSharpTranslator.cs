@@ -7,15 +7,27 @@ public sealed class DelphiToCSharpTranslator
 {
     private FunctionTypeContext? _currentTypeContext;
 
+    private HashSet<string> _proceduralVariables =
+        new(StringComparer.OrdinalIgnoreCase);
+
     public string TranslateFunction(
         SemanticFunction function,
-        BehaviorAnalyzer.BehaviorInfo behavior)
+        BehaviorAnalyzer.BehaviorInfo behavior,
+        IEnumerable<string>? proceduralVariables = null)
     {
         FunctionTypeContext? previous =
             _currentTypeContext;
 
+        HashSet<string> previousProceduralVariables =
+            _proceduralVariables;
+
         _currentTypeContext =
             new FunctionTypeContext(function);
+
+        _proceduralVariables =
+            new HashSet<string>(
+                proceduralVariables ?? Array.Empty<string>(),
+                StringComparer.OrdinalIgnoreCase);
 
         try
         {
@@ -96,6 +108,7 @@ public sealed class DelphiToCSharpTranslator
         finally
         {
             _currentTypeContext = previous;
+            _proceduralVariables = previousProceduralVariables;
         }
     }
 
@@ -117,11 +130,21 @@ public sealed class DelphiToCSharpTranslator
 
             case BehaviorAnalyzer.StatementKind.Expression:
             case BehaviorAnalyzer.StatementKind.Call:
+                string expressionText =
+                    TranslateExpression(statement.Expression);
+
+                if (statement.Expression?.Kind ==
+                        ExpressionParser.ExpressionKind.Identifier &&
+                    _proceduralVariables.Contains(
+                        statement.Expression.Text))
+                {
+                    expressionText += "()";
+                }
+
                 AppendLine(
                     builder,
                     indent,
-                    TranslateExpression(
-                        statement.Expression) + ";");
+                    expressionText + ";");
                 break;
 
             case BehaviorAnalyzer.StatementKind.If:
