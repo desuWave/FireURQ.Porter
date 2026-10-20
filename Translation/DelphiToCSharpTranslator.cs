@@ -957,7 +957,10 @@ public sealed class DelphiToCSharpTranslator
     private static bool IsNilLiteral(
         ExpressionParser.ExpressionNode expression)
     {
-        return expression.Kind == ExpressionParser.ExpressionKind.Literal &&
+        // ExpressionParser classifies Pascal keywords as Identifier nodes,
+        // so "nil" commonly arrives here as Identifier rather than Literal.
+        return (expression.Kind == ExpressionParser.ExpressionKind.Literal ||
+                expression.Kind == ExpressionParser.ExpressionKind.Identifier) &&
                expression.Text.Equals(
                    "nil",
                    StringComparison.OrdinalIgnoreCase);
@@ -1070,6 +1073,22 @@ private string TranslateCall(
         arguments.Add(
             TranslateExpression(
                 expression.Children[i]));
+    }
+
+    // Delphi Assigned(P) is a null/non-null test, including the common
+    // Assigned(@ProcedureVariable) spelling used after GetProcAddress.
+    if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Text.Equals(
+            "Assigned",
+            StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count == 2)
+    {
+        ExpressionParser.ExpressionNode argument = expression.Children[1];
+        if (IsAddressOfIdentifier(argument))
+            argument = argument.Children[0];
+
+        string assignedValue = TranslateExpression(argument);
+        return $"({assignedValue} != null)";
     }
 
 if (targetExpression.Kind ==
