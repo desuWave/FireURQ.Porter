@@ -976,8 +976,8 @@ public sealed class DelphiToCSharpTranslator
         // Delphi pointer aliases conventionally begin with P (PByteArray,
         // PMD5Context, etc.). Their declarations are emitted as IntPtr aliases.
         return typeName.Length > 1 &&
-               typeName[0] == 'P' &&
-               char.IsUpper(typeName[1]);
+               typeName.StartsWith("P", StringComparison.OrdinalIgnoreCase) &&
+               char.IsLetter(typeName[1]);
     }
 
     private static bool IsAddressOfIdentifier(
