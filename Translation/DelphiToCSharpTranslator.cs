@@ -860,6 +860,12 @@ public sealed class DelphiToCSharpTranslator
         if (expression.Children.Count < 2)
             return expression.Text;
 
+        // Delphi code commonly checks dynamically loaded procedural variables
+        // with "@ProcVar = nil". In that context the address-of form denotes
+        // the resolved procedure pointer, so compare the variable itself.
+        if (TryTranslateAddressOfNilComparison(expression, out string nilComparison))
+            return nilComparison;
+
         string left =
             TranslateExpression(
                 expression.Children[0]);
@@ -910,6 +916,51 @@ public sealed class DelphiToCSharpTranslator
             };
 
         return $"({left} {op} {right})";
+    }
+
+    private static bool TryTranslateAddressOfNilComparison(
+        ExpressionParser.ExpressionNode expression,
+        out string translated)
+    {
+        translated = string.Empty;
+
+        string op = expression.Text.Trim();
+        if (op != "=" && op != "<>")
+            return false;
+
+        ExpressionParser.ExpressionNode left = expression.Children[0];
+        ExpressionParser.ExpressionNode right = expression.Children[1];
+
+        ExpressionParser.ExpressionNode? addressOperand = null;
+
+        if (IsNilLiteral(right) && IsAddressOfIdentifier(left))
+            addressOperand = left.Children[0];
+        else if (IsNilLiteral(left) && IsAddressOfIdentifier(right))
+            addressOperand = right.Children[0];
+
+        if (addressOperand is null)
+            return false;
+
+        string identifier = addressOperand.Text;
+        translated = $"({identifier} {(op == "=" ? "==" : "!=")} null)";
+        return true;
+    }
+
+    private static bool IsAddressOfIdentifier(
+        ExpressionParser.ExpressionNode expression)
+    {
+        return expression.Kind == ExpressionParser.ExpressionKind.AddressOf &&
+               expression.Children.Count == 1 &&
+               expression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier;
+    }
+
+    private static bool IsNilLiteral(
+        ExpressionParser.ExpressionNode expression)
+    {
+        return expression.Kind == ExpressionParser.ExpressionKind.Literal &&
+               expression.Text.Equals(
+                   "nil",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private string TranslateUnary(
