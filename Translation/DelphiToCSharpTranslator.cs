@@ -686,9 +686,22 @@ public sealed class DelphiToCSharpTranslator
             return;
         }
 
+        ExpressionParser.ExpressionNode targetExpression =
+            statement.Assignment.Target;
+
+        // Delphi dynamic API loaders sometimes express assignment to a
+        // procedural variable through an address-of target. In this one
+        // narrow case, GetProcAddress returns the value to store in the
+        // procedural variable; emitting "@target" as a C# lvalue is invalid.
+        if (IsAddressOfGetProcAddressTarget(
+                targetExpression,
+                statement.Assignment.Value))
+        {
+            targetExpression = targetExpression.Children[0];
+        }
+
         string target =
-            TranslateExpression(
-                statement.Assignment.Target);
+            TranslateExpression(targetExpression);
 
         string value =
             TranslateExpression(
@@ -706,6 +719,21 @@ public sealed class DelphiToCSharpTranslator
             builder,
             indent,
             $"{target} = {value};");
+    }
+
+    private static bool IsAddressOfGetProcAddressTarget(
+        ExpressionParser.ExpressionNode target,
+        ExpressionParser.ExpressionNode value)
+    {
+        return target.Kind == ExpressionParser.ExpressionKind.AddressOf &&
+               target.Children.Count == 1 &&
+               target.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+               value.Kind == ExpressionParser.ExpressionKind.Call &&
+               value.Children.Count > 0 &&
+               value.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+               value.Children[0].Text.Equals(
+                   "GetProcAddress",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private void TranslateRaise(
