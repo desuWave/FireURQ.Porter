@@ -667,6 +667,13 @@ public sealed class DelphiToCSharpTranslator
             return "result";
         }
 
+        if (text.Equals(
+            "nil",
+            StringComparison.OrdinalIgnoreCase))
+        {
+            return "null";
+        }
+
         return text;
     }
 
@@ -951,7 +958,7 @@ public sealed class DelphiToCSharpTranslator
         return true;
     }
 
-    private ExpressionParser.ExpressionNode? UnwrapAddressOfIdentifier(
+    private static ExpressionParser.ExpressionNode UnwrapAddressOfIdentifier(
         ExpressionParser.ExpressionNode expression)
     {
         return IsAddressOfIdentifier(expression)
