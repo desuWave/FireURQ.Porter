@@ -704,8 +704,10 @@ public sealed class DelphiToCSharpTranslator
             TranslateExpression(targetExpression);
 
         string value =
-            TranslateExpression(
-                statement.Assignment.Value);
+            IsNilLiteral(statement.Assignment.Value) &&
+            IsIntPtrBackedExpression(targetExpression)
+                ? "IntPtr.Zero"
+                : TranslateExpression(statement.Assignment.Value);
 
         if (!function.IsProcedure &&
             target.Equals(
@@ -860,10 +862,9 @@ public sealed class DelphiToCSharpTranslator
         if (expression.Children.Count < 2)
             return expression.Text;
 
-        // Delphi code commonly checks dynamically loaded procedural variables
-        // with "@ProcVar = nil". In that context the address-of form denotes
-        // the resolved procedure pointer, so compare the variable itself.
-        if (TryTranslateAddressOfNilComparison(expression, out string nilComparison))
+        // Delphi nil comparisons must respect the translated pointer representation:
+        // pointer aliases are IntPtr-backed, while procedure/delegate references use null.
+        if (TryTranslateNilComparison(expression, out string nilComparison))
             return nilComparison;
 
         string left =
@@ -918,7 +919,7 @@ public sealed class DelphiToCSharpTranslator
         return $"({left} {op} {right})";
     }
 
-    private static bool TryTranslateAddressOfNilComparison(
+    private bool TryTranslateNilComparison(
         ExpressionParser.ExpressionNode expression,
         out string translated)
     {
@@ -931,19 +932,45 @@ public sealed class DelphiToCSharpTranslator
         ExpressionParser.ExpressionNode left = expression.Children[0];
         ExpressionParser.ExpressionNode right = expression.Children[1];
 
-        ExpressionParser.ExpressionNode? addressOperand = null;
+        ExpressionParser.ExpressionNode? valueExpression = null;
 
-        if (IsNilLiteral(right) && IsAddressOfIdentifier(left))
-            addressOperand = left.Children[0];
-        else if (IsNilLiteral(left) && IsAddressOfIdentifier(right))
-            addressOperand = right.Children[0];
+        if (IsNilLiteral(right))
+            valueExpression = UnwrapAddressOfIdentifier(left);
+        else if (IsNilLiteral(left))
+            valueExpression = UnwrapAddressOfIdentifier(right);
 
-        if (addressOperand is null)
+        if (valueExpression is null)
             return false;
 
-        string identifier = addressOperand.Text;
-        translated = $"({identifier} {(op == "=" ? "==" : "!=")} null)";
+        string nullValue = IsIntPtrBackedExpression(valueExpression)
+            ? "IntPtr.Zero"
+            : "null";
+
+        string value = TranslateExpression(valueExpression);
+        translated = $"({value} {(op == "=" ? "==" : "!=")} {nullValue})";
         return true;
+    }
+
+    private ExpressionParser.ExpressionNode? UnwrapAddressOfIdentifier(
+        ExpressionParser.ExpressionNode expression)
+    {
+        return IsAddressOfIdentifier(expression)
+            ? expression.Children[0]
+            : expression;
+    }
+
+    private bool IsIntPtrBackedExpression(
+        ExpressionParser.ExpressionNode expression)
+    {
+        string? typeName = ResolveExpressionType(expression);
+        if (string.IsNullOrWhiteSpace(typeName))
+            return false;
+
+        // Delphi pointer aliases conventionally begin with P (PByteArray,
+        // PMD5Context, etc.). Their declarations are emitted as IntPtr aliases.
+        return typeName.Length > 1 &&
+               typeName[0] == 'P' &&
+               char.IsUpper(typeName[1]);
     }
 
     private static bool IsAddressOfIdentifier(
@@ -1083,12 +1110,14 @@ private string TranslateCall(
             StringComparison.OrdinalIgnoreCase) &&
         expression.Children.Count == 2)
     {
-        ExpressionParser.ExpressionNode argument = expression.Children[1];
-        if (IsAddressOfIdentifier(argument))
-            argument = argument.Children[0];
+        ExpressionParser.ExpressionNode argument =
+            UnwrapAddressOfIdentifier(expression.Children[1]);
 
         string assignedValue = TranslateExpression(argument);
-        return $"({assignedValue} != null)";
+        string nullValue = IsIntPtrBackedExpression(argument)
+            ? "IntPtr.Zero"
+            : "null";
+        return $"({assignedValue} != {nullValue})";
     }
 
 if (targetExpression.Kind ==
