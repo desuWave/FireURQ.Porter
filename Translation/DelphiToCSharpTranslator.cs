@@ -977,7 +977,7 @@ public sealed class DelphiToCSharpTranslator
         // PMD5Context, etc.). Their declarations are emitted as IntPtr aliases.
         return typeName.Length > 1 &&
                typeName.StartsWith("P", StringComparison.OrdinalIgnoreCase) &&
-               char.IsLetter(typeName[1]);
+               char.IsUpper(typeName[1]);
     }
 
     private static bool IsAddressOfIdentifier(
