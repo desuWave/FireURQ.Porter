@@ -667,6 +667,13 @@ public sealed class DelphiToCSharpTranslator
             return "result";
         }
 
+        if (text.Equals(
+            "nil",
+            StringComparison.OrdinalIgnoreCase))
+        {
+            return "null";
+        }
+
         return text;
     }
 
@@ -686,13 +693,28 @@ public sealed class DelphiToCSharpTranslator
             return;
         }
 
+        ExpressionParser.ExpressionNode targetExpression =
+            statement.Assignment.Target;
+
+        // Delphi dynamic API loaders sometimes express assignment to a
+        // procedural variable through an address-of target. In this one
+        // narrow case, GetProcAddress returns the value to store in the
+        // procedural variable; emitting "@target" as a C# lvalue is invalid.
+        if (IsAddressOfGetProcAddressTarget(
+                targetExpression,
+                statement.Assignment.Value))
+        {
+            targetExpression = targetExpression.Children[0];
+        }
+
         string target =
-            TranslateExpression(
-                statement.Assignment.Target);
+            TranslateExpression(targetExpression);
 
         string value =
-            TranslateExpression(
-                statement.Assignment.Value);
+            IsNilLiteral(statement.Assignment.Value) &&
+            IsIntPtrBackedExpression(targetExpression)
+                ? "IntPtr.Zero"
+                : TranslateExpression(statement.Assignment.Value);
 
         if (!function.IsProcedure &&
             target.Equals(
@@ -706,6 +728,21 @@ public sealed class DelphiToCSharpTranslator
             builder,
             indent,
             $"{target} = {value};");
+    }
+
+    private static bool IsAddressOfGetProcAddressTarget(
+        ExpressionParser.ExpressionNode target,
+        ExpressionParser.ExpressionNode value)
+    {
+        return target.Kind == ExpressionParser.ExpressionKind.AddressOf &&
+               target.Children.Count == 1 &&
+               target.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+               value.Kind == ExpressionParser.ExpressionKind.Call &&
+               value.Children.Count > 0 &&
+               value.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+               value.Children[0].Text.Equals(
+                   "GetProcAddress",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private void TranslateRaise(
@@ -832,6 +869,11 @@ public sealed class DelphiToCSharpTranslator
         if (expression.Children.Count < 2)
             return expression.Text;
 
+        // Delphi nil comparisons must respect the translated pointer representation:
+        // pointer aliases are IntPtr-backed, while procedure/delegate references use null.
+        if (TryTranslateNilComparison(expression, out string nilComparison))
+            return nilComparison;
+
         string left =
             TranslateExpression(
                 expression.Children[0]);
@@ -882,6 +924,80 @@ public sealed class DelphiToCSharpTranslator
             };
 
         return $"({left} {op} {right})";
+    }
+
+    private bool TryTranslateNilComparison(
+        ExpressionParser.ExpressionNode expression,
+        out string translated)
+    {
+        translated = string.Empty;
+
+        string op = expression.Text.Trim();
+        if (op != "=" && op != "<>")
+            return false;
+
+        ExpressionParser.ExpressionNode left = expression.Children[0];
+        ExpressionParser.ExpressionNode right = expression.Children[1];
+
+        ExpressionParser.ExpressionNode? valueExpression = null;
+
+        if (IsNilLiteral(right))
+            valueExpression = UnwrapAddressOfIdentifier(left);
+        else if (IsNilLiteral(left))
+            valueExpression = UnwrapAddressOfIdentifier(right);
+
+        if (valueExpression is null)
+            return false;
+
+        string nullValue = IsIntPtrBackedExpression(valueExpression)
+            ? "IntPtr.Zero"
+            : "null";
+
+        string value = TranslateExpression(valueExpression);
+        translated = $"({value} {(op == "=" ? "==" : "!=")} {nullValue})";
+        return true;
+    }
+
+    private static ExpressionParser.ExpressionNode UnwrapAddressOfIdentifier(
+        ExpressionParser.ExpressionNode expression)
+    {
+        return IsAddressOfIdentifier(expression)
+            ? expression.Children[0]
+            : expression;
+    }
+
+    private bool IsIntPtrBackedExpression(
+        ExpressionParser.ExpressionNode expression)
+    {
+        string? typeName = ResolveExpressionType(expression);
+        if (string.IsNullOrWhiteSpace(typeName))
+            return false;
+
+        // Delphi pointer aliases conventionally begin with P (PByteArray,
+        // PMD5Context, etc.). Their declarations are emitted as IntPtr aliases.
+        return typeName.Length > 1 &&
+               typeName.StartsWith("P", StringComparison.OrdinalIgnoreCase) &&
+               char.IsUpper(typeName[1]);
+    }
+
+    private static bool IsAddressOfIdentifier(
+        ExpressionParser.ExpressionNode expression)
+    {
+        return expression.Kind == ExpressionParser.ExpressionKind.AddressOf &&
+               expression.Children.Count == 1 &&
+               expression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier;
+    }
+
+    private static bool IsNilLiteral(
+        ExpressionParser.ExpressionNode expression)
+    {
+        // ExpressionParser classifies Pascal keywords as Identifier nodes,
+        // so "nil" commonly arrives here as Identifier rather than Literal.
+        return (expression.Kind == ExpressionParser.ExpressionKind.Literal ||
+                expression.Kind == ExpressionParser.ExpressionKind.Identifier) &&
+               expression.Text.Equals(
+                   "nil",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private string TranslateUnary(
@@ -991,6 +1107,24 @@ private string TranslateCall(
         arguments.Add(
             TranslateExpression(
                 expression.Children[i]));
+    }
+
+    // Delphi Assigned(P) is a null/non-null test, including the common
+    // Assigned(@ProcedureVariable) spelling used after GetProcAddress.
+    if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Text.Equals(
+            "Assigned",
+            StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count == 2)
+    {
+        ExpressionParser.ExpressionNode argument =
+            UnwrapAddressOfIdentifier(expression.Children[1]);
+
+        string assignedValue = TranslateExpression(argument);
+        string nullValue = IsIntPtrBackedExpression(argument)
+            ? "IntPtr.Zero"
+            : "null";
+        return $"({assignedValue} != {nullValue})";
     }
 
 if (targetExpression.Kind ==
