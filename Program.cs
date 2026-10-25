@@ -218,18 +218,6 @@ if (args.Length >= 2 &&
     return;
 }
 
-if (args.Length >= 3 &&
-    args[0].Equals(
-        "--probe-body-owner",
-        StringComparison.OrdinalIgnoreCase))
-{
-    BodyOwnerProbe.Analyze(
-        args[1],
-        args[2]);
-
-    return;
-}
-
 // ========================================================
 // VARIANT RECORD STRUCTURE PROBE
 // ========================================================
@@ -538,6 +526,8 @@ if (args.Length >= 1 &&
         "--translate-test",
         StringComparison.OrdinalIgnoreCase))
 {
+    const int expectedTranslatedBodies = 30;
+
     string testFile =
         Path.Combine(
             "tests",
@@ -548,6 +538,7 @@ if (args.Length >= 1 &&
         Console.WriteLine(
             $"ERROR: Translation test file not found: {testFile}");
 
+        Environment.ExitCode = 1;
         return;
     }
 
@@ -661,6 +652,19 @@ if (function is null)
 
 Console.WriteLine(
     $"Translated bodies: {translatedCount}");
+
+if (translatedCount != expectedTranslatedBodies)
+{
+    Console.WriteLine(
+        $"ERROR: Expected {expectedTranslatedBodies} translated bodies, but got {translatedCount}.");
+
+    Environment.ExitCode = 1;
+}
+else
+{
+    Console.WriteLine(
+        $"TRANSLATION BODY COUNT CHECK: PASS ({translatedCount}/{expectedTranslatedBodies})");
+}
 
 return;
 }
@@ -817,23 +821,3 @@ static void PrintUsage()
 
     Console.WriteLine(
     "  FireURQ.Porter --audit-methods <directory>");
-
-    Console.WriteLine("Usage:");
-
-    Console.WriteLine(
-        "  FireURQ.Porter <file.pas>");
-
-    Console.WriteLine(
-        "  FireURQ.Porter <file.pas> " +
-        "--export-graph <file.json>");
-
-    Console.WriteLine(
-        "  FireURQ.Porter --analyze <directory>");
-
-    Console.WriteLine(
-        "  FireURQ.Porter --analyze <directory> " +
-        "--export-graph <file.json>");
-
-    Console.WriteLine();
-}
-
