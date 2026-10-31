@@ -54,6 +54,10 @@ type
   TPointSet = set of Integer;
   TPointClassRef = class of TPoint;
 
+function IsNullPointer(P: PPoint): Boolean;
+function IsAssignedPointer(P: PPoint): Boolean;
+procedure ClearPointer(var P: PPoint);
+
 implementation
 
 function Add(A, B: Integer): Integer;
@@ -236,6 +240,21 @@ end;
 function InSetRange(A: Integer): Boolean;
 begin
   Result := A in [1..3];
+end;
+
+function IsNullPointer(P: PPoint): Boolean;
+begin
+  Result := P = nil;
+end;
+
+function IsAssignedPointer(P: PPoint): Boolean;
+begin
+  Result := Assigned(P);
+end;
+
+procedure ClearPointer(var P: PPoint);
+begin
+  P := nil;
 end;
 
 end.
