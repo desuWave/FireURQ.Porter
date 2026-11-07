@@ -25,6 +25,25 @@ public static class SemanticAnalyzer
                     interfaces.Add(AnalyzeInterface(value));
                     break;
 
+                case DelphiProcedureType value:
+                    types.Add(
+                        new SemanticType(
+                            value.Name,
+                            "Procedure",
+                            string.Empty,
+                            UnitName: unit.Name,
+                            ProcedureType: new SemanticProcedureType(
+                                value.Parameters.Select(parameter =>
+                                    new SemanticParameter(
+                                        parameter.Name,
+                                        parameter.Type,
+                                        parameter.Kind.ToString())).ToList(),
+                                value.ReturnType,
+                                value.IsProcedure,
+                                value.IsMethodOfObject,
+                                value.CallingConvention)));
+                    break;
+
                 case DelphiType value:
                     types.Add(
                         new SemanticType(
@@ -133,7 +152,13 @@ public static class SemanticAnalyzer
                                 parameter.Type,
                                 parameter.Kind.ToString()))
                         .ToList(),
-                    false),
+                    false)
+                {
+                    IsConstructor = function.IsConstructor,
+            IsDestructor = function.IsDestructor,
+            IsClassMethod = function.IsClassMethod,
+                    Modifiers = function.Modifiers
+                },
 
             DelphiProperty property =>
                 new SemanticMember(
@@ -181,7 +206,8 @@ public static class SemanticAnalyzer
             .Select(variable =>
                 new SemanticVariable(
                     variable.Name,
-                    variable.Type))
+                    variable.Type,
+                    AbsoluteTarget: variable.AbsoluteTarget))
             .ToList();
 
         return new SemanticFunction(
@@ -189,6 +215,12 @@ public static class SemanticAnalyzer
             parameters,
             function.ReturnType,
             function.IsProcedure,
-            localVariables);
+            localVariables)
+        {
+            IsConstructor = function.IsConstructor,
+            IsDestructor = function.IsDestructor,
+            IsClassMethod = function.IsClassMethod,
+            Modifiers = function.Modifiers
+        };
     }
 }

@@ -19,6 +19,12 @@ public static class SemanticModelBuilder
             .Select(value => value.Name)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        var fullInterfaceNames = unit.Declarations
+            .OfType<DelphiInterface>()
+            .Where(value => !value.IsForward)
+            .Select(value => value.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         foreach (var declaration in unit.Declarations)
         {
             switch (declaration)
@@ -34,7 +40,32 @@ public static class SemanticModelBuilder
                     break;
 
                 case DelphiInterface value:
+                    if (value.IsForward &&
+                        fullInterfaceNames.Contains(value.Name))
+                    {
+                        break;
+                    }
+
                     interfaces.Add(BuildInterface(value));
+                    break;
+
+                case DelphiProcedureType value:
+                    types.Add(
+                        new SemanticType(
+                            value.Name,
+                            "Procedure",
+                            string.Empty,
+                            UnitName: unit.Name,
+                            ProcedureType: new SemanticProcedureType(
+                                value.Parameters.Select(parameter =>
+                                    new SemanticParameter(
+                                        parameter.Name,
+                                        parameter.Type,
+                                        parameter.Kind.ToString())).ToList(),
+                                value.ReturnType,
+                                value.IsProcedure,
+                                value.IsMethodOfObject,
+                                value.CallingConvention)));
                     break;
 
                 case DelphiType value:
@@ -79,7 +110,16 @@ public static class SemanticModelBuilder
                     variables.Add(
                         new SemanticVariable(
                             value.Name,
-                            value.Type));
+                            value.Type,
+                            value.ProcedureType is null
+                                ? null
+                                : new SemanticProcedureType(
+                                    value.ProcedureType.Parameters
+                                        .Select(BuildParameter).ToList(),
+                                    value.ProcedureType.ReturnType,
+                                    value.ProcedureType.IsProcedure,
+                                    value.ProcedureType.IsMethodOfObject,
+                                    value.ProcedureType.CallingConvention)));
                     break;
 
                 case DelphiFunction value:
@@ -139,7 +179,13 @@ public static class SemanticModelBuilder
                     function.IsProcedure ? string.Empty : function.ReturnType,
                     member.Visibility.ToString(),
                     function.Parameters.Select(BuildParameter).ToList(),
-                    false),
+                    false)
+                {
+                    IsConstructor = function.IsConstructor,
+            IsDestructor = function.IsDestructor,
+            IsClassMethod = function.IsClassMethod,
+                    Modifiers = function.Modifiers
+                },
 
             DelphiProperty property =>
                 new SemanticMember(
@@ -178,8 +224,15 @@ public static class SemanticModelBuilder
                 .Select(variable =>
                     new SemanticVariable(
                         variable.Name,
-                        variable.Type))
-                .ToList());
+                        variable.Type,
+                        AbsoluteTarget: variable.AbsoluteTarget))
+                .ToList())
+        {
+            IsConstructor = function.IsConstructor,
+            IsDestructor = function.IsDestructor,
+            IsClassMethod = function.IsClassMethod,
+            Modifiers = function.Modifiers
+        };
     }
 
     private static SemanticParameter BuildParameter(DelphiParameter parameter)

@@ -1,4 +1,4 @@
-﻿using FireURQ.Porter.AST;
+using FireURQ.Porter.AST;
 using FireURQ.Porter.Analysis;
 
 namespace FireURQ.Porter.Translation;
@@ -14,6 +14,9 @@ public static SemanticFunction? Match(
         FindImplementation(
             unit,
             body);
+
+    if (implementation is null)
+        return null;
 
     if (body.OwnerKind ==
         BodyTokenAnalyzer.BodyOwnerKind.TopLevel)
@@ -73,6 +76,10 @@ public static SemanticFunction? Match(
             }
 
             if (function.IsProcedure != body.IsProcedure)
+                continue;
+
+            if (!ReferenceEquals(function.BodyTokens, body.BodyTokens) &&
+                !function.BodyTokens.SequenceEqual(body.BodyTokens))
                 continue;
 
             return function;
@@ -182,8 +189,18 @@ public static SemanticFunction? Match(
                     variable =>
                         new SemanticVariable(
                             variable.Name,
-                            variable.Type))
-                .ToList());
+                            variable.Type,
+                            AbsoluteTarget: variable.AbsoluteTarget))
+                .ToList())
+        {
+            IsConstructor = implementation.IsConstructor,
+            IsDestructor = implementation.IsDestructor,
+            IsClassMethod = member.IsClassMethod || implementation.IsClassMethod,
+            Modifiers = member.Modifiers
+                .Concat(implementation.Modifiers)
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            Visibility = member.Visibility
+        };
     }
 
     private static bool FunctionMatches(

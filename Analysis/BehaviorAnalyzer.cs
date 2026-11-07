@@ -928,42 +928,45 @@ private BehaviorStatement ParseCase()
 
 private bool IsNextCaseLabel()
 {
-    int position =
-        _position;
-
+    int position = _position;
     int depth = 0;
 
     while (position < _tokens.Count)
     {
-        string text =
-            _tokens[position].Text;
+        LexerToken token = _tokens[position];
+        string text = token.Text;
 
-        if (text == "(" ||
-            text == "[")
+        // Quoted content cannot introduce statement boundaries or labels.
+        if (token.Kind == TokenKind.String ||
+            token.Kind == TokenKind.Character)
         {
+            position++;
+            continue;
+        }
+
+        if (depth == 0)
+        {
+            if (text == ":")
+                return true;
+
+            if (text == ":=" || text == ";")
+                return false;
+
+            if (text.ToLowerInvariant() is
+                "if" or "then" or "begin" or "end" or "else" or
+                "case" or "of" or "try" or "except" or "finally" or
+                "for" or "while" or "repeat" or "until" or "with" or
+                "do" or "raise" or "exit" or "break" or "continue")
+                return false;
+        }
+
+        if (text == "(" || text == "[")
             depth++;
-        }
-        else if (text == ")" ||
-                 text == "]")
+        else if (text == ")" || text == "]")
         {
-            if (depth > 0)
-            {
-                depth--;
-            }
-        }
-
-        if (depth == 0 &&
-            text == ":")
-        {
-            return true;
-        }
-
-        if (depth == 0 &&
-            (text == ";" ||
-             text == "end" ||
-             text == "else"))
-        {
-            return false;
+            if (depth == 0)
+                return false;
+            depth--;
         }
 
         position++;
@@ -971,7 +974,6 @@ private bool IsNextCaseLabel()
 
     return false;
 }
-
         private BehaviorStatement ParseRepeat()
         {
             int line =
@@ -1340,6 +1342,7 @@ private bool IsNextCaseLabel()
             while (!IsEnd() &&
                    !PeekText(";") &&
                    !PeekText("end") &&
+                   !PeekText("else") &&
                    !PeekText("until") &&
                    !PeekText("except") &&
                    !PeekText("finally"))

@@ -530,7 +530,8 @@ public static class ExpressionParser
                 Array.Empty<ExpressionNode>());
         }
 
-        if (token.Kind == TokenKind.Character)
+        if (token.Kind == TokenKind.Character ||
+            token.Kind == TokenKind.String)
         {
             int literalStart = position;
 

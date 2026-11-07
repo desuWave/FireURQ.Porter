@@ -1,15 +1,33 @@
-﻿using System.Text;
+using System.Text;
 using FireURQ.Porter.Analysis;
 
 namespace FireURQ.Porter.Translation;
 
 public sealed class DelphiToCSharpTranslator
 {
+    private readonly TypeResolver? _resolver;
+    private readonly string? _unitName;
+
+    public DelphiToCSharpTranslator(
+        TypeResolver? resolver = null,
+        string? unitName = null)
+    {
+        _resolver = resolver;
+        _unitName = unitName;
+    }
+
+    private bool IsBooleanType(string? type) =>
+        !string.IsNullOrWhiteSpace(type) && MapType(type) == "bool";
+
+    private string MapType(string? type) =>
+        CSharpTypeMapper.Map(type, _resolver, _unitName);
+
     private FunctionTypeContext? _currentTypeContext;
 
     public string TranslateFunction(
         SemanticFunction function,
-        BehaviorAnalyzer.BehaviorInfo behavior)
+        BehaviorAnalyzer.BehaviorInfo behavior,
+        bool manageDestructorLifetime = false)
     {
         FunctionTypeContext? previous =
             _currentTypeContext;
@@ -24,7 +42,7 @@ public sealed class DelphiToCSharpTranslator
             string returnType =
                 function.IsProcedure
                     ? "void"
-                    : CSharpTypeMapper.Map(function.ReturnType);
+                    : MapType(function.ReturnType);
 
             builder
                 .Append(returnType)
@@ -42,7 +60,7 @@ public sealed class DelphiToCSharpTranslator
 
                 builder
                     .Append(MapParameterKind(parameter.Kind))
-                    .Append(CSharpTypeMapper.Map(parameter.Type))
+                    .Append(MapType(parameter.Type))
                     .Append(' ')
                     .Append(parameter.Name);
             }
@@ -50,19 +68,61 @@ public sealed class DelphiToCSharpTranslator
             builder.AppendLine(")");
             builder.AppendLine("{");
 
+            if (manageDestructorLifetime && function.IsDestructor)
+            {
+                string scopeName = "__fireurqDestructorScope";
+                while (function.LocalVariables.Any(variable =>
+                           variable.Name.Equals(scopeName,
+                               StringComparison.OrdinalIgnoreCase)) ||
+                       function.Parameters.Any(parameter =>
+                           parameter.Name.Equals(scopeName,
+                               StringComparison.OrdinalIgnoreCase)))
+                    scopeName += "_";
+
+                builder.AppendLine(
+                    $"    using var {scopeName} = __FireUrqEnterDestructor();");
+            }
+
             foreach (
                 SemanticVariable variable
                 in function.LocalVariables)
             {
-                builder.AppendLine(
-                    $"    {CSharpTypeMapper.Map(variable.Type)} " +
-                    $"{variable.Name};");
+                if (variable.AbsoluteTarget is not null &&
+                    string.Equals(_unitName, "f2ScnMain",
+                        StringComparison.OrdinalIgnoreCase) &&
+                    function.Name.Equals("CompareDecorSprites",
+                        StringComparison.OrdinalIgnoreCase) &&
+                    MapType(variable.Type) == "Tf2DecorationSprite" &&
+                    function.Parameters.Any(parameter =>
+                        parameter.Name.Equals(variable.AbsoluteTarget,
+                            StringComparison.OrdinalIgnoreCase) &&
+                        MapType(parameter.Type) == "IntPtr" &&
+                        parameter.Kind.Equals("Value",
+                            StringComparison.OrdinalIgnoreCase)))
+                {
+                    // This comparator only reads the aliased object references.
+                    // TObjectList.Sort must supply GCHandle tokens for this call.
+                    string target = function.Parameters.First(parameter =>
+                        parameter.Name.Equals(variable.AbsoluteTarget,
+                            StringComparison.OrdinalIgnoreCase)).Name;
+
+                    builder.AppendLine(
+                        $"    {MapType(variable.Type)} {variable.Name} = " +
+                        $"({MapType(variable.Type)})global::System.Runtime.InteropServices." +
+                        $"GCHandle.FromIntPtr({target}).Target!;");
+                }
+                else
+                {
+                    builder.AppendLine(
+                        $"    {MapType(variable.Type)} " +
+                        $"{variable.Name};");
+                }
             }
 
             if (!function.IsProcedure)
             {
                 builder.AppendLine(
-                    $"    {CSharpTypeMapper.Map(function.ReturnType)} result;");
+                    $"    {MapType(function.ReturnType)} result;");
             }
 
             if (function.LocalVariables.Count > 0)
@@ -99,12 +159,51 @@ public sealed class DelphiToCSharpTranslator
         }
     }
 
+    private string TranslateProcedureStatement(
+        ExpressionParser.ExpressionNode? expression)
+    {
+        if (expression is not null &&
+            (expression.Kind == ExpressionParser.ExpressionKind.Identifier ||
+             expression.Kind == ExpressionParser.ExpressionKind.MemberAccess))
+        {
+            var call = new ExpressionParser.ExpressionNode(
+                ExpressionParser.ExpressionKind.Call,
+                string.Empty,
+                new[] { expression });
+            return TranslateExpression(call);
+        }
+
+        return TranslateExpression(expression);
+    }
+
     private void TranslateStatement(
         BehaviorAnalyzer.BehaviorStatement statement,
         SemanticFunction function,
         StringBuilder builder,
         int indent)
     {
+        if (statement.InheritedCall is not null)
+        {
+            string method = statement.InheritedCall.Method;
+            string arguments = string.Join(", ",
+                statement.InheritedCall.Arguments.Select(TranslateExpression));
+
+            AppendLine(builder, indent, $"base.{method}({arguments});");
+            return;
+        }
+
+        if (statement.Text.Trim().Equals(
+                "inherited", StringComparison.OrdinalIgnoreCase))
+        {
+            string method = function.Name[
+                (function.Name.LastIndexOf('.') + 1)..];
+            string arguments = string.Join(", ",
+                function.Parameters.Select(parameter =>
+                    MapParameterKind(parameter.Kind) + parameter.Name));
+
+            AppendLine(builder, indent, $"base.{method}({arguments});");
+            return;
+        }
         switch (statement.Kind)
         {
             case BehaviorAnalyzer.StatementKind.Assignment:
@@ -120,7 +219,7 @@ public sealed class DelphiToCSharpTranslator
                 AppendLine(
                     builder,
                     indent,
-                    TranslateExpression(
+                    TranslateProcedureStatement(
                         statement.Expression) + ";");
                 break;
 
@@ -899,14 +998,7 @@ public sealed class DelphiToCSharpTranslator
                 expression.Children[1]);
 
         bool isBoolean =
-            string.Equals(
-                leftType,
-                "Boolean",
-                StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(
-                rightType,
-                "Boolean",
-                StringComparison.OrdinalIgnoreCase);
+            IsBooleanType(leftType) || IsBooleanType(rightType);
 
         string op =
             expression.Text.ToLowerInvariant() switch
@@ -973,6 +1065,9 @@ public sealed class DelphiToCSharpTranslator
         if (string.IsNullOrWhiteSpace(typeName))
             return false;
 
+        if (_resolver is not null)
+            return MapType(typeName) == "IntPtr";
+
         // Delphi pointer aliases conventionally begin with P (PByteArray,
         // PMD5Context, etc.). Their declarations are emitted as IntPtr aliases.
         return typeName.Length > 1 &&
@@ -1014,11 +1109,7 @@ public sealed class DelphiToCSharpTranslator
             ResolveExpressionType(
                 expression.Children[0]);
 
-        bool isBoolean =
-            string.Equals(
-                operandType,
-                "Boolean",
-                StringComparison.OrdinalIgnoreCase);
+        bool isBoolean = IsBooleanType(operandType);
 
         string op =
             expression.Text.ToLowerInvariant() switch
@@ -1151,7 +1242,7 @@ if (targetExpression.Kind ==
         arguments.Count == 1)
     {
         string csharpType =
-            CSharpTypeMapper.Map(
+            MapType(
                 targetExpression.Text);
 
         return $"({csharpType})({arguments[0]})";

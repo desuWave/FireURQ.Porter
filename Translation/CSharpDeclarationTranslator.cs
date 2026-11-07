@@ -5,6 +5,24 @@ namespace FireURQ.Porter.Translation;
 
 public sealed class CSharpDeclarationTranslator
 {
+    private readonly TypeResolver? _resolver;
+    private readonly string? _unitName;
+    private readonly IReadOnlyList<SemanticUnit> _units;
+    private SemanticUnit? _currentUnit;
+
+    public CSharpDeclarationTranslator(
+        TypeResolver? resolver = null,
+        string? unitName = null,
+        IReadOnlyList<SemanticUnit>? units = null)
+    {
+        _resolver = resolver;
+        _unitName = unitName;
+        _units = units ?? Array.Empty<SemanticUnit>();
+    }
+
+    private string MapType(string? type) =>
+        CSharpTypeMapper.Map(type, _resolver, _unitName);
+
     public string TranslateTypeDeclaration(SemanticType type)
     {
         return TranslateType(type);
@@ -12,12 +30,52 @@ public sealed class CSharpDeclarationTranslator
 
     public string Translate(SemanticUnit unit)
     {
+        _currentUnit = unit;
         var builder = new StringBuilder();
 
         foreach (SemanticType type in unit.Types.Where(IsTypeAlias))
             builder.AppendLine(TranslateType(type));
 
         if (unit.Types.Any(IsTypeAlias))
+            builder.AppendLine();
+
+        foreach (SemanticVariable variable in unit.Variables.Where(
+            variable => variable.ProcedureType is not null))
+        {
+            SemanticProcedureType procedure = variable.ProcedureType!;
+            string returnType = procedure.IsProcedure
+                ? "void"
+                : MapType(procedure.ReturnType);
+
+            string parameters = string.Join(", ",
+                procedure.Parameters.Select(parameter =>
+                    FormatDelegateParameter(parameter, procedure)));
+
+            string? convention = procedure.CallingConvention?
+                .Trim().ToLowerInvariant() switch
+                {
+                    "stdcall" => "StdCall",
+                    "cdecl" => "Cdecl",
+                    "safecall" => "StdCall",
+                    _ => null
+                };
+
+            if (!procedure.IsMethodOfObject && convention is not null)
+                builder.AppendLine(
+                    $"[UnmanagedFunctionPointer(CallingConvention.{convention})]");
+
+            if (!procedure.IsMethodOfObject &&
+                convention is not null &&
+                !procedure.IsProcedure &&
+                IsLongBool(procedure.ReturnType))
+                builder.AppendLine(
+                    "[return: MarshalAs(UnmanagedType.Bool)]");
+
+            builder.AppendLine(
+                $"public delegate {returnType} {variable.Name}Delegate({parameters});");
+        }
+
+        if (unit.Variables.Any(variable => variable.ProcedureType is not null))
             builder.AppendLine();
 
         foreach (SemanticType type in unit.Types.Where(type => !IsTypeAlias(type)))
@@ -48,7 +106,7 @@ public sealed class CSharpDeclarationTranslator
         foreach (SemanticVariable variable in unit.Variables)
         {
             builder.AppendLine(
-                $"public static {CSharpTypeMapper.Map(variable.Type)} {variable.Name};");
+                $"public static {(variable.ProcedureType is null ? MapType(variable.Type) : variable.Name + "Delegate")} {variable.Name};");
         }
 
         if (unit.Variables.Count > 0)
@@ -56,7 +114,31 @@ public sealed class CSharpDeclarationTranslator
 
         foreach (SemanticConstant constant in unit.Constants)
         {
+            if (TryTranslateBassStreamSentinel(constant, unit, out string sentinel))
+            {
+                builder.AppendLine(sentinel);
+                continue;
+            }
+
+            if (TryTranslateBuiltinPiConstant(constant, unit, out string piConstant))
+            {
+                builder.AppendLine(piConstant);
+                continue;
+            }
+
+            if (TryTranslateReferencedSetUnion(constant, unit, out string setUnion))
+            {
+                builder.AppendLine(setUnion);
+                continue;
+            }
+
             string sourceType = constant.Type;
+
+            if (string.IsNullOrWhiteSpace(sourceType))
+                sourceType = InferReferencedConstantType(
+                    constant,
+                    unit,
+                    new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             SemanticType? setAlias = unit.Types.FirstOrDefault(type =>
                 type.Name.Equals(sourceType, StringComparison.OrdinalIgnoreCase) &&
                 type.Kind.Equals("Set", StringComparison.OrdinalIgnoreCase));
@@ -64,7 +146,12 @@ public sealed class CSharpDeclarationTranslator
             if (setAlias is not null)
                 sourceType = setAlias.Definition;
 
-            string type = CSharpTypeMapper.Map(sourceType);
+            string type = MapType(sourceType);
+
+            if (type == "object" &&
+                TryEvaluateLiteralLength(constant.Value.Trim(), out _))
+                type = "int";
+
             SemanticType? recordType = unit.Types.FirstOrDefault(candidate =>
                 candidate.Name.Equals(sourceType, StringComparison.OrdinalIgnoreCase) &&
                 candidate.Kind.Equals("Record", StringComparison.OrdinalIgnoreCase));
@@ -79,7 +166,7 @@ public sealed class CSharpDeclarationTranslator
                 constantText[^1] == ')' &&
                 constantText.Contains(':');
             bool requiresStaticReadonly =
-                type.EndsWith("[]", StringComparison.Ordinal) ||
+                System.Text.RegularExpressions.Regex.IsMatch(type, @"\[[,]*\]$") ||
                 type.StartsWith("HashSet<", StringComparison.Ordinal) ||
                 isRecordInitializer;
             string modifier = requiresStaticReadonly ? "public static readonly" : "public const";
@@ -89,7 +176,260 @@ public sealed class CSharpDeclarationTranslator
         return builder.ToString();
     }
 
-    private static bool IsTypeAlias(SemanticType type)
+    private bool IsBassStreamCallback(string typeName)
+    {
+        if (_resolver is null)
+            return false;
+
+        TypeResolution resolution = _resolver.Resolve(typeName, _unitName);
+        return resolution.IsResolved &&
+            !resolution.IsPointer &&
+            resolution.ResolvedName.Equals(
+                "STREAMPROC", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(
+                resolution.DeclaringUnitName, "Dynamic_Bass",
+                StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool TryTranslateBassStreamSentinel(
+        SemanticConstant constant,
+        SemanticUnit unit,
+        out string declaration)
+    {
+        declaration = string.Empty;
+
+        if (!unit.Name.Equals(
+                "Dynamic_Bass", StringComparison.OrdinalIgnoreCase) ||
+            !IsBassStreamCallback(constant.Type))
+            return false;
+
+        SemanticType? callback = unit.Types.FirstOrDefault(type =>
+            type.Name.Equals("STREAMPROC", StringComparison.OrdinalIgnoreCase));
+
+        if (callback?.ProcedureType is not { IsMethodOfObject: false } procedure ||
+            !string.Equals(
+                procedure.CallingConvention?.Trim(), "stdcall",
+                StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        var match = System.Text.RegularExpressions.Regex.Match(
+            constant.Value.Trim(),
+            @"^STREAMPROC\s*\(\s*(?<value>0|-\s*1)\s*\)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (!match.Success)
+            return false;
+
+        string value = match.Groups["value"].Value.StartsWith(
+            "-", StringComparison.Ordinal)
+            ? "new global::System.IntPtr(-1)"
+            : "global::System.IntPtr.Zero";
+
+        declaration =
+            $"public static readonly global::System.IntPtr {constant.Name} = {value};";
+        return true;
+    }
+    private bool TryTranslateBuiltinPiConstant(
+        SemanticConstant constant,
+        SemanticUnit unit,
+        out string declaration)
+    {
+        declaration = string.Empty;
+
+        if (_resolver is not null)
+        {
+            if (_resolver.HasVisibleValueDeclaration("Pi", unit.Name))
+                return false;
+        }
+        else if (
+            unit.Constants.Any(value => value.Name.Equals(
+                "Pi", StringComparison.OrdinalIgnoreCase)) ||
+            unit.Variables.Any(value => value.Name.Equals(
+                "Pi", StringComparison.OrdinalIgnoreCase)) ||
+            unit.Functions.Any(value => value.Name.Equals(
+                "Pi", StringComparison.OrdinalIgnoreCase)) ||
+            unit.Types.Any(value => value.Name.Equals(
+                "Pi", StringComparison.OrdinalIgnoreCase)) ||
+            unit.Classes.Any(value => value.Name.Equals(
+                "Pi", StringComparison.OrdinalIgnoreCase)) ||
+            unit.Interfaces.Any(value => value.Name.Equals(
+                "Pi", StringComparison.OrdinalIgnoreCase)))
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(constant.Type) &&
+            MapType(constant.Type) != "double")
+            return false;
+
+        var tokens = new FireURQ.Porter.Lexer.DelphiLexer(
+            constant.Value).Tokenize();
+        var parts = new List<string>();
+        bool hasPi = false;
+
+        foreach (var token in tokens)
+        {
+            if (token.Kind == FireURQ.Porter.Lexer.TokenKind.EndOfFile)
+                continue;
+
+            if (token.Kind == FireURQ.Porter.Lexer.TokenKind.Identifier &&
+                token.Text.Equals("Pi", StringComparison.OrdinalIgnoreCase))
+            {
+                hasPi = true;
+                parts.Add("global::System.Math.PI");
+            }
+            else if (token.Kind == FireURQ.Porter.Lexer.TokenKind.Number)
+            {
+                parts.Add(token.Text.StartsWith("$", StringComparison.Ordinal)
+                    ? "0x" + token.Text[1..]
+                    : token.Text);
+            }
+            else if (token.Text is "+" or "-" or "*" or "/" or "(" or ")")
+            {
+                parts.Add(token.Text);
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        if (!hasPi)
+            return false;
+
+        declaration = $"public const double {constant.Name} = " +
+            string.Join(" ", parts) + ";";
+        return true;
+    }
+    private bool TryTranslateReferencedSetUnion(
+        SemanticConstant constant,
+        SemanticUnit unit,
+        out string declaration)
+    {
+        declaration = string.Empty;
+        var match = System.Text.RegularExpressions.Regex.Match(
+            constant.Value.Trim(),
+            @"^(?<name>[A-Za-z_][A-Za-z0-9_]*(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)?)\s*\+\s*(?<set>\[.*\])$",
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        if (!match.Success)
+            return false;
+
+        string name = match.Groups["name"].Value;
+        SemanticConstant? target;
+        string? owner;
+
+        if (_resolver is not null)
+        {
+            if (!_resolver.TryResolveConstant(name, unit.Name, out target, out owner))
+                return false;
+        }
+        else
+        {
+            var local = unit.Constants.Where(value =>
+                value.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (local.Length != 1)
+                return false;
+
+            target = local[0];
+            owner = unit.Name;
+        }
+
+        if (target is null || owner is null ||
+            string.IsNullOrWhiteSpace(target.Type))
+            return false;
+
+        string type = CSharpTypeMapper.Map(target.Type, _resolver, owner);
+
+        if (!type.StartsWith("HashSet<", StringComparison.Ordinal))
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(constant.Type) &&
+            CSharpTypeMapper.Map(constant.Type, _resolver, unit.Name) != type)
+            return false;
+
+        if (!TryTranslateSetConstant(
+                match.Groups["set"].Value, type, out string added))
+            return false;
+
+        string reference = $"global::{owner}Module.{target.Name}";
+        declaration =
+            $"public static readonly {type} {constant.Name} = " +
+            $"new {type}(global::System.Linq.Enumerable.Concat({reference}, {added}));";
+        return true;
+    }
+    private string InferReferencedConstantType(
+        SemanticConstant constant,
+        SemanticUnit unit,
+        HashSet<string> visited)
+    {
+        if (!string.IsNullOrWhiteSpace(constant.Type))
+            return constant.Type;
+
+        if (!visited.Add(constant.Name))
+            return string.Empty;
+
+        try
+        {
+            string expression = constant.Value.Trim();
+
+            var cast = System.Text.RegularExpressions.Regex.Match(
+                expression,
+                @"^(?<type>Int64|UInt64|Integer|Longint|Cardinal|Longword|DWORD|SmallInt|Word|Byte)\s*\(\s*[+-]?\s*(?:\$[0-9A-Fa-f]+|\d+)\s*\)$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            if (cast.Success)
+                return cast.Groups["type"].Value;
+
+            var parts = System.Text.RegularExpressions.Regex.Split(
+                expression,
+                @"\s+(?:or|and|xor)\s+",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            string? result = null;
+
+            foreach (string part in parts)
+            {
+                string name = part.Trim();
+
+                if (!System.Text.RegularExpressions.Regex.IsMatch(
+                    name, @"^[A-Za-z_][A-Za-z0-9_]*$"))
+                    return string.Empty;
+
+                SemanticConstant? target = unit.Constants.FirstOrDefault(
+                    candidate => candidate.Name.Equals(
+                        name, StringComparison.OrdinalIgnoreCase));
+
+                if (target is null)
+                    return string.Empty;
+
+                string targetType = InferReferencedConstantType(
+                    target, unit, visited);
+
+                if (string.IsNullOrWhiteSpace(targetType))
+                    return string.Empty;
+
+                string mapped = MapType(targetType);
+
+                if (parts.Length > 1 &&
+                    mapped is not ("int" or "uint" or "long" or "ulong"))
+                    return string.Empty;
+
+                if (result is null)
+                    result = targetType;
+                else if (MapType(result) != mapped)
+                    return string.Empty;
+            }
+
+            return result ?? string.Empty;
+        }
+        finally
+        {
+            visited.Remove(constant.Name);
+        }
+    }
+
+    private bool IsTypeAlias(SemanticType type)
     {
         return type.Kind.Equals("Simple", StringComparison.OrdinalIgnoreCase)
             || type.Kind.Equals("Array", StringComparison.OrdinalIgnoreCase)
@@ -98,14 +438,32 @@ public sealed class CSharpDeclarationTranslator
             || type.Kind.Equals("ClassReference", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string TranslateConstantValue(
+    private string TranslateConstantValue(
         string value,
         string sourceType,
         IReadOnlyList<SemanticField>? recordFields = null)
     {
         string text = value.Trim();
-        string mappedType = CSharpTypeMapper.Map(sourceType);
-        if (mappedType.EndsWith("[]", StringComparison.Ordinal) &&
+        string mappedType = MapType(sourceType);
+
+        var numericCast = System.Text.RegularExpressions.Regex.Match(
+            text,
+            @"^(?<type>Int64|UInt64|Integer|Longint|Cardinal|Longword|DWORD|SmallInt|Word|Byte)\s*\(\s*(?<value>[+-]?\s*(?:\$[0-9A-Fa-f]+|\d+))\s*\)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (numericCast.Success)
+        {
+            string targetType = numericCast.Groups["type"].Value;
+            string operand = TranslateConstantValue(
+                numericCast.Groups["value"].Value, targetType);
+
+            return $"unchecked(({MapType(targetType)})({operand}))";
+        }
+
+        if (TryEvaluateLiteralLength(text, out int literalLength))
+            return literalLength.ToString(
+                System.Globalization.CultureInfo.InvariantCulture);
+        if (System.Text.RegularExpressions.Regex.IsMatch(mappedType, @"\[[,]*\]$") &&
             TryTranslateArrayConstant(text, mappedType, out string arrayValue))
             return arrayValue;
 
@@ -143,35 +501,133 @@ public sealed class CSharpDeclarationTranslator
             return text.ToLowerInvariant();
         if (text.Equals("nil", StringComparison.OrdinalIgnoreCase))
             return "null";
-        return text;
+
+        var tokens = new FireURQ.Porter.Lexer.DelphiLexer(text).Tokenize();
+        var translatedTokens = new List<string>();
+
+        foreach (var token in tokens)
+        {
+            if (token.Kind == FireURQ.Porter.Lexer.TokenKind.EndOfFile)
+                continue;
+
+            if (token.Kind == FireURQ.Porter.Lexer.TokenKind.String)
+            {
+                translatedTokens.Add(TranslateConstantValue(token.Text, "string"));
+                continue;
+            }
+
+            if (token.Text.StartsWith("$", StringComparison.Ordinal))
+            {
+                translatedTokens.Add("0x" + token.Text[1..]);
+                continue;
+            }
+
+            translatedTokens.Add(token.Text.ToLowerInvariant() switch
+            {
+                "or" => "|",
+                "and" => "&",
+                "xor" => "^",
+                "not" => mappedType == "bool" ? "!" : "~",
+                "shl" => "<<",
+                "shr" => ">>",
+                "div" => "/",
+                "mod" => "%",
+                "true" => "true",
+                "false" => "false",
+                _ => token.Text
+            });
+        }
+
+        return string.Join(" ", translatedTokens);
     }
 
-    private static bool TryTranslateArrayConstant(string text, string arrayType, out string result)
+    private bool TryEvaluateLiteralLength(string text, out int length)
     {
-        result = string.Empty;
-        if (text.Length < 2 || text[0] != '(' || text[^1] != ')') return false;
-        string elementType = arrayType[..^2].Trim();
-        List<string> elements = SplitTopLevel(text[1..^1], ',');
-        if (elements.Count == 0) return false;
+        length = 0;
 
-        var translated = new List<string>();
-        foreach (string element in elements)
-        {
-            string item = element.Trim();
-            if (item.Length == 0) return false;
-            if (item.StartsWith("(") && item.EndsWith(")") && item.Contains(':'))
-            {
-                if (!TryTranslateRecordInitializer(item, out string recordValue)) return false;
-                translated.Add($"new {elementType} {recordValue}");
-            }
-            else
-                translated.Add(TranslateConstantValue(item, elementType));
-        }
-        result = $"new {arrayType} {{ {string.Join(", ", translated)} }}";
+        var match = System.Text.RegularExpressions.Regex.Match(
+            text,
+            @"^Length\s*\(\s*'(?<value>(?:[^']|'')*)'\s*\)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (!match.Success)
+            return false;
+
+        length = match.Groups["value"].Value.Replace("''", "'").Length;
         return true;
     }
 
-    private static bool TryTranslateRecordInitializer(
+    private bool TryTranslateArrayConstant(string text, string arrayType, out string result)
+    {
+        result = string.Empty;
+        var match = System.Text.RegularExpressions.Regex.Match(
+            arrayType, @"^(?<element>.+)\[(?<commas>,*)\]$");
+
+        if (!match.Success)
+            return false;
+
+        string elementType = match.Groups["element"].Value.Trim();
+        int rank = match.Groups["commas"].Value.Length + 1;
+
+        if (!TryTranslateArrayLevel(text, elementType, rank, out string initializer))
+            return false;
+
+        result = $"new {arrayType} {initializer}";
+        return true;
+    }
+
+    private bool TryTranslateArrayLevel(
+        string text,
+        string elementType,
+        int rank,
+        out string result)
+    {
+        result = string.Empty;
+        text = text.Trim();
+
+        if (text.Length < 2 || text[0] != '(' || text[^1] != ')')
+            return false;
+
+        List<string> elements = SplitTopLevel(text[1..^1], ',');
+        if (elements.Count == 0)
+            return false;
+
+        var translated = new List<string>();
+
+        foreach (string element in elements)
+        {
+            string item = element.Trim();
+            if (item.Length == 0)
+                return false;
+
+            if (rank > 1)
+            {
+                if (!TryTranslateArrayLevel(
+                    item, elementType, rank - 1, out string nested))
+                    return false;
+
+                translated.Add(nested);
+            }
+            else if (item.StartsWith("(") &&
+                     item.EndsWith(")") &&
+                     item.Contains(':'))
+            {
+                if (!TryTranslateRecordInitializer(item, out string recordValue))
+                    return false;
+
+                translated.Add($"new {elementType} {recordValue}");
+            }
+            else
+            {
+                translated.Add(TranslateConstantValue(item, elementType));
+            }
+        }
+
+        result = $"{{ {string.Join(", ", translated)} }}";
+        return true;
+    }
+
+    private bool TryTranslateRecordInitializer(
         string text,
         out string result,
         IReadOnlyList<SemanticField>? recordFields = null)
@@ -201,7 +657,7 @@ public sealed class CSharpDeclarationTranslator
         return assignments.Count > 0;
     }
 
-    private static string TranslateUntypedRecordValue(string value)
+    private string TranslateUntypedRecordValue(string value)
     {
         string text = value.Trim();
 
@@ -218,7 +674,7 @@ public sealed class CSharpDeclarationTranslator
         return TranslateConstantValue(text, "int");
     }
 
-    private static List<string> SplitTopLevel(string text, char separator)
+    private List<string> SplitTopLevel(string text, char separator)
     {
         var parts = new List<string>();
         int roundDepth = 0, squareDepth = 0;
@@ -259,7 +715,7 @@ public sealed class CSharpDeclarationTranslator
         return parts;
     }
 
-    private static bool TryTranslateSetConstant(string text, string setType, out string result)
+    private bool TryTranslateSetConstant(string text, string setType, out string result)
     {
         result = string.Empty;
         if (text.Length < 2 || text[0] != '[' || text[^1] != ']')
@@ -317,7 +773,7 @@ public sealed class CSharpDeclarationTranslator
         return true;
     }
 
-    private static string FormatSetElement(int value, string elementType)
+    private string FormatSetElement(int value, string elementType)
     {
         if (elementType.Equals("byte", StringComparison.OrdinalIgnoreCase))
             return $"(byte){value}";
@@ -326,7 +782,7 @@ public sealed class CSharpDeclarationTranslator
         return value.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
-    private static bool TryParsePascalSetValue(string text, out int value)
+    private bool TryParsePascalSetValue(string text, out int value)
     {
         string token = text.Trim();
         value = 0;
@@ -353,7 +809,7 @@ public sealed class CSharpDeclarationTranslator
             System.Globalization.CultureInfo.InvariantCulture, out value);
     }
 
-    private static bool TryTranslateCharacterCodes(string text, string mappedType, out string result)
+    private bool TryTranslateCharacterCodes(string text, string mappedType, out string result)
     {
         result = string.Empty;
         if (text.Length == 0 || text[0] != '#')
@@ -399,7 +855,7 @@ public sealed class CSharpDeclarationTranslator
         return true;
     }
 
-    private static string EscapeCSharpCharacter(char value)
+    private string EscapeCSharpCharacter(char value)
     {
         return value switch
         {
@@ -418,7 +874,7 @@ public sealed class CSharpDeclarationTranslator
         };
     }
 
-    private static string EscapeCSharpString(string value)
+    private string EscapeCSharpString(string value)
     {
         var builder = new StringBuilder();
         foreach (char character in value)
@@ -442,26 +898,96 @@ public sealed class CSharpDeclarationTranslator
         return builder.ToString();
     }
 
-    private static string TranslateClass(SemanticClass @class)
+    private HashSet<string> GetPendingAbstractMethods(
+        SemanticClass owner,
+        SemanticUnit? unit,
+        HashSet<string> visited)
+    {
+        var pending = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        string context = unit?.Name ?? _unitName ?? string.Empty;
+        if (!visited.Add(context + "." + owner.Name))
+            return pending;
+
+        if (_resolver is not null &&
+            !string.IsNullOrWhiteSpace(owner.BaseType))
+        {
+            TypeResolution resolution = _resolver.Resolve(owner.BaseType, context);
+            if (resolution.IsResolved && !resolution.IsPointer)
+            {
+                string baseUnitName = resolution.DeclaringUnitName ?? context;
+                SemanticUnit? baseUnit = unit is not null &&
+                    unit.Name.Equals(baseUnitName, StringComparison.OrdinalIgnoreCase)
+                        ? unit
+                        : _units.FirstOrDefault(candidate => candidate.Name.Equals(
+                            baseUnitName, StringComparison.OrdinalIgnoreCase));
+
+                string baseName = resolution.ResolvedName;
+                int separator = baseName.LastIndexOf('.');
+                if (separator >= 0)
+                    baseName = baseName[(separator + 1)..];
+
+                SemanticClass? baseClass = baseUnit?.Classes.FirstOrDefault(
+                    candidate => candidate.Name.Equals(
+                        baseName, StringComparison.OrdinalIgnoreCase));
+
+                if (baseClass is not null)
+                    pending.UnionWith(GetPendingAbstractMethods(
+                        baseClass, baseUnit, visited));
+            }
+        }
+
+        foreach (SemanticMember member in owner.Members.Where(
+            member => member.Kind == SemanticMemberKind.Method &&
+                !member.IsClassMethod))
+        {
+            string signature = GetAbstractSignature(member, context);
+            if (member.Modifiers.Contains(
+                "abstract", StringComparer.OrdinalIgnoreCase))
+                pending.Add(signature);
+            else if (member.Modifiers.Contains(
+                "override", StringComparer.OrdinalIgnoreCase))
+                pending.Remove(signature);
+        }
+
+        return pending;
+    }
+
+    private string GetAbstractSignature(SemanticMember member, string context)
+    {
+        string returnType = string.IsNullOrWhiteSpace(member.Type)
+            ? "void"
+            : CSharpTypeMapper.Map(member.Type, _resolver, context);
+        string parameters = string.Join(",", member.Parameters.Select(parameter =>
+            parameter.Kind.Trim() + ":" +
+            CSharpTypeMapper.Map(parameter.Type, _resolver, context)));
+        return member.Name + "(" + parameters + "):" + returnType;
+    }
+
+    private string TranslateClass(SemanticClass @class)
     {
         var builder = new StringBuilder();
         string baseType = string.IsNullOrWhiteSpace(@class.BaseType)
-            ? string.Empty
-            : $" : {CSharpTypeMapper.Map(@class.BaseType)}";
+            ? " : global::FireURQ.Runtime.TObject"
+            : $" : {MapType(@class.BaseType)}";
 
-        builder.AppendLine($"public partial class {@class.Name}{baseType}");
+        bool hasAbstractMethods = GetPendingAbstractMethods(
+            @class,
+            _currentUnit,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Count > 0;
+        string abstractModifier = hasAbstractMethods ? "abstract " : string.Empty;
+        builder.AppendLine($"public {abstractModifier}partial class {@class.Name}{baseType}");
         builder.AppendLine("{");
         AppendMembers(builder, @class.Members, isInterface: false);
         builder.Append('}');
         return builder.ToString();
     }
 
-    private static string TranslateInterface(SemanticInterface @interface)
+    private string TranslateInterface(SemanticInterface @interface)
     {
         var builder = new StringBuilder();
         string baseType = string.IsNullOrWhiteSpace(@interface.BaseType)
             ? string.Empty
-            : $" : {CSharpTypeMapper.Map(@interface.BaseType)}";
+            : $" : {MapType(@interface.BaseType)}";
 
         builder.AppendLine($"public interface {@interface.Name}{baseType}");
         builder.AppendLine("{");
@@ -470,7 +996,7 @@ public sealed class CSharpDeclarationTranslator
         return builder.ToString();
     }
 
-    private static void AppendMembers(StringBuilder builder, IReadOnlyList<SemanticMember> members, bool isInterface)
+    private void AppendMembers(StringBuilder builder, IReadOnlyList<SemanticMember> members, bool isInterface)
     {
         foreach (SemanticMember member in members)
         {
@@ -481,7 +1007,7 @@ public sealed class CSharpDeclarationTranslator
                     {
                         string visibility = MapVisibility(member.Visibility);
                         builder.AppendLine(
-                            $"    {visibility}{CSharpTypeMapper.Map(member.Type)} {member.Name};");
+                            $"    {visibility}{MapType(member.Type)} {member.Name};");
                     }
                     break;
 
@@ -490,6 +1016,9 @@ public sealed class CSharpDeclarationTranslator
                     // Interface methods remain declarations because the interface is a contract.
                     if (isInterface)
                         AppendMethod(builder, member, isInterface: true);
+                    else if (member.Modifiers.Contains(
+                        "abstract", StringComparer.OrdinalIgnoreCase))
+                        AppendAbstractMethod(builder, member);
                     break;
 
                 case SemanticMemberKind.Property:
@@ -503,19 +1032,39 @@ public sealed class CSharpDeclarationTranslator
         }
     }
 
-    private static void AppendMethod(StringBuilder builder, SemanticMember member, bool isInterface)
+    private void AppendAbstractMethod(StringBuilder builder, SemanticMember member)
+    {
+        string visibility = MapVisibility(member.Visibility);
+        if (visibility == "private ")
+            visibility = "protected ";
+        string returnType = string.IsNullOrWhiteSpace(member.Type)
+            ? "void"
+            : MapType(member.Type);
+        string parameters = string.Join(", ", member.Parameters.Select(parameter =>
+        {
+            string modifier = parameter.Kind.Equals(
+                "Const", StringComparison.OrdinalIgnoreCase)
+                ? "in "
+                : MapParameterKind(parameter.Kind);
+            return $"{modifier}{MapType(parameter.Type)} {parameter.Name}";
+        }));
+        builder.AppendLine(
+            $"    {visibility}abstract {returnType} {member.Name}({parameters});");
+    }
+
+    private void AppendMethod(StringBuilder builder, SemanticMember member, bool isInterface)
     {
         string visibility = isInterface ? string.Empty : MapVisibility(member.Visibility);
-        string returnType = CSharpTypeMapper.Map(member.Type);
+        string returnType = MapType(member.Type);
         string parameters = string.Join(", ", member.Parameters.Select(parameter =>
-            $"{MapParameterKind(parameter.Kind)}{CSharpTypeMapper.Map(parameter.Type)} {parameter.Name}"));
+            $"{MapParameterKind(parameter.Kind)}{MapType(parameter.Type)} {parameter.Name}"));
         builder.AppendLine($"    {visibility}{returnType} {member.Name}({parameters});");
     }
 
-    private static void AppendProperty(StringBuilder builder, SemanticMember member, IReadOnlyList<SemanticMember> members, bool isInterface)
+    private void AppendProperty(StringBuilder builder, SemanticMember member, IReadOnlyList<SemanticMember> members, bool isInterface)
     {
         string visibility = isInterface ? string.Empty : MapVisibility(member.Visibility);
-        string propertyType = CSharpTypeMapper.Map(member.Type);
+        string propertyType = MapType(member.Type);
 
         string getter = BuildPropertyAccessor(member.ReadAccessor, members, isInterface, true);
         string setter = BuildPropertyAccessor(member.WriteAccessor, members, isInterface, false);
@@ -530,7 +1079,7 @@ public sealed class CSharpDeclarationTranslator
         builder.AppendLine($"    {visibility}{propertyType} {member.Name} {{ {accessors} }}");
     }
 
-    private static string BuildPropertyAccessor(string? accessor, IReadOnlyList<SemanticMember> members, bool isInterface, bool isGetter)
+    private string BuildPropertyAccessor(string? accessor, IReadOnlyList<SemanticMember> members, bool isInterface, bool isGetter)
     {
         if (string.IsNullOrWhiteSpace(accessor))
             return string.Empty;
@@ -558,7 +1107,7 @@ public sealed class CSharpDeclarationTranslator
         return isGetter ? $"get => {name}({parameters});" : $"set => {name}({parameters});";
     }
 
-    private static string MapVisibility(string? visibility)
+    private string MapVisibility(string? visibility)
     {
         if (string.IsNullOrWhiteSpace(visibility))
             return "public ";
@@ -575,7 +1124,7 @@ public sealed class CSharpDeclarationTranslator
         };
     }
 
-    private static string MapParameterKind(string? kind)
+    private string MapParameterKind(string? kind)
     {
         if (string.IsNullOrWhiteSpace(kind))
             return string.Empty;
@@ -590,16 +1139,105 @@ public sealed class CSharpDeclarationTranslator
         };
     }
 
-    private static string TranslateType(SemanticType type)
+    private bool IsLongBool(string typeName)
     {
+        string resolved = _resolver is null
+            ? typeName.Trim()
+            : _resolver.Resolve(typeName, _unitName).ResolvedName;
+
+        return resolved.Equals(
+            "LongBool", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string FormatDelegateParameter(
+        SemanticParameter parameter,
+        SemanticProcedureType procedure)
+    {
+        string attribute =
+            !procedure.IsMethodOfObject &&
+            !string.IsNullOrWhiteSpace(procedure.CallingConvention) &&
+            IsLongBool(parameter.Type)
+                ? "[MarshalAs(UnmanagedType.Bool)] "
+                : string.Empty;
+
+        string parameterType =
+            !procedure.IsMethodOfObject &&
+            string.Equals(
+                procedure.CallingConvention?.Trim(), "stdcall",
+                StringComparison.OrdinalIgnoreCase) &&
+            IsBassStreamCallback(parameter.Type)
+                ? "global::System.IntPtr"
+                : MapType(parameter.Type);
+
+        return attribute + MapParameterKind(parameter.Kind) +
+            parameterType + " @" + parameter.Name;
+    }
+
+    private string MapAliasType(string definition)
+    {
+        string mapped = MapType(definition);
+
+        mapped = System.Text.RegularExpressions.Regex.Replace(
+            mapped,
+            @"(?<![\w.:])IntPtr\b",
+            "global::System.IntPtr");
+
+        mapped = System.Text.RegularExpressions.Regex.Replace(
+            mapped,
+            @"(?<![\w.:])HashSet<",
+            "global::System.Collections.Generic.HashSet<");
+
+        return mapped;
+    }
+
+    private string TranslateType(SemanticType type)
+    {
+        if (type.ProcedureType is not null)
+        {
+            SemanticProcedureType procedure = type.ProcedureType;
+
+            string returnType = procedure.IsProcedure
+                ? "void"
+                : MapType(procedure.ReturnType);
+
+            string parameters = string.Join(", ",
+                procedure.Parameters.Select(parameter =>
+                    FormatDelegateParameter(parameter, procedure)));
+
+            string? convention = procedure.CallingConvention?
+                .Trim().ToLowerInvariant() switch
+                {
+                    "stdcall" => "StdCall",
+                    "cdecl" => "Cdecl",
+                    "safecall" => "StdCall",
+                    _ => null
+                };
+
+            string attribute =
+                !procedure.IsMethodOfObject && convention is not null
+                    ? $"[UnmanagedFunctionPointer(CallingConvention.{convention})]" +
+                      Environment.NewLine
+                    : string.Empty;
+
+            if (!procedure.IsMethodOfObject &&
+                convention is not null &&
+                !procedure.IsProcedure &&
+                IsLongBool(procedure.ReturnType))
+                attribute += "[return: MarshalAs(UnmanagedType.Bool)]" +
+                    Environment.NewLine;
+
+            return attribute +
+                $"public delegate {returnType} {type.Name}({parameters});";
+        }
+
         if (type.Kind.Equals("Simple", StringComparison.OrdinalIgnoreCase))
-            return $"using {type.Name} = {CSharpTypeMapper.Map(type.Definition)};";
+            return $"using {type.Name} = {MapAliasType(type.Definition)};";
 
         if (type.Kind.Equals("Enum", StringComparison.OrdinalIgnoreCase))
         {
             string[] values = type.Definition.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             var builder = new StringBuilder();
-            builder.AppendLine($"enum {type.Name}");
+            builder.AppendLine($"public enum {type.Name}");
             builder.AppendLine("{");
             for (int i = 0; i < values.Length; i++)
                 builder.AppendLine($"    {values[i]}{(i < values.Length - 1 ? "," : string.Empty)}");
@@ -608,24 +1246,16 @@ public sealed class CSharpDeclarationTranslator
         }
 
         if (type.Kind.Equals("Array", StringComparison.OrdinalIgnoreCase))
-        {
-            string definition = type.Definition.Trim();
-            int ofIndex = definition.IndexOf("of", StringComparison.OrdinalIgnoreCase);
-            if (ofIndex >= 0)
-            {
-                string elementType = definition[(ofIndex + 2)..].Trim();
-                return $"using {type.Name} = {CSharpTypeMapper.Map(elementType)}[];";
-            }
-        }
+            return $"using {type.Name} = {MapAliasType(type.Definition)};";
 
         if (type.Kind.Equals("Pointer", StringComparison.OrdinalIgnoreCase))
-            return $"using {type.Name} = IntPtr;";
+            return $"using {type.Name} = global::System.IntPtr;";
 
         if (type.Kind.Equals("Set", StringComparison.OrdinalIgnoreCase))
-            return $"using {type.Name} = {CSharpTypeMapper.Map(type.Definition)};";
+            return $"using {type.Name} = {MapAliasType(type.Definition)};";
 
         if (type.Kind.Equals("ClassReference", StringComparison.OrdinalIgnoreCase))
-            return $"using {type.Name} = Type;";
+            return $"using {type.Name} = global::System.Type;";
 
         if (type.Kind.Equals("Record", StringComparison.OrdinalIgnoreCase))
         {
@@ -633,12 +1263,19 @@ public sealed class CSharpDeclarationTranslator
                 return TranslateVariantRecord(type);
 
             var builder = new StringBuilder();
-            builder.AppendLine($"struct {type.Name}");
+            builder.AppendLine($"public struct {type.Name}");
             builder.AppendLine("{");
             if (type.Fields is not null)
             {
                 foreach (SemanticField field in type.Fields)
-                    builder.AppendLine($"    public {CSharpTypeMapper.Map(field.Type)} {field.Name};");
+                {
+                    if (IsLongBool(field.Type))
+                        builder.AppendLine(
+                            "    [MarshalAs(UnmanagedType.Bool)]");
+
+                    builder.AppendLine(
+                        $"    public {MapType(field.Type)} {field.Name};");
+                }
             }
             builder.Append('}');
             return builder.ToString();
@@ -647,7 +1284,7 @@ public sealed class CSharpDeclarationTranslator
         return $"// TODO: Delphi type {type.Name} ({type.Kind}): {type.Definition}";
     }
 
-    private static string TranslateVariantRecord(SemanticType type)
+    private string TranslateVariantRecord(SemanticType type)
     {
         SemanticVariantPart variantPart = type.VariantPart!;
 
@@ -687,7 +1324,7 @@ public sealed class CSharpDeclarationTranslator
                 continue;
             }
 
-            string mappedType = CSharpTypeMapper.Map(fieldType);
+            string mappedType = MapType(fieldType);
 
             if (!IsExplicitLayoutScalar(mappedType))
             {
@@ -710,7 +1347,7 @@ public sealed class CSharpDeclarationTranslator
         return builder.ToString();
     }
 
-    private static bool IsExplicitLayoutScalar(string mappedType)
+    private bool IsExplicitLayoutScalar(string mappedType)
     {
         return mappedType is
             "bool" or "byte" or "sbyte" or
@@ -720,7 +1357,7 @@ public sealed class CSharpDeclarationTranslator
             "char" or "float" or "double";
     }
 
-    private static bool TryGetFixedBuffer(
+    private bool TryGetFixedBuffer(
         string delphiType,
         out string elementType,
         out int length)
@@ -740,7 +1377,7 @@ public sealed class CSharpDeclarationTranslator
             return false;
 
         string mappedElementType =
-            CSharpTypeMapper.Map(match.Groups[2].Value);
+            MapType(match.Groups[2].Value);
 
         if (!IsExplicitLayoutScalar(mappedElementType) ||
             mappedElementType == "bool" ||

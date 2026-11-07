@@ -6,8 +6,25 @@ namespace FireURQ.Porter.Translation;
 
 public sealed class ProjectTranslator
 {
-    private readonly CSharpDeclarationTranslator _declarationTranslator = new();
-    private readonly DelphiToCSharpTranslator _functionTranslator = new();
+    private readonly CSharpDeclarationTranslator _declarationTranslator;
+    private readonly DelphiToCSharpTranslator _functionTranslator;
+    private readonly TypeResolver? _resolver;
+    private readonly IReadOnlyList<SemanticUnit> _units;
+
+    public ProjectTranslator() : this(null, null)
+    {
+    }
+
+    private ProjectTranslator(
+        TypeResolver? resolver,
+        string? unitName,
+        IReadOnlyList<SemanticUnit>? units = null)
+    {
+        _resolver = resolver;
+        _units = units ?? Array.Empty<SemanticUnit>();
+        _declarationTranslator = new CSharpDeclarationTranslator(resolver, unitName, _units);
+        _functionTranslator = new DelphiToCSharpTranslator(resolver, unitName);
+    }
 
     public IReadOnlyList<TranslationResult> Translate(
         IReadOnlyList<ProjectTranslationInput> inputs,
@@ -16,8 +33,24 @@ public sealed class ProjectTranslator
         Directory.CreateDirectory(outputDirectory);
         var results = new List<TranslationResult>();
 
+        string runtimeDirectory = Path.Combine(outputDirectory, "__runtime");
+        Directory.CreateDirectory(runtimeDirectory);
+        File.WriteAllText(
+            Path.Combine(runtimeDirectory, "TObject.cs"),
+            CSharpObjectRuntime.Source,
+            Encoding.UTF8);
+
+        var resolver = new TypeResolver(
+            inputs.Select(input => input.SemanticModel));
+
         foreach (ProjectTranslationInput input in inputs)
-            results.Add(TranslateUnit(input, outputDirectory));
+        {
+            var unitTranslator = new ProjectTranslator(
+                resolver, input.SemanticModel.Name,
+                inputs.Select(item => item.SemanticModel).ToList());
+
+            results.Add(unitTranslator.TranslateUnit(input, outputDirectory));
+        }
 
         return results;
     }
@@ -45,6 +78,7 @@ public sealed class ProjectTranslator
             builder.AppendLine("using System.Collections.Generic;");
             builder.AppendLine("using System.Linq;");
             builder.AppendLine("using System.Runtime.InteropServices;");
+            builder.AppendLine("using FireURQ.Runtime;");
             builder.AppendLine();
 
             string declarations = _declarationTranslator.Translate(input.SemanticModel);
@@ -165,8 +199,12 @@ public sealed class ProjectTranslator
                     continue;
                 }
 
-                string translated = _functionTranslator.TranslateFunction(function, body.Behavior);
-                builder.Append(IndentAndModifySignature(translated, "public ", 1));
+                function = NormalizeOverrideVisibility(
+                    function, group.Key, input.SemanticModel);
+                string translated = _functionTranslator.TranslateFunction(
+                    function, body.Behavior, manageDestructorLifetime: true);
+                builder.Append(IndentAndModifySignature(
+                    translated, GetInstanceImplementationPrefix(function), 1));
                 builder.AppendLine();
                 translatedCount++;
             }
@@ -178,6 +216,135 @@ public sealed class ProjectTranslator
         return translatedCount;
     }
 
+    private SemanticFunction NormalizeOverrideVisibility(
+        SemanticFunction function,
+        string ownerName,
+        SemanticUnit unit)
+    {
+        if (_resolver is null || function.IsClassMethod ||
+            !function.Modifiers.Contains(
+                "override", StringComparer.OrdinalIgnoreCase))
+            return function;
+
+        SemanticClass? owner = unit.Classes.FirstOrDefault(item =>
+            item.Name.Equals(ownerName, StringComparison.OrdinalIgnoreCase));
+        string? baseName = owner?.BaseType;
+        string context = unit.Name;
+        string? visibility = null;
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        while (!string.IsNullOrWhiteSpace(baseName))
+        {
+            TypeResolution resolution = _resolver.Resolve(baseName, context);
+            if (!resolution.IsResolved || resolution.IsPointer)
+                break;
+
+            string declaringUnit = resolution.DeclaringUnitName ?? context;
+            SemanticUnit? baseUnit = _units.FirstOrDefault(item =>
+                item.Name.Equals(declaringUnit, StringComparison.OrdinalIgnoreCase));
+            if (baseUnit is null)
+                break;
+
+            string resolvedName = resolution.ResolvedName;
+            int separator = resolvedName.LastIndexOf('.');
+            if (separator >= 0)
+                resolvedName = resolvedName[(separator + 1)..];
+
+            SemanticClass? baseClass = baseUnit.Classes.FirstOrDefault(item =>
+                item.Name.Equals(resolvedName, StringComparison.OrdinalIgnoreCase));
+            if (baseClass is null ||
+                !visited.Add(baseUnit.Name + "." + baseClass.Name))
+                break;
+
+            var candidates = baseClass.Members.Where(member =>
+                member.Kind == SemanticMemberKind.Method &&
+                !member.IsClassMethod &&
+                member.Name.Equals(function.Name, StringComparison.OrdinalIgnoreCase) &&
+                SameParameterSignature(
+                    member.Parameters, baseUnit.Name,
+                    function.Parameters, unit.Name)).ToList();
+
+            if (candidates.Count > 1)
+                break;
+
+            if (candidates.Count == 1)
+            {
+                SemanticMember member = candidates[0];
+                bool Has(string modifier) => member.Modifiers.Contains(
+                    modifier, StringComparer.OrdinalIgnoreCase);
+
+                if (!Has("virtual") && !Has("dynamic") &&
+                    !Has("abstract") && !Has("override"))
+                    break;
+
+                visibility = member.Visibility;
+                if (!Has("override"))
+                    break;
+            }
+
+            baseName = baseClass.BaseType;
+            context = baseUnit.Name;
+        }
+
+        return visibility is null
+            ? function
+            : function with { Visibility = visibility };
+    }
+
+    private bool SameParameterSignature(
+        IReadOnlyList<SemanticParameter> left,
+        string leftUnit,
+        IReadOnlyList<SemanticParameter> right,
+        string rightUnit)
+    {
+        if (left.Count != right.Count)
+            return false;
+
+        for (int index = 0; index < left.Count; index++)
+        {
+            if (!left[index].Kind.Equals(
+                    right[index].Kind, StringComparison.OrdinalIgnoreCase) ||
+                !CSharpTypeMapper.Map(left[index].Type, _resolver, leftUnit).Equals(
+                    CSharpTypeMapper.Map(right[index].Type, _resolver, rightUnit),
+                    StringComparison.Ordinal))
+                return false;
+        }
+
+        return true;
+    }
+
+    private static string GetInstanceImplementationPrefix(SemanticFunction function)
+    {
+        // Delphi class-method dispatch requires separate handling.
+        if (function.IsClassMethod)
+            return "public ";
+
+        string visibility = function.Visibility?.ToLowerInvariant() switch
+        {
+            "private" or "strict private" => "private ",
+            "protected" or "strict protected" => "protected ",
+            _ => "public "
+        };
+
+        bool Has(string modifier) => function.Modifiers.Contains(
+            modifier, StringComparer.OrdinalIgnoreCase);
+
+        if (visibility == "private " &&
+            (Has("virtual") || Has("dynamic") ||
+             Has("override") || Has("abstract")))
+            visibility = "protected ";
+
+        if (Has("override"))
+            return visibility + "override ";
+
+        if (Has("virtual") || Has("dynamic"))
+            return visibility + "virtual ";
+
+        if (Has("reintroduce"))
+            return visibility + "new ";
+
+        return visibility;
+    }
     private static string IndentAndModifySignature(
         string translated,
         string modifier,

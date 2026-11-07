@@ -340,6 +340,29 @@ if (c == '(' && Peek(1) == '*')
             }
         }
 
+        // Read an optional decimal exponent.
+        if (!IsAtEnd() &&
+            (Current() == 'e' || Current() == 'E') &&
+            (char.IsDigit(Peek(1)) ||
+             ((Peek(1) == '+' || Peek(1) == '-') &&
+              char.IsDigit(Peek(2)))))
+        {
+            builder.Append(Current());
+            Advance();
+
+            if (!IsAtEnd() && (Current() == '+' || Current() == '-'))
+            {
+                builder.Append(Current());
+                Advance();
+            }
+
+            while (!IsAtEnd() && char.IsDigit(Current()))
+            {
+                builder.Append(Current());
+                Advance();
+            }
+        }
+
         return new LexerToken(
             TokenKind.Number,
             builder.ToString(),

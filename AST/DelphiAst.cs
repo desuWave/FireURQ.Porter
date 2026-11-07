@@ -43,7 +43,9 @@ public sealed record DelphiVariantPart(
 
 public sealed record DelphiVariable(
     string Name,
-    string Type
+    string Type,
+    DelphiProcedureType? ProcedureType = null,
+    string? AbsoluteTarget = null
 ) : DelphiNode;
 
 public sealed record DelphiProperty(
@@ -78,7 +80,8 @@ public sealed record DelphiClass(
 public sealed record DelphiInterface(
     string Name,
     string? BaseType,
-    IReadOnlyList<DelphiClassMember> Members
+    IReadOnlyList<DelphiClassMember> Members,
+    bool IsForward = false
 ) : DelphiNode;
 
 public enum DelphiVisibility
@@ -140,7 +143,13 @@ public sealed record DelphiFunction(
     bool IsProcedure,
     IReadOnlyList<DelphiVariable> LocalVariables,
     IReadOnlyList<LexerToken> BodyTokens
-) : DelphiNode;
+) : DelphiNode
+{
+    public bool IsClassMethod { get; init; }
+    public bool IsConstructor { get; init; }
+    public bool IsDestructor { get; init; }
+    public IReadOnlyList<string> Modifiers { get; init; } = Array.Empty<string>();
+}
 
 public sealed record DelphiMethodResolution(
     string InterfaceMethod,

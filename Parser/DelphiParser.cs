@@ -115,6 +115,17 @@ public sealed class DelphiParser
                 continue;
             }
 
+            if (PeekKeyword("class") &&
+                (IsKeywordAt(1, "function") || IsKeywordAt(1, "procedure")))
+            {
+                Advance();
+                DelphiNode classCallable = ParseCallableDeclaration(readBodies);
+                if (classCallable is DelphiFunction classFunction)
+                    classCallable = classFunction with { IsClassMethod = true };
+                declarations.Add(classCallable);
+                continue;
+            }
+
             if (PeekKeyword("function") ||
                 PeekKeyword("procedure") ||
                 PeekKeyword("constructor") ||
@@ -187,11 +198,17 @@ public sealed class DelphiParser
                 implementationMethod);
         }
 
+        bool isConstructor = PeekKeyword("constructor");
+        bool isDestructor = PeekKeyword("destructor");
         Advance();
 
         return ParseFunction(
             isProcedure,
-            readBody);
+            readBody) with
+        {
+            IsConstructor = isConstructor,
+            IsDestructor = isDestructor
+        };
     }
 
     // ========================================================
@@ -424,25 +441,40 @@ if (string.IsNullOrWhiteSpace(type))
             }
 
             string type = "";
+            DelphiProcedureType? procedureType = null;
 
             if (MatchSymbol(":"))
             {
-                type =
-                    ReadTypeExpression();
+                if (MatchKeyword("function"))
+                {
+                    procedureType = ParseProcedureType(names[0], isProcedure: false);
+                    type = "function";
+                }
+                else if (MatchKeyword("procedure"))
+                {
+                    procedureType = ParseProcedureType(names[0], isProcedure: true);
+                    type = "procedure";
+                }
+                else
+                {
+                    type = ReadTypeExpression();
+                    MatchSymbol(";");
+                }
             }
             else
             {
                 continue;
             }
 
-            MatchSymbol(";");
-
             foreach (string name in names)
             {
                 declarations.Add(
                     new DelphiVariable(
                         name,
-                        type));
+                        type,
+                        procedureType is null
+                            ? null
+                            : procedureType with { Name = name }));
             }
         }
     }
@@ -656,6 +688,19 @@ if (MatchKeyword("function"))
 
 if (MatchKeyword("interface"))
 {
+    // A forward declaration ends here; it has no member body.
+    if (MatchSymbol(";"))
+    {
+        declarations.Add(
+            new DelphiInterface(
+                name,
+                null,
+                Array.Empty<DelphiClassMember>(),
+                IsForward: true));
+
+        continue;
+    }
+
     string? baseType = null;
 
     if (MatchSymbol("("))
@@ -929,7 +974,7 @@ if (MatchKeyword("interface"))
                         var classFunction =
                             ParseFunction(
                                 isProcedure,
-                                readBody: false);
+                                readBody: false) with { IsClassMethod = true };
 
                         members.Add(
                             new DelphiClassMember(
@@ -1007,7 +1052,7 @@ if (MatchKeyword("interface"))
                         var constructor =
                             ParseFunction(
                                 isProcedure: true,
-                                readBody: false);
+                                readBody: false) with { IsConstructor = true };
 
                         members.Add(
                             new DelphiClassMember(
@@ -1027,7 +1072,7 @@ if (MatchKeyword("interface"))
                         var destructor =
                             ParseFunction(
                                 isProcedure: true,
-                                readBody: false);
+                                readBody: false) with { IsDestructor = true };
 
                         members.Add(
                             new DelphiClassMember(
@@ -1149,7 +1194,7 @@ if (MatchKeyword("record"))
             if (MatchSymbol(":"))
             {
                 string fieldType =
-                    ReadTypeExpression();
+                    ReadTypeExpression(stopAtRecordEnd: true);
 
                 MatchSymbol(";");
 
@@ -1245,7 +1290,8 @@ string simpleTypeDefinition =
 
 DelphiTypeKind simpleTypeKind =
     (simpleTypeTokens.Count == 1 &&
-     IsSimpleTypeName(simpleTypeTokens[0])) ||
+     System.Text.RegularExpressions.Regex.IsMatch(
+         simpleTypeTokens[0], @"^[\p{L}_][\p{L}\p{Nd}_]*$")) ||
     IsQualifiedTypeName(simpleTypeTokens)
         ? DelphiTypeKind.Simple
         : DelphiTypeKind.Unknown;
@@ -1553,6 +1599,10 @@ private static string InferConstantType(
 {
     string text = value.Trim();
 
+    // The parser joins tokens with spaces, including a unary sign.
+    text = System.Text.RegularExpressions.Regex.Replace(
+        text, @"^([+-])\s+(?=\d)", "$1");
+
     if (text.Equals(
             "true",
             StringComparison.OrdinalIgnoreCase) ||
@@ -1576,7 +1626,22 @@ private static string InferConstantType(
         text.Length > 1 &&
         text[1..].All(Uri.IsHexDigit))
     {
-        return "Integer";
+        if (ulong.TryParse(
+            text[1..],
+            System.Globalization.NumberStyles.AllowHexSpecifier,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out ulong hexadecimal))
+        {
+            if (hexadecimal <= int.MaxValue)
+                return "Integer";
+
+            if (hexadecimal <= uint.MaxValue)
+                return "Cardinal";
+
+            return hexadecimal <= long.MaxValue ? "Int64" : "UInt64";
+        }
+
+        return "";
     }
 
     if (int.TryParse(
@@ -1610,7 +1675,15 @@ private static string InferConstantType(
     if (text.StartsWith("[", StringComparison.Ordinal) &&
         text.EndsWith("]", StringComparison.Ordinal))
     {
-        return "set of Byte";
+        var setTokens = new FireURQ.Porter.Lexer.DelphiLexer(text).Tokenize();
+
+        bool hasCharacterLiteral = setTokens.Any(token =>
+            token.Kind == FireURQ.Porter.Lexer.TokenKind.Character ||
+            (token.Kind == FireURQ.Porter.Lexer.TokenKind.String &&
+             token.Text.Length >= 2 &&
+             token.Text[1..^1].Replace("''", "'").Length == 1));
+
+        return hasCharacterLiteral ? "set of Char" : "set of Byte";
     }
 
     return "";
@@ -1831,15 +1904,26 @@ private static string InferConstantType(
 
         MatchSymbol(";");
 
-while (!IsEnd() && IsDirective())
+var modifiers = new List<string>();
+while (!IsEnd())
 {
-    Advance();
-
-    if (!IsEnd() &&
-        MatchKeyword("inline"))
+    if (IsDirective())
     {
-        MatchSymbol(";");
+        Advance();
+        continue;
     }
+
+    string modifier = Current().Text.ToLowerInvariant();
+    if (Current().Kind is not (TokenKind.Keyword or TokenKind.Identifier) ||
+        modifier is not (
+            "virtual" or "dynamic" or "override" or "abstract" or
+            "reintroduce" or "overload" or "inline" or "static" or
+            "stdcall" or "cdecl" or "register" or "pascal" or "safecall"))
+        break;
+
+    modifiers.Add(modifier);
+    Advance();
+    MatchSymbol(";");
 }
 
 IReadOnlyList<DelphiVariable> localVariables =
@@ -1863,7 +1947,10 @@ return new DelphiFunction(
     returnType,
     isProcedure,
     localVariables,
-    bodyTokens);
+    bodyTokens)
+{
+    Modifiers = modifiers
+};
     }
 
     // ========================================================
@@ -1942,10 +2029,23 @@ private void ParseLocalVariableSection(
         string type =
             ReadTypeExpression();
 
+        string? absoluteTarget = null;
+        var absolute = System.Text.RegularExpressions.Regex.Match(
+            type,
+            @"^(?<type>.+?)\s+absolute\s+(?<target>[\p{L}_][\p{L}\p{Nd}_]*)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        if (absolute.Success)
+        {
+            type = absolute.Groups["type"].Value.Trim();
+            absoluteTarget = absolute.Groups["target"].Value;
+        }
+
         variables.Add(
             new DelphiVariable(
                 name,
-                type));
+                type,
+                AbsoluteTarget: absoluteTarget));
 
         MatchSymbol(";");
     }
@@ -1964,151 +2064,56 @@ private void ParseLocalVariableSection(
 
     private void SkipLocalCallableDeclaration()
     {
-        // Skip "function" / "procedure".
-
+        bool isProcedure = PeekKeyword("procedure");
         Advance();
 
-        // Skip the callable header until its
-        // terminating semicolon.
-
-        while (!IsEnd())
-        {
-            if (MatchSymbol(";"))
-            {
-                break;
-            }
-
-            Advance();
-        }
-
-        // A local callable with no body is possible
-        // in some declaration forms.
-
-        if (!PeekKeyword("begin"))
-        {
-            return;
-        }
-
-        // Skip the complete local callable body.
-
-        int beginDepth = 0;
-
-        while (!IsEnd())
-        {
-            if (PeekKeyword("begin"))
-            {
-                beginDepth++;
-
-                Advance();
-
-                continue;
-            }
-
-            if (PeekKeyword("end"))
-            {
-                Advance();
-
-                beginDepth--;
-
-                MatchSymbol(";");
-
-                if (beginDepth == 0)
-                {
-                    break;
-                }
-
-                continue;
-            }
-
-            Advance();
-        }
+        // Reuse full parameter, local-declaration and block parsing.
+        // Nested case/try blocks must not terminate the enclosing routine.
+        _ = ParseFunction(isProcedure, readBody: true);
     }
-
     // ========================================================
     // FUNCTION BODY
     // ========================================================
 
     private IReadOnlyList<LexerToken> ReadFunctionBody()
     {
-        var body =
-            new List<LexerToken>();
+        var body = new List<LexerToken>();
 
         if (!PeekKeyword("begin"))
-        {
             return body;
-        }
 
-        int beginDepth = 0;
-        int caseDepth = 0;
+        int blockDepth = 0;
 
         while (!IsEnd())
         {
-            // Compiler directives such as {$I-} and {$I+}
-            // control the Pascal compiler and must not be
-            // forwarded to the C# statement translator.
             if (IsDirective())
             {
                 Advance();
                 continue;
             }
 
-            if (PeekKeyword("begin"))
+            if (PeekKeyword("begin") ||
+                PeekKeyword("case") ||
+                PeekKeyword("try"))
             {
-                beginDepth++;
-
-                body.Add(
-                    Current());
-
-                Advance();
-
-                continue;
+                blockDepth++;
             }
-
-            if (PeekKeyword("case"))
+            else if (PeekKeyword("end"))
             {
-                caseDepth++;
-
-                body.Add(
-                    Current());
-
+                body.Add(Current());
                 Advance();
+                blockDepth--;
 
-                continue;
-            }
-
-            if (PeekKeyword("end"))
-            {
-                body.Add(
-                    Current());
-
-                Advance();
-
-                if (caseDepth > 0)
-                {
-                    caseDepth--;
-
-                    MatchSymbol(";");
-
-                    continue;
-                }
-
-                beginDepth--;
-
-                if (beginDepth == 0)
+                if (blockDepth == 0)
                 {
                     MatchSymbol(";");
-
                     break;
                 }
 
-                MatchSymbol(";");
-
                 continue;
             }
 
-            body.Add(
-                Current());
-
+            body.Add(Current());
             Advance();
         }
 
@@ -2172,7 +2177,7 @@ private void ParseLocalVariableSection(
             parts);
     }
 
-    private string ReadTypeExpression()
+    private string ReadTypeExpression(bool stopAtRecordEnd = false)
     {
         var parts =
             new List<string>();
@@ -2180,7 +2185,8 @@ private void ParseLocalVariableSection(
         while (!IsEnd())
         {
             if (PeekSymbol("=") ||
-                PeekSymbol(";"))
+                PeekSymbol(";") ||
+                (stopAtRecordEnd && PeekKeyword("end")))
             {
                 break;
             }
@@ -2469,41 +2475,39 @@ private DelphiProcedureType ParseProcedureType(
     bool isMethodOfObject = false;
     string? callingConvention = null;
 
-    if (MatchSymbol(";") &&
-        !IsEnd() &&
-        IsCallingConvention(Current().Text))
+    // Consume only recognized modifiers before the declaration terminator.
+    while (!IsEnd() && !PeekSymbol(";"))
     {
-        callingConvention =
-            Current().Text;
-
-        Advance();
-    }
-
-    while (!IsEnd() &&
-           !PeekSymbol(";"))
-    {
-        if (MatchKeyword("of"))
+        if (PeekKeyword("of"))
         {
+            Advance();
             if (MatchKeyword("object"))
-            {
                 isMethodOfObject = true;
-            }
+            else
+                break;
 
             continue;
         }
 
-        string text =
-            Current().Text;
-
-        if (IsCallingConvention(text))
+        if (IsCallingConvention(Current().Text))
         {
-            callingConvention = text;
+            callingConvention = Current().Text;
+            Advance();
+            continue;
         }
 
-        Advance();
+        break;
     }
 
     MatchSymbol(";");
+
+    // A convention may follow the first semicolon. A new declaration may not.
+    if (!IsEnd() && IsCallingConvention(Current().Text))
+    {
+        callingConvention = Current().Text;
+        Advance();
+        MatchSymbol(";");
+    }
 
     return new DelphiProcedureType(
         name,

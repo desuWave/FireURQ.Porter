@@ -40,7 +40,13 @@ public sealed record SemanticMember(
     bool IsDefault,
     string? ReadAccessor = null,
     string? WriteAccessor = null
-);
+)
+{
+    public bool IsClassMethod { get; init; }
+    public bool IsConstructor { get; init; }
+    public bool IsDestructor { get; init; }
+    public IReadOnlyList<string> Modifiers { get; init; } = Array.Empty<string>();
+}
 
 public sealed record SemanticField(
     string Name,
@@ -64,7 +70,8 @@ public sealed record SemanticType(
     string Definition,
     IReadOnlyList<SemanticField>? Fields = null,
     string? UnitName = null,
-    SemanticVariantPart? VariantPart = null
+    SemanticVariantPart? VariantPart = null,
+    SemanticProcedureType? ProcedureType = null
 );
 
 public sealed record SemanticConstant(
@@ -75,7 +82,17 @@ public sealed record SemanticConstant(
 
 public sealed record SemanticVariable(
     string Name,
-    string Type
+    string Type,
+    SemanticProcedureType? ProcedureType = null,
+    string? AbsoluteTarget = null
+);
+
+public sealed record SemanticProcedureType(
+    IReadOnlyList<SemanticParameter> Parameters,
+    string ReturnType,
+    bool IsProcedure,
+    bool IsMethodOfObject,
+    string? CallingConvention
 );
 
 public sealed record SemanticFunction(
@@ -84,7 +101,14 @@ public sealed record SemanticFunction(
     string ReturnType,
     bool IsProcedure,
     IReadOnlyList<SemanticVariable> LocalVariables
-);
+)
+{
+    public bool IsClassMethod { get; init; }
+    public bool IsConstructor { get; init; }
+    public bool IsDestructor { get; init; }
+    public IReadOnlyList<string> Modifiers { get; init; } = Array.Empty<string>();
+    public string? Visibility { get; init; }
+}
 
 public sealed record SemanticParameter(
     string Name,

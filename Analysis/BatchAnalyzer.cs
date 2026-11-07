@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 using FireURQ.Porter.AST;
 using FireURQ.Porter.Lexer;
@@ -130,6 +130,29 @@ public static class BatchAnalyzer
 
                 var tokens =
                     lexer.Tokenize();
+
+                var preprocessor = new DelphiConditionalPreprocessor();
+
+                if (!preprocessor.TryProcess(
+                    tokens, out var activeTokens, out var preprocessingError, sourcePath: file))
+                {
+                    failed++;
+                    string message = preprocessingError
+                        ?? "Unknown preprocessing error.";
+
+                    errors[message] = errors.TryGetValue(message, out int count)
+                        ? count + 1
+                        : 1;
+
+                    Console.WriteLine();
+                    Console.WriteLine($"PREPROCESSING ERROR: {file}");
+                    Console.WriteLine(message);
+
+                    progress.Report(success + failed, files.Count);
+                    continue;
+                }
+
+                tokens = activeTokens;
 
                 var parser =
                     new DelphiParser(tokens);
@@ -482,6 +505,18 @@ public static class BatchAnalyzer
         int translationFailed =
             translationResults.Count(
                 result => !result.Success);
+
+        // Report individual failures and expose unsuccessful runs to callers.
+        foreach (TranslationResult result in translationResults.Where(
+            result => !result.Success))
+        {
+            Console.WriteLine();
+            Console.WriteLine($"TRANSLATION ERROR: {result.SourceFile}");
+            Console.WriteLine(result.Error ?? "No error details available.");
+        }
+
+        if (failed > 0 || translationFailed > 0)
+            Environment.ExitCode = 1;
 
         int functionsTranslated =
             translationResults.Sum(
