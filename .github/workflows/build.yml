@@ -1,0 +1,32 @@
+name: Build
+
+on:
+  push:
+    branches: [main, ci/**]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore FireURQ.Porter.csproj
+
+      - name: Build
+        run: dotnet build FireURQ.Porter.csproj --configuration Release --no-restore
+
+      - name: Translation test
+        run: dotnet run --project FireURQ.Porter.csproj --configuration Release --no-build -- --translate-test
