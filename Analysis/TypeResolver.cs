@@ -216,6 +216,117 @@ public sealed class TypeResolver
         return resolution.IsResolved && resolution.IsPointer;
     }
 
+    public bool IsInheritedTStreamOperation(
+        string typeName, string operation, string? unitName)
+    {
+        string current = typeName;
+        string? context = unitName;
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        while (!string.IsNullOrWhiteSpace(current))
+        {
+            TypeResolution resolution = Resolve(current, context);
+            if (!resolution.IsResolved || resolution.IsPointer)
+                return false;
+
+            string name = resolution.ResolvedName;
+            string? owner = resolution.DeclaringUnitName;
+            if (owner is null)
+            {
+                if (name.StartsWith("Classes.", StringComparison.OrdinalIgnoreCase))
+                    name = name["Classes.".Length..];
+                return name.Equals("TStream", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("TMemoryStream", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("TFileStream", StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (!visited.Add(owner + "." + name) ||
+                !_units.TryGetValue(owner, out SemanticUnit? unit))
+                return false;
+
+            SemanticClass? classType = unit.Classes.FirstOrDefault(candidate =>
+                candidate.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (classType is null ||
+                classType.Members.Any(member =>
+                    member.Name.Equals(operation, StringComparison.OrdinalIgnoreCase)))
+                return false;
+
+            current = classType.BaseType ?? string.Empty;
+            context = owner;
+        }
+
+        return false;
+    }
+
+    public bool IsInheritedTObjectFree(string typeName, string? unitName)
+    {
+        string current = typeName;
+        string? context = unitName;
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        while (!string.IsNullOrWhiteSpace(current))
+        {
+            TypeResolution resolution = Resolve(current, context);
+            if (!resolution.IsResolved || resolution.IsPointer)
+                return false;
+
+            string name = resolution.ResolvedName;
+            string? owner = resolution.DeclaringUnitName;
+
+            if (owner is null)
+                return name.Equals("TObject", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("System.TObject", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("TInterfacedObject", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("System.TInterfacedObject", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("TStream", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("TMemoryStream", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("TFileStream", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("Classes.TStream", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("Classes.TMemoryStream", StringComparison.OrdinalIgnoreCase) ||
+                    name.Equals("Classes.TFileStream", StringComparison.OrdinalIgnoreCase);
+
+            if (!visited.Add(owner + "." + name) ||
+                !_units.TryGetValue(owner, out SemanticUnit? unit))
+                return false;
+
+            SemanticClass? classType = unit.Classes.FirstOrDefault(candidate =>
+                candidate.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (classType is null)
+                return false;
+
+            // Any explicit member with this name requires separate binding.
+            // Do not replace user methods, fields, properties or delegates.
+            if (classType.Members.Any(member =>
+                member.Name.Equals("Free", StringComparison.OrdinalIgnoreCase)))
+                return false;
+
+            if (string.IsNullOrWhiteSpace(classType.BaseType))
+                return true;
+
+            current = classType.BaseType;
+            context = owner;
+        }
+
+        return false;
+    }
+
+    public bool HasVisibleNonTypeDeclaration(string name, string unitName)
+    {
+        if (!_units.TryGetValue(unitName, out SemanticUnit? context))
+            return true;
+
+        var visible = new HashSet<string>(
+            context.Uses, StringComparer.OrdinalIgnoreCase) { context.Name };
+
+        return _units.Values.Where(unit => visible.Contains(unit.Name))
+            .Any(unit =>
+                unit.Constants.Any(value => value.Name.Equals(
+                    name, StringComparison.OrdinalIgnoreCase)) ||
+                unit.Variables.Any(value => value.Name.Equals(
+                    name, StringComparison.OrdinalIgnoreCase)) ||
+                unit.Functions.Any(value => value.Name.Equals(
+                    name, StringComparison.OrdinalIgnoreCase)));
+    }
     public bool HasVisibleValueDeclaration(string name, string unitName)
     {
         if (!_units.TryGetValue(unitName, out SemanticUnit? context))

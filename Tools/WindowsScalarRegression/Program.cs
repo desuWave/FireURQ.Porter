@@ -72,6 +72,69 @@ Check("GUID native field byte order",
         0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF
     }));
 
+foreach (var item in new[]
+{
+    (Delphi: "UINT", CSharp: "uint"),
+    (Delphi: "HMODULE", CSharp: "IntPtr"),
+    (Delphi: "WPARAM", CSharp: "UIntPtr"),
+    (Delphi: "LPARAM", CSharp: "IntPtr"),
+    (Delphi: "LRESULT", CSharp: "IntPtr")
+})
+{
+    Check(item.Delphi + ": legacy mapping",
+        CSharpTypeMapper.Map(item.Delphi) == item.CSharp);
+    Check(item.Delphi + ": contextual mapping",
+        CSharpTypeMapper.Map(item.Delphi, resolver, "Consumer") == item.CSharp);
+    Check(item.Delphi + ": case-insensitive mapping",
+        CSharpTypeMapper.Map(item.Delphi.ToLowerInvariant()) == item.CSharp);
+}
+
+var nativeAliases = Parse("""
+unit NativeAliases;
+interface
+type
+TMessageWord = WPARAM;
+TMessageLong = LPARAM;
+TMessageResult = LRESULT;
+TModuleHandle = HMODULE;
+TMessageID = UINT;
+implementation
+end.
+""");
+var messageShadow = Parse("""
+unit MessageShadow;
+interface
+type WPARAM = SmallInt;
+implementation
+end.
+""");
+var nativeResolver = new TypeResolver(new[] { nativeAliases, messageShadow });
+
+Check("WPARAM alias remains unsigned and pointer-sized",
+    CSharpTypeMapper.Map("TMessageWord", nativeResolver, "NativeAliases") == "UIntPtr");
+Check("LPARAM alias remains signed and pointer-sized",
+    CSharpTypeMapper.Map("TMessageLong", nativeResolver, "NativeAliases") == "IntPtr");
+Check("LRESULT alias remains signed and pointer-sized",
+    CSharpTypeMapper.Map("TMessageResult", nativeResolver, "NativeAliases") == "IntPtr");
+Check("Module handle alias resolves",
+    CSharpTypeMapper.Map("TModuleHandle", nativeResolver, "NativeAliases") == "IntPtr");
+Check("UINT alias remains 32-bit",
+    CSharpTypeMapper.Map("TMessageID", nativeResolver, "NativeAliases") == "uint");
+Check("Explicit WPARAM declaration takes precedence",
+    CSharpTypeMapper.Map("WPARAM", nativeResolver, "MessageShadow") == "short");
+Check("Array of WPARAM preserves unsigned elements",
+    CSharpTypeMapper.Map("array of WPARAM", nativeResolver, "NativeAliases") == "UIntPtr[]");
+
+Check("WPARAM storage matches process pointer width",
+    Marshal.SizeOf<UIntPtr>() == IntPtr.Size);
+Check("Signed message value preserves minus one",
+    new IntPtr(-1).ToInt64() == -1);
+Check("Unsigned message value preserves all native bits",
+    (UIntPtr.Size == 8 ? new UIntPtr(ulong.MaxValue) : new UIntPtr(uint.MaxValue))
+        .ToUInt64() == (UIntPtr.Size == 8 ? ulong.MaxValue : uint.MaxValue));
+Check("UINT storage is four bytes",
+    Marshal.SizeOf<uint>() == 4);
+
 Console.WriteLine($"Process pointer size: {IntPtr.Size * 8} bits");
 Console.WriteLine($"Windows-scalar checks: {total - failed}/{total} passed.");
 return failed == 0 ? 0 : 1;

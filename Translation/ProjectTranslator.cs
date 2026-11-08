@@ -10,6 +10,9 @@ public sealed class ProjectTranslator
     private readonly DelphiToCSharpTranslator _functionTranslator;
     private readonly TypeResolver? _resolver;
     private readonly IReadOnlyList<SemanticUnit> _units;
+    private readonly bool _usesStreamRuntime;
+    private readonly bool _usesJclStringListRuntime;
+    private readonly bool _usesStringListRuntime;
 
     public ProjectTranslator() : this(null, null)
     {
@@ -22,6 +25,11 @@ public sealed class ProjectTranslator
     {
         _resolver = resolver;
         _units = units ?? Array.Empty<SemanticUnit>();
+        _usesStreamRuntime = RequiresStreamRuntime(_units, resolver);
+        _usesJclStringListRuntime = RequiresJclStringListRuntime(_units, resolver);
+        _usesStringListRuntime = resolver is not null &&
+            RequiresListRuntime(_units, resolver,
+                "TStrings", "TStringList", "TStringListSortCompare");
         _declarationTranslator = new CSharpDeclarationTranslator(resolver, unitName, _units);
         _functionTranslator = new DelphiToCSharpTranslator(resolver, unitName);
     }
@@ -39,9 +47,92 @@ public sealed class ProjectTranslator
             Path.Combine(runtimeDirectory, "TObject.cs"),
             CSharpObjectRuntime.Source,
             Encoding.UTF8);
+        File.WriteAllText(
+            Path.Combine(runtimeDirectory, "Variant.cs"),
+            CSharpVariantRuntime.Source,
+            Encoding.UTF8);
 
         var resolver = new TypeResolver(
             inputs.Select(input => input.SemanticModel));
+
+        if (RequiresStreamRuntime(
+            inputs.Select(input => input.SemanticModel), resolver))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "Streams.cs"),
+                CSharpStreamRuntime.Source,
+                Encoding.UTF8);
+        }
+
+        if (RequiresJclStringListRuntime(
+            inputs.Select(input => input.SemanticModel), resolver))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "JclStringLists.cs"),
+                CSharpJclStringListRuntime.Source,
+                Encoding.UTF8);
+        }
+
+        if (RequiresListRuntime(
+            inputs.Select(input => input.SemanticModel), resolver,
+            "TList", "TObjectList"))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "Lists.cs"),
+                CSharpListRuntime.Source,
+                Encoding.UTF8);
+        }
+
+        if (RequiresListRuntime(
+            inputs.Select(input => input.SemanticModel), resolver,
+            "IInterfaceList", "TInterfaceList"))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "InterfaceLists.cs"),
+                CSharpInterfaceListRuntime.Source,
+                Encoding.UTF8);
+        }
+
+        if (RequiresListRuntime(
+            inputs.Select(input => input.SemanticModel), resolver,
+            "AnsiString"))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "AnsiStrings.cs"),
+                CSharpAnsiStringRuntime.Source,
+                Encoding.UTF8);
+
+            if (RequiresStreamRuntime(
+                inputs.Select(input => input.SemanticModel), resolver))
+            {
+                File.WriteAllText(
+                    Path.Combine(runtimeDirectory, "AnsiStringStreams.cs"),
+                    CSharpAnsiStringStreamRuntime.Source,
+                    Encoding.UTF8);
+            }
+        }
+
+        if (RequiresJclStringListRuntime(
+                inputs.Select(input => input.SemanticModel), resolver) ||
+            RequiresListRuntime(
+                inputs.Select(input => input.SemanticModel), resolver,
+                "TStrings", "TStringList", "TStringListSortCompare"))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "StringListCommon.cs"),
+                CSharpStringListCommonRuntime.Source,
+                Encoding.UTF8);
+        }
+
+        if (RequiresListRuntime(
+            inputs.Select(input => input.SemanticModel), resolver,
+            "TStrings", "TStringList", "TStringListSortCompare"))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "StringLists.cs"),
+                CSharpStringListRuntime.Source,
+                Encoding.UTF8);
+        }
 
         foreach (ProjectTranslationInput input in inputs)
         {
@@ -53,6 +144,161 @@ public sealed class ProjectTranslator
         }
 
         return results;
+    }
+
+    private static bool RequiresListRuntime(
+        IEnumerable<SemanticUnit> units,
+        TypeResolver resolver,
+        params string[] runtimeTypeNames)
+    {
+        foreach (SemanticUnit unit in units)
+        {
+            var types = new List<string>();
+            types.AddRange(unit.Types.Select(type => type.Definition));
+            types.AddRange(unit.Variables.Select(variable => variable.Type));
+            foreach (SemanticFunction function in unit.Functions)
+            {
+                types.Add(function.ReturnType);
+                types.AddRange(function.Parameters.Select(parameter => parameter.Type));
+                types.AddRange(function.LocalVariables.Select(variable => variable.Type));
+            }
+            foreach (SemanticClass owner in unit.Classes)
+            {
+                types.Add(owner.BaseType ?? string.Empty);
+                foreach (SemanticMember member in owner.Members)
+                {
+                    types.Add(member.Type);
+                    types.AddRange(member.Parameters.Select(parameter => parameter.Type));
+                }
+            }
+            foreach (SemanticInterface owner in unit.Interfaces)
+            {
+                foreach (SemanticMember member in owner.Members)
+                {
+                    types.Add(member.Type);
+                    types.AddRange(member.Parameters.Select(parameter => parameter.Type));
+                }
+            }
+
+            foreach (string name in runtimeTypeNames)
+            {
+                TypeResolution resolution = resolver.Resolve(name, unit.Name);
+                if (!resolution.IsResolved || resolution.Chain.Count > 0)
+                    continue;
+
+                if (types.Any(type => !string.IsNullOrWhiteSpace(type) &&
+                    System.Text.RegularExpressions.Regex.IsMatch(
+                        type,
+                        @"(?<![\w.])" + name + @"(?!\w)",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+                        System.Text.RegularExpressions.RegexOptions.CultureInvariant)))
+                    return true;
+            }
+        }
+        return false;
+    }
+    private static bool RequiresJclStringListRuntime(
+        IEnumerable<SemanticUnit> units,
+        TypeResolver? resolver)
+    {
+        if (resolver is null)
+            return false;
+
+        foreach (SemanticUnit unit in units)
+        {
+            // A project declaration with this name takes precedence.
+            TypeResolution resolution = resolver.Resolve("IJclStringList", unit.Name);
+            if (!resolution.IsResolved || resolution.Chain.Count > 0)
+                continue;
+
+            var types = new List<string>();
+            types.AddRange(unit.Types.Select(type => type.Definition));
+            types.AddRange(unit.Variables.Select(variable => variable.Type));
+
+            foreach (SemanticFunction function in unit.Functions)
+            {
+                types.Add(function.ReturnType);
+                types.AddRange(function.Parameters.Select(parameter => parameter.Type));
+                types.AddRange(function.LocalVariables.Select(variable => variable.Type));
+            }
+
+            foreach (SemanticClass owner in unit.Classes)
+            {
+                types.Add(owner.BaseType ?? string.Empty);
+                foreach (SemanticMember member in owner.Members)
+                {
+                    types.Add(member.Type);
+                    types.AddRange(member.Parameters.Select(parameter => parameter.Type));
+                }
+            }
+
+            foreach (SemanticInterface owner in unit.Interfaces)
+            {
+                foreach (SemanticMember member in owner.Members)
+                {
+                    types.Add(member.Type);
+                    types.AddRange(member.Parameters.Select(parameter => parameter.Type));
+                }
+            }
+
+            if (types.Any(type => !string.IsNullOrWhiteSpace(type) &&
+                System.Text.RegularExpressions.Regex.IsMatch(
+                    type,
+                    @"(?<![\w.])IJclStringList(?!\w)",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+                    System.Text.RegularExpressions.RegexOptions.CultureInvariant)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool RequiresStreamRuntime(
+        IEnumerable<SemanticUnit> units,
+        TypeResolver? resolver)
+    {
+        if (resolver is null)
+            return false;
+
+        foreach (SemanticUnit unit in units)
+        {
+            var types = new List<string>();
+            types.AddRange(unit.Types.Select(type => type.Definition));
+            types.AddRange(unit.Variables.Select(variable => variable.Type));
+            foreach (SemanticFunction function in unit.Functions)
+            {
+                types.Add(function.ReturnType);
+                types.AddRange(function.Parameters.Select(parameter => parameter.Type));
+                types.AddRange(function.LocalVariables.Select(variable => variable.Type));
+            }
+
+            foreach (SemanticClass owner in unit.Classes)
+            {
+                types.Add(owner.BaseType ?? string.Empty);
+                foreach (SemanticMember member in owner.Members)
+                {
+                    types.Add(member.Type);
+                    types.AddRange(member.Parameters.Select(parameter => parameter.Type));
+                }
+            }
+
+            foreach (SemanticInterface owner in unit.Interfaces)
+            {
+                foreach (SemanticMember member in owner.Members)
+                {
+                    types.Add(member.Type);
+                    types.AddRange(member.Parameters.Select(parameter => parameter.Type));
+                }
+            }
+
+            if (types.Where(type => !string.IsNullOrWhiteSpace(type)).Any(type =>
+                resolver.IsInheritedTStreamOperation(type, "Read", unit.Name)))
+                return true;
+        }
+
+        return false;
     }
 
     private TranslationResult TranslateUnit(
@@ -79,6 +325,13 @@ public sealed class ProjectTranslator
             builder.AppendLine("using System.Linq;");
             builder.AppendLine("using System.Runtime.InteropServices;");
             builder.AppendLine("using FireURQ.Runtime;");
+            builder.AppendLine("using static global::FireURQ.Runtime.DelphiVariants;");
+            if (_usesJclStringListRuntime)
+                builder.AppendLine("using static global::FireURQ.Runtime.DelphiJclStringLists;");
+            if (_usesJclStringListRuntime || _usesStringListRuntime)
+                builder.AppendLine("using static global::FireURQ.Runtime.TDuplicates;");
+            if (_usesStreamRuntime)
+                builder.AppendLine("using static global::FireURQ.Runtime.DelphiStreamConstants;");
             builder.AppendLine();
 
             string declarations = _declarationTranslator.Translate(input.SemanticModel);

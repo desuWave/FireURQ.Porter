@@ -2018,16 +2018,14 @@ private void ParseLocalVariableSection(
             continue;
         }
 
-        string name =
-            ExpectIdentifier();
+        var names = new List<string> { ExpectIdentifier() };
+        while (MatchSymbol(","))
+            names.Add(ExpectIdentifier());
 
         if (!MatchSymbol(":"))
-        {
             continue;
-        }
 
-        string type =
-            ReadTypeExpression();
+        string type = ReadTypeExpression();
 
         string? absoluteTarget = null;
         var absolute = System.Text.RegularExpressions.Regex.Match(
@@ -2041,11 +2039,14 @@ private void ParseLocalVariableSection(
             absoluteTarget = absolute.Groups["target"].Value;
         }
 
-        variables.Add(
-            new DelphiVariable(
-                name,
-                type,
-                AbsoluteTarget: absoluteTarget));
+        foreach (string name in names)
+        {
+            variables.Add(
+                new DelphiVariable(
+                    name,
+                    type,
+                    AbsoluteTarget: absoluteTarget));
+        }
 
         MatchSymbol(";");
     }

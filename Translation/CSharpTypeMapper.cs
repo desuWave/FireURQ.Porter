@@ -4,6 +4,22 @@ namespace FireURQ.Porter.Translation;
 
 public static class CSharpTypeMapper
 {
+    private static string? GetRuntimeListTypeName(string type) =>
+        type.ToLowerInvariant() switch
+        {
+            "tlist" => "TList",
+            "tobjectlist" => "TObjectList",
+            "ijclstringlist" => "IJclStringList",
+            "iinterface" => "IInterface",
+            "iinterfacelist" => "IInterfaceList",
+            "tinterfacelist" => "TInterfaceList",
+            "ansistring" => "AnsiString",
+            "tstrings" => "TStrings",
+            "tstringlist" => "TStringList",
+            "tstringlistsortcompare" => "TStringListSortCompare",
+            _ => null
+        };
+
     public static string Map(string? delphiType) =>
         Map(delphiType, null, null);
 
@@ -37,6 +53,11 @@ public static class CSharpTypeMapper
 
             type = resolution.ResolvedName;
 
+            // Preserve a project-defined class, interface or composite type.
+            if (resolution.DeclaringUnitName is not null &&
+                GetRuntimeListTypeName(type) is not null)
+                return type;
+
             if (resolver.TryGetCompositeDefinition(
                 type,
                 resolution.DeclaringUnitName ?? unitName,
@@ -47,6 +68,10 @@ public static class CSharpTypeMapper
                 unitName = declaringUnit;
             }
         }
+
+        string? runtimeListType = GetRuntimeListTypeName(type);
+        if (runtimeListType is not null)
+            return runtimeListType;
 
         if (type.StartsWith("set of ", StringComparison.OrdinalIgnoreCase))
             return $"HashSet<{Map(type[7..], resolver, unitName)}>";
@@ -99,7 +124,9 @@ public static class CSharpTypeMapper
             "uint64" => "ulong",
             "longint" => "int",
             "shortint" => "sbyte",
-            "hwnd" or "thandle" => "IntPtr",
+            "hwnd" or "thandle" or "hmodule" or "lparam" or "lresult" => "IntPtr",
+            "wparam" => "UIntPtr",
+            "uint" => "uint",
             "hresult" => "int",
             "tguid" => "global::System.Guid",
             _ => type

@@ -115,14 +115,16 @@ public sealed class DelphiToCSharpTranslator
                 {
                     builder.AppendLine(
                         $"    {MapType(variable.Type)} " +
-                        $"{variable.Name};");
+                        $"{variable.Name}" +
+                        (MapType(variable.Type) == "AnsiString" ? " = default;" : ";"));
                 }
             }
 
             if (!function.IsProcedure)
             {
                 builder.AppendLine(
-                    $"    {MapType(function.ReturnType)} result;");
+                    $"    {MapType(function.ReturnType)} result" +
+                    (MapType(function.ReturnType) == "AnsiString" ? " = default;" : ";"));
             }
 
             if (function.LocalVariables.Count > 0)
@@ -759,6 +761,12 @@ public sealed class DelphiToCSharpTranslator
     private string TranslateIdentifier(
         string text)
     {
+        if (text.Equals("true", StringComparison.OrdinalIgnoreCase))
+            return "true";
+
+        if (text.Equals("false", StringComparison.OrdinalIgnoreCase))
+            return "false";
+
         if (text.Equals(
             "Result",
             StringComparison.OrdinalIgnoreCase))
@@ -908,11 +916,57 @@ public sealed class DelphiToCSharpTranslator
             $"throw {TranslateExpression(expression)};");
     }
 
+    private bool TryGetStandardListFactoryTarget(
+        ExpressionParser.ExpressionNode expression,
+        out string target)
+    {
+        target = string.Empty;
+        if (_resolver is null ||
+            expression.Kind != ExpressionParser.ExpressionKind.MemberAccess ||
+            expression.Children.Count != 2)
+            return false;
+
+        var receiver = expression.Children[0];
+        var member = expression.Children[1];
+        if (receiver.Kind != ExpressionParser.ExpressionKind.Identifier ||
+            member.Kind != ExpressionParser.ExpressionKind.Identifier ||
+            !member.Text.Equals("Create", StringComparison.OrdinalIgnoreCase) ||
+            ResolveExpressionType(receiver) is not null)
+            return false;
+
+        string typeName;
+        if (receiver.Text.Equals("TList", StringComparison.OrdinalIgnoreCase))
+            typeName = "TList";
+        else if (receiver.Text.Equals("TObjectList", StringComparison.OrdinalIgnoreCase))
+            typeName = "TObjectList";
+        else if (receiver.Text.Equals("TInterfaceList", StringComparison.OrdinalIgnoreCase))
+            typeName = "TInterfaceList";
+        else if (receiver.Text.Equals("TStringList", StringComparison.OrdinalIgnoreCase))
+            typeName = "TStringList";
+        else
+            return false;
+
+        TypeResolution resolution = _resolver.Resolve(typeName, _unitName);
+        if (!resolution.IsResolved || resolution.Chain.Count > 0)
+            return false;
+
+        target = typeName + ".Create";
+        return true;
+    }
+
+    private string TranslateCallTarget(
+        ExpressionParser.ExpressionNode expression) =>
+        TryGetStandardListFactoryTarget(expression, out string target)
+            ? target
+            : TranslateExpression(expression);
     private string TranslateExpression(
         ExpressionParser.ExpressionNode? expression)
     {
         if (expression is null)
             return string.Empty;
+
+        if (TryGetStandardListFactoryTarget(expression, out string factoryTarget))
+            return factoryTarget + "()";
 
         return expression.Kind switch
         {
@@ -1176,17 +1230,252 @@ public sealed class DelphiToCSharpTranslator
         return $"{target}[{index}]";
     }
 
+private bool TryTranslateStreamCall(
+    ExpressionParser.ExpressionNode expression,
+    ExpressionParser.ExpressionNode target,
+    out string translated)
+{
+    translated = string.Empty;
+    if (_resolver is null ||
+        expression.Children.Count != 3 ||
+        target.Kind != ExpressionParser.ExpressionKind.MemberAccess ||
+        target.Children.Count != 2 ||
+        target.Children[1].Kind != ExpressionParser.ExpressionKind.Identifier)
+        return false;
+
+    string operation = target.Children[1].Text.ToLowerInvariant() switch
+    {
+        "read" => "Read",
+        "readbuffer" => "ReadBuffer",
+        "write" => "Write",
+        "writebuffer" => "WriteBuffer",
+        _ => string.Empty
+    };
+    if (operation.Length == 0)
+        return false;
+
+    string? receiverType = ResolveExpressionType(target.Children[0]);
+    if (receiverType is null ||
+        !_resolver.IsInheritedTStreamOperation(
+            receiverType, operation, _unitName))
+        return false;
+
+    ExpressionParser.ExpressionNode buffer = expression.Children[1];
+    string argument;
+    if (buffer.Kind == ExpressionParser.ExpressionKind.Dereference &&
+        buffer.Children.Count == 1)
+    {
+        string? pointerType = ResolveExpressionType(buffer.Children[0]);
+        if (pointerType is null ||
+            !_resolver.Resolve(pointerType, _unitName).IsPointer)
+            return false;
+        argument = TranslateExpression(buffer.Children[0]);
+    }
+    else
+    {
+        string? bufferType = ResolveExpressionType(buffer);
+        if (bufferType is null)
+            return false;
+        string mapped = MapType(bufferType);
+        bool scalar = mapped is
+            "bool" or "byte" or "sbyte" or "char" or
+            "short" or "ushort" or "int" or "uint" or
+            "long" or "ulong" or "float" or "double" or
+            "IntPtr" or "UIntPtr";
+
+        if (!scalar && mapped != "byte[]")
+            return false;
+        if (scalar && buffer.Kind != ExpressionParser.ExpressionKind.Identifier)
+            return false;
+
+        argument = TranslateExpression(buffer);
+        if (scalar && operation is "Read" or "ReadBuffer")
+            argument = "ref " + argument;
+    }
+
+    string receiver = TranslateExpression(target.Children[0]);
+    string count = TranslateExpression(expression.Children[2]);
+    translated = $"{receiver}.{operation}({argument}, checked((int)({count})))";
+    return true;
+}
+
+    private bool IsStandardAnsiStringValue(
+        ExpressionParser.ExpressionNode expression)
+    {
+        string? type = ResolveExpressionType(expression);
+        if (_resolver is null || type is null)
+            return false;
+
+        TypeResolution resolution = _resolver.Resolve(type, _unitName);
+        return resolution.IsResolved &&
+            resolution.DeclaringUnitName is null &&
+            !resolution.IsPointer &&
+            MapType(type) == "AnsiString";
+    }
+
+    private bool TryTranslateAnsiStringCall(
+        ExpressionParser.ExpressionNode expression,
+        out string translated)
+    {
+        translated = string.Empty;
+        if (_resolver is null || _unitName is null ||
+            expression.Kind != ExpressionParser.ExpressionKind.Call ||
+            expression.Children.Count < 2)
+            return false;
+
+        var target = expression.Children[0];
+
+        if (target.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            !_resolver.HasVisibleValueDeclaration(target.Text, _unitName) &&
+            ResolveExpressionType(target) is null)
+        {
+            var value = expression.Children[1];
+            if (value.Kind == ExpressionParser.ExpressionKind.Identifier &&
+                IsStandardAnsiStringValue(value))
+            {
+                string name = TranslateExpression(value);
+                if (target.Text.Equals("SetLength", StringComparison.OrdinalIgnoreCase) &&
+                    expression.Children.Count == 3)
+                {
+                    string length = TranslateExpression(expression.Children[2]);
+                    translated = $"{name} = {name}.WithLength(checked((int)({length})))";
+                    return true;
+                }
+
+                if (target.Text.Equals("Length", StringComparison.OrdinalIgnoreCase) &&
+                    expression.Children.Count == 2)
+                {
+                    translated = $"{name}.Length";
+                    return true;
+                }
+            }
+        }
+
+        if (target.Kind != ExpressionParser.ExpressionKind.MemberAccess ||
+            target.Children.Count != 2 || expression.Children.Count != 3)
+            return false;
+
+        var receiver = target.Children[0];
+        var member = target.Children[1];
+        string? receiverType = ResolveExpressionType(receiver);
+        if (receiverType is null ||
+            member.Kind != ExpressionParser.ExpressionKind.Identifier)
+            return false;
+
+        string operation = member.Text.ToLowerInvariant() switch
+        {
+            "read" => "Read",
+            "readbuffer" => "ReadBuffer",
+            "write" => "Write",
+            "writebuffer" => "WriteBuffer",
+            _ => string.Empty
+        };
+        if (operation.Length == 0 ||
+            !_resolver.IsInheritedTStreamOperation(
+                receiverType, operation, _unitName))
+            return false;
+
+        var buffer = expression.Children[1];
+        if (buffer.Kind != ExpressionParser.ExpressionKind.Dereference ||
+            buffer.Children.Count != 1)
+            return false;
+
+        var cast = buffer.Children[0];
+        if (cast.Kind != ExpressionParser.ExpressionKind.Call ||
+            cast.Children.Count != 2 ||
+            cast.Children[0].Kind != ExpressionParser.ExpressionKind.Identifier)
+            return false;
+
+        string castName = cast.Children[0].Text;
+        if (!castName.Equals("PChar", StringComparison.OrdinalIgnoreCase) &&
+            !castName.Equals("PAnsiChar", StringComparison.OrdinalIgnoreCase))
+            return false;
+        if (_resolver.HasVisibleValueDeclaration(castName, _unitName))
+            return false;
+        TypeResolution pointerResolution = _resolver.Resolve(castName, _unitName);
+        if (!pointerResolution.IsResolved || pointerResolution.Chain.Count > 0)
+            return false;
+
+        var valueExpression = cast.Children[1];
+        if (valueExpression.Kind != ExpressionParser.ExpressionKind.Identifier ||
+            !IsStandardAnsiStringValue(valueExpression))
+            return false;
+
+        string argument = TranslateExpression(valueExpression);
+        if (operation is "Read" or "ReadBuffer")
+            argument = "ref " + argument;
+
+        string count = TranslateExpression(expression.Children[2]);
+        translated = "global::FireURQ.Runtime.AnsiStringStreams." +
+            $"{operation}({TranslateExpression(receiver)}, {argument}, " +
+            $"checked((int)({count})))";
+        return true;
+    }
+    private bool TryTranslateDeclaredTypeCast(
+        ExpressionParser.ExpressionNode expression,
+        out string translated)
+    {
+        translated = string.Empty;
+        if (_resolver is null || _unitName is null ||
+            expression.Kind != ExpressionParser.ExpressionKind.Call ||
+            expression.Children.Count != 2)
+            return false;
+
+        var target = expression.Children[0];
+        if (target.Kind != ExpressionParser.ExpressionKind.Identifier ||
+            ResolveExpressionType(target) is not null ||
+            _resolver.HasVisibleNonTypeDeclaration(target.Text, _unitName))
+            return false;
+
+        TypeResolution resolution = _resolver.Resolve(target.Text, _unitName);
+        if (!resolution.IsResolved || resolution.IsPointer ||
+            (resolution.Chain.Count == 0 &&
+             resolution.DeclaringUnitName is null))
+            return false;
+
+        string type = MapType(target.Text);
+        string value = TranslateExpression(expression.Children[1]);
+        translated = $"(({type})({value}))";
+        return true;
+    }
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
+    if (TryTranslateDeclaredTypeCast(expression, out string declaredCast))
+        return declaredCast;
+
+    if (TryTranslateAnsiStringCall(expression, out string ansiStringCall))
+        return ansiStringCall;
+
     if (expression.Children.Count == 0)
         return expression.Text;
 
     ExpressionParser.ExpressionNode targetExpression =
         expression.Children[0];
 
+    if (TryTranslateStreamCall(expression, targetExpression, out string streamCall))
+        return streamCall;
+
+    if (expression.Children.Count == 1 &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+        targetExpression.Children.Count == 2 &&
+        targetExpression.Children[1].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Children[1].Text.Equals(
+            "Free", StringComparison.OrdinalIgnoreCase))
+    {
+        ExpressionParser.ExpressionNode receiver = targetExpression.Children[0];
+        string? receiverType = ResolveExpressionType(receiver);
+        if (receiverType is not null &&
+            _resolver is not null &&
+            _resolver.IsInheritedTObjectFree(receiverType, _unitName))
+        {
+            return "global::FireURQ.Runtime.TObject.Free(" +
+                TranslateExpression(receiver) + ")";
+        }
+    }
+
     string target =
-        TranslateExpression(
+        TranslateCallTarget(
             targetExpression);
 
     var arguments = new List<string>();

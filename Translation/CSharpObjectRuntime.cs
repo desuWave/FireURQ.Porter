@@ -7,6 +7,43 @@ public static class CSharpObjectRuntime
 #nullable enable
 namespace FireURQ.Runtime
 {
+    // Reference-count portion of the Delphi interface contract.
+    // QueryInterface is not implemented yet.
+    public interface IInterface
+    {
+        int _AddRef();
+        int _Release();
+    }
+
+    public class TInterfacedObject : TObject, IInterface
+    {
+        int IInterface._AddRef() => _AddRef();
+        int IInterface._Release() => _Release();
+
+        protected int FRefCount;
+
+        public int RefCount =>
+            global::System.Threading.Volatile.Read(ref FRefCount);
+
+        // Delphi also permits protected-member access within its unit.
+        // The generated units currently share one C# assembly.
+        protected internal int _AddRef()
+        {
+            return global::System.Threading.Interlocked.Increment(
+                ref FRefCount);
+        }
+
+        protected internal int _Release()
+        {
+            int remaining =
+                global::System.Threading.Interlocked.Decrement(
+                    ref FRefCount);
+            if (remaining == 0)
+                Destroy();
+            return remaining;
+        }
+    }
+
     public class TObject
     {
         private int __fireurqDestructorDepth;

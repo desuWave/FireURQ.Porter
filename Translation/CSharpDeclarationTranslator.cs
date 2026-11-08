@@ -986,7 +986,9 @@ public sealed class CSharpDeclarationTranslator
     {
         var builder = new StringBuilder();
         string baseType = string.IsNullOrWhiteSpace(@interface.BaseType)
-            ? string.Empty
+            ? (@interface.Name.Equals("IInterface", StringComparison.OrdinalIgnoreCase)
+                ? string.Empty
+                : " : " + MapType("IInterface"))
             : $" : {MapType(@interface.BaseType)}";
 
         builder.AppendLine($"public interface {@interface.Name}{baseType}");
