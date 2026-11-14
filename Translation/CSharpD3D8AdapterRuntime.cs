@@ -327,6 +327,20 @@ public static class D3D8
         return (TMethod)(object)Marshal.GetDelegateForFunctionPointer(entry, typeof(TMethod));
     }
 
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int RenderStateCall(IntPtr self, int state, uint value);
+
+    public const int D3DRS_ZENABLE = 7;
+    public const uint D3DZB_FALSE = 0;
+    public const uint D3DZB_TRUE = 1;
+
+    public static int SetRenderState(IDirect3DDevice8 device, int state, uint value)
+    {
+        IntPtr self = Marshal.GetComInterfaceForObject(device, typeof(IDirect3DDevice8));
+        try { return DrawMethod<RenderStateCall>(self, 50)(self, state, value); }
+        finally { Marshal.Release(self); }
+    }
+
     public static int SetVertexShader(IDirect3DDevice8 device, uint shader)
     {
         IntPtr self = Marshal.GetComInterfaceForObject(device, typeof(IDirect3DDevice8));
