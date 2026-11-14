@@ -2,6 +2,7 @@ param(
     [string]$RootPath = (Split-Path -Parent $PSScriptRoot),
     [int]$PreviousErrorCount = 142,
     [switch]$CheckD3D8RenderTargets,
+    [switch]$CheckQuestEntryPoints,
     [string[]]$SourceRoots = @(
         'E:\EVI_DATA\EVI_Projects\fireurq-master',
         'E:\EVI_DATA\EVI_Projects\d2dge-furq_2_2_4'
@@ -91,6 +92,31 @@ try {
             [System.IO.Directory]::Exists($generatedRoot)
 
         if ($ready) {
+            if ($CheckQuestEntryPoints) {
+                $quest = Join-Path $SourceRoots[0] 'tests\ver1.8\202.simple_links.qst'
+                $report.Add("=== Quest entry point audit ===")
+                $report.Add("Author fixture present: $(Test-Path -LiteralPath $quest -PathType Leaf)")
+                $generatedFiles = @(
+                    @{ Path = 'fireurq-master\furqContext.cs'; Names = @('Load', 'DeleteComments') }
+                    @{ Path = 'fireurq-master\f2\f2ScnMain.cs'; Names = @('DoOpenQuest', 'OpenCodeFileProc', 'StartOver') }
+                )
+                foreach ($entry in $generatedFiles) {
+                    $file = Join-Path $generatedRoot $entry.Path
+                    if (!(Test-Path -LiteralPath $file -PathType Leaf)) {
+                        $report.Add("Missing generated file: $($entry.Path)")
+                        continue
+                    }
+                    foreach ($name in $entry.Names) {
+                        $pattern = '^\s*(?:(?:public|private|protected|internal|static|virtual|override)\s+)*(?:void|string)\s+' + $name + '\('
+                        $hits = @(Select-String -LiteralPath $file -Pattern $pattern)
+                        if (!$hits.Count) { $report.Add("No generated declaration: $name"); continue }
+                        foreach ($hit in $hits) {
+                            $report.Add(('{0}:{1}: {2}' -f $entry.Path, $hit.LineNumber, $hit.Line.Trim()))
+                        }
+                    }
+                }
+            }
+
             if ($CheckD3D8RenderTargets) {
                 $core = [IO.File]::ReadAllText((Join-Path $generatedRoot 'd2dge-furq_2_2_4\d2dCore.cs'))
                 $types = [IO.File]::ReadAllText((Join-Path $generatedRoot 'd2dge-furq_2_2_4\d2dTypes.cs'))
