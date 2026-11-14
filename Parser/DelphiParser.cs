@@ -2055,6 +2055,7 @@ private void ParseLocalVariableSection(
     private void SkipLocalDeclarationSection()
     {
         while (!IsEnd() &&
+               !PeekKeyword("var") &&
                !PeekKeyword("begin") &&
                !PeekKeyword("function") &&
                !PeekKeyword("procedure"))

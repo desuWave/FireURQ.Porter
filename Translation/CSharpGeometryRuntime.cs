@@ -57,6 +57,16 @@ namespace FireURQ.Runtime
 
     public static class DelphiGeometry
     {
+        public static unsafe TResult WithPointAddress<TResult>(
+            ref TPoint point,
+            global::System.Func<global::System.IntPtr, TResult> action)
+        {
+            fixed (TPoint* address = &point)
+            {
+                return action((global::System.IntPtr)address);
+            }
+        }
+
         public static TPoint Point(int x, int y) =>
             new TPoint(x, y);
 

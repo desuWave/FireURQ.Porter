@@ -134,6 +134,45 @@ public sealed class ProjectTranslator
                 Encoding.UTF8);
         }
 
+        if (RequiresListRuntime(
+            inputs.Select(input => input.SemanticModel), resolver,
+            "TPoint", "TRect"))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "Geometry.cs"),
+                CSharpGeometryRuntime.Source,
+                Encoding.UTF8);
+        }
+
+        if (RequiresListRuntime(
+            inputs.Select(input => input.SemanticModel), resolver,
+            "TD3DXImageInfo"))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "D3DX8.cs"),
+                CSharpD3DX8Runtime.Source,
+                Encoding.UTF8);
+        }
+
+        if (inputs.Any(input => input.SemanticModel.Name.Equals(
+                "d2dCore", StringComparison.OrdinalIgnoreCase)))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "D2dLogFormat.cs"),
+                CSharpD2dLogFormatRuntime.Source,
+                Encoding.UTF8);
+        }
+
+        if (RequiresListRuntime(
+            inputs.Select(input => input.SemanticModel), resolver,
+            "D3DADAPTER_IDENTIFIER8"))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "D3D8Adapter.cs"),
+                CSharpD3D8AdapterRuntime.Source,
+                Encoding.UTF8);
+        }
+
         foreach (ProjectTranslationInput input in inputs)
         {
             var unitTranslator = new ProjectTranslator(
@@ -450,6 +489,22 @@ public sealed class ProjectTranslator
                     builder.AppendLine($"    // TODO: Unmatched Delphi method implementation: {body.Body.Name}");
                     builder.AppendLine();
                     continue;
+                }
+
+                // Route base-typed Windows context output to the text buffer.
+                if (input.SemanticModel.Name.Equals("furqContext", StringComparison.OrdinalIgnoreCase) &&
+                    group.Key.Equals("TFURQWinContext", StringComparison.OrdinalIgnoreCase) &&
+                    function.Name.Equals("OutText", StringComparison.OrdinalIgnoreCase) &&
+                    function.IsProcedure && !function.IsClassMethod &&
+                    function.Parameters.Count == 1 &&
+                    function.Parameters[0].Kind.Equals("const", StringComparison.OrdinalIgnoreCase) &&
+                    function.Parameters[0].Type.Equals("string", StringComparison.OrdinalIgnoreCase) &&
+                    !function.Modifiers.Contains("override", StringComparer.OrdinalIgnoreCase))
+                {
+                    function = function with
+                    {
+                        Modifiers = function.Modifiers.Append("override").ToArray()
+                    };
                 }
 
                 function = NormalizeOverrideVisibility(
