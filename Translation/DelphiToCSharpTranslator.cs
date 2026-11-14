@@ -30,13 +30,19 @@ public sealed class DelphiToCSharpTranslator
     public string TranslateFunction(
         SemanticFunction function,
         BehaviorAnalyzer.BehaviorInfo behavior,
-        bool manageDestructorLifetime = false)
+        bool manageDestructorLifetime = false) =>
+        TranslateFunctionCore(function, behavior, manageDestructorLifetime, null);
+
+    private string TranslateFunctionCore(
+        SemanticFunction function, BehaviorAnalyzer.BehaviorInfo behavior,
+        bool manageDestructorLifetime, FunctionTypeContext? parent)
     {
         FunctionTypeContext? previous =
             _currentTypeContext;
 
         _currentTypeContext =
-            new FunctionTypeContext(function);
+            new FunctionTypeContext(function, parent);
+        FunctionTypeContext context = _currentTypeContext;
 
         try
         {
@@ -123,6 +129,8 @@ public sealed class DelphiToCSharpTranslator
 
             builder.AppendLine(")");
             builder.AppendLine("{");
+            foreach (var copy in context.ConstCopies)
+                builder.AppendLine($"    var {copy.Value} = {copy.Key};");
 
             if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
                 function.Name.Equals("System_Log", StringComparison.OrdinalIgnoreCase) &&
@@ -200,8 +208,18 @@ public sealed class DelphiToCSharpTranslator
             if (!function.IsProcedure)
             {
                 builder.AppendLine(
-                    $"    {MapType(function.ReturnType)} result" +
+                    $"    {MapType(function.ReturnType)} {context.ResultName}" +
                     (MapType(function.ReturnType) == "AnsiString" ? " = default;" : ";"));
+            }
+
+            foreach (var local in function.LocalFunctions)
+            {
+                var localBehavior = BehaviorAnalyzer.Analyze(behavior.FilePath, local.Name, local.BodyTokens);
+                string translated = TranslateFunctionCore(
+                    SemanticModelBuilder.BuildFunction(local), localBehavior, false, context);
+                foreach (string line in translated.TrimEnd().Split('\n'))
+                    builder.AppendLine("    " + line.TrimEnd('\r'));
+                builder.AppendLine();
             }
 
             if (function.LocalVariables.Count > 0)
@@ -225,7 +243,7 @@ public sealed class DelphiToCSharpTranslator
                 AppendLine(
                     builder,
                     1,
-                    "return result;");
+                    $"return {_currentTypeContext?.ResultName ?? "result"};");
             }
 
             builder.AppendLine("}");
@@ -355,7 +373,7 @@ public sealed class DelphiToCSharpTranslator
                     indent,
                     function.IsProcedure
                         ? "return;"
-                        : "return result;");
+                        : $"return {_currentTypeContext?.ResultName ?? "result"};");
                 break;
 
             case BehaviorAnalyzer.StatementKind.Continue:
@@ -869,7 +887,7 @@ public sealed class DelphiToCSharpTranslator
             "Result",
             StringComparison.OrdinalIgnoreCase))
         {
-            return "result";
+            return _currentTypeContext?.ResultName ?? "result";
         }
 
         if (text.Equals(
@@ -879,7 +897,7 @@ public sealed class DelphiToCSharpTranslator
             return "null";
         }
 
-        return text;
+        return _currentTypeContext?.ResolveSpelling(text) ?? text;
     }
 
     private void TranslateAssignment(
@@ -1003,7 +1021,7 @@ public sealed class DelphiToCSharpTranslator
                 "Result",
                 StringComparison.OrdinalIgnoreCase))
         {
-            target = "result";
+            target = _currentTypeContext?.ResultName ?? "result";
         }
 
         AppendLine(
@@ -2578,10 +2596,16 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
             new(StringComparer.OrdinalIgnoreCase);
 
         private readonly string _returnType;
+        private readonly FunctionTypeContext? _parent;
+        private readonly int _depth;
+        public string ResultName { get; }
+        public Dictionary<string, string> ConstCopies { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-        public FunctionTypeContext(
-            SemanticFunction function)
+        public FunctionTypeContext(SemanticFunction function, FunctionTypeContext? parent)
         {
+            _parent = parent;
+            _depth = parent is null ? 0 : parent._depth + 1;
+            ResultName = _depth == 0 ? "result" : $"__localResult{_depth}";
             foreach (
                 SemanticParameter parameter
                 in function.Parameters)
@@ -2598,8 +2622,22 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
                     variable.Type;
             }
 
-            _returnType =
-                function.ReturnType;
+            if (function.LocalFunctions.Count != 0)
+            {
+                foreach (var parameter in function.Parameters)
+                {
+                    if (!parameter.Kind.Equals("const", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    string copy = $"__captured{_depth}_{parameter.Name}";
+                    while (_identifiers.ContainsKey(copy) || parent?.ResolveIdentifier(copy) is not null)
+                        copy += "_";
+                    ConstCopies.Add(parameter.Name, copy);
+                    _identifiers.Add(copy, parameter.Type);
+                }
+            }
+
+            _returnType = function.ReturnType;
         }
 
         public string? ResolveIdentifier(
@@ -2616,7 +2654,17 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
                 name,
                 out string? type)
                 ? type
-                : null;
+                : _parent?.ResolveIdentifier(name);
         }
+
+        public string ResolveSpelling(string name)
+        {
+            if (_identifiers.ContainsKey(name))
+                return name;
+            return _parent?.ResolveCapturedSpelling(name) ?? name;
+        }
+
+        private string ResolveCapturedSpelling(string name) =>
+            ConstCopies.TryGetValue(name, out string? copy) ? copy : ResolveSpelling(name);
     }
 }
