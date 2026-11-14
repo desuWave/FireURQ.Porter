@@ -66,6 +66,14 @@ Check("Following routine has its own body",
     functions.Any(value => value.Name == "Following" &&
         value.BodyTokens.Any(token => token.Text == "Marker")));
 
+var inner = outer?.LocalFunctions.SingleOrDefault();
+var nested = inner?.LocalFunctions.SingleOrDefault();
+Check("Nested declarations retain their own parameters, locals and bodies",
+    inner?.Name == "Inner" && inner.Parameters.Count == 2 &&
+    inner.LocalVariables.Any(variable => variable.Name == "local") &&
+    nested?.Name == "Nested" &&
+    nested.BodyTokens.Any(token => token.Text == "finally"));
+
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 string path = @"E:\EVI_DATA\EVI_Projects\fireurq-master\furqContext.pas";
 bool ok = new DelphiConditionalPreprocessor().TryProcess(

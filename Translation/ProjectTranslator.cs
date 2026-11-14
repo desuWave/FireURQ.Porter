@@ -134,6 +134,45 @@ public sealed class ProjectTranslator
                 Encoding.UTF8);
         }
 
+        if (RequiresListRuntime(
+            inputs.Select(input => input.SemanticModel), resolver,
+            "TPoint", "TRect"))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "Geometry.cs"),
+                CSharpGeometryRuntime.Source,
+                Encoding.UTF8);
+        }
+
+        if (RequiresListRuntime(
+            inputs.Select(input => input.SemanticModel), resolver,
+            "TD3DXImageInfo"))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "D3DX8.cs"),
+                CSharpD3DX8Runtime.Source,
+                Encoding.UTF8);
+        }
+
+        if (inputs.Any(input => input.SemanticModel.Name.Equals(
+                "d2dCore", StringComparison.OrdinalIgnoreCase)))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "D2dLogFormat.cs"),
+                CSharpD2dLogFormatRuntime.Source,
+                Encoding.UTF8);
+        }
+
+        if (RequiresListRuntime(
+            inputs.Select(input => input.SemanticModel), resolver,
+            "D3DADAPTER_IDENTIFIER8"))
+        {
+            File.WriteAllText(
+                Path.Combine(runtimeDirectory, "D3D8Adapter.cs"),
+                CSharpD3D8AdapterRuntime.Source,
+                Encoding.UTF8);
+        }
+
         foreach (ProjectTranslationInput input in inputs)
         {
             var unitTranslator = new ProjectTranslator(
@@ -366,7 +405,7 @@ public sealed class ProjectTranslator
                     builder,
                     input);
 
-                string outputText = builder.ToString();
+                string outputText = AdaptD2dRenderTargets(input.SemanticModel.Name, builder.ToString());
                 File.WriteAllText(outputFile, outputText, Encoding.UTF8);
 
                 return new TranslationResult(
@@ -379,7 +418,7 @@ public sealed class ProjectTranslator
             }
 
             int onlyClassFunctionsTranslated = AppendClassImplementations(builder, input);
-            string finalOutput = builder.ToString();
+            string finalOutput = AdaptD2dRenderTargets(input.SemanticModel.Name, builder.ToString());
             File.WriteAllText(outputFile, finalOutput, Encoding.UTF8);
 
             return new TranslationResult(
@@ -394,6 +433,91 @@ public sealed class ProjectTranslator
         {
             return new TranslationResult(input.FilePath, outputFile, false, 0, 0, ex.ToString());
         }
+    }
+
+
+    private static string AdaptD2dRenderTargets(string unitName, string source)
+    {
+        // Render targets contain COM references and are used by identity in D2D.
+        if (unitName.Equals("d2dTypes", StringComparison.OrdinalIgnoreCase))
+        {
+            return source
+                .Replace("using Pd2dRenderTarget = global::System.IntPtr;", "")
+                .Replace("public struct Td2dRenderTarget", "public sealed class Td2dRenderTarget");
+        }
+
+        if (!unitName.Equals("d2dCore", StringComparison.OrdinalIgnoreCase))
+            return source;
+
+        source = global::System.Text.RegularExpressions.Regex.Replace(
+            source, @"\bIntPtr(?=\s+(?:aTarget|l_Target|f_CurTarget|Target_Create)\b)", "Td2dRenderTarget");
+        source = global::System.Text.RegularExpressions.Regex.Replace(
+            source, @"\b(aTarget|l_Target)\s*!=\s*(?:global::System\.)?IntPtr\.Zero\b", "$1 != null");
+
+        return source
+            .Replace("TList f_Targets;", "List<Td2dRenderTarget> f_Targets;")
+            .Replace("f_Targets = TList.Create();", "f_Targets = new List<Td2dRenderTarget>();")
+            .Replace("f_Targets.Free();", "ClearTargets();")
+            .Replace("f_Targets.Pack();", "f_CurTarget = null;")
+            .Replace("Pd2dRenderTarget(f_Targets.Items[I])", "f_Targets[I]")
+            .Replace("Dispose(f_Targets[I]);", "ReleaseTargetResources(f_Targets[I]);")
+            .Replace("Dispose(Pd2dRenderTarget(f_Targets.Items[l_Idx]));",
+                "ReleaseTargetResources(f_Targets[l_Idx]);")
+            .Replace("f_Targets.Delete(l_Idx);", "f_Targets.RemoveAt(l_Idx);")
+            .Replace("if (aTarget != f_CurTarget)",
+                "if (!ReferenceEquals(aTarget, f_CurTarget) || (aTarget != null && aTarget.Tex == null))")
+            .Replace("aTarget.Tex.GetSurfaceLevel(0, out l_Surf);",
+                "if (aTarget.Tex == null || aTarget.Tex.GetSurfaceLevel(0, out l_Surf) < 0) return false;")
+            .Replace("f_D3DDevice.SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);",
+                "global::FireURQ.Runtime.D3D8.SetRenderState(f_D3DDevice, global::FireURQ.Runtime.D3D8.D3DRS_ZENABLE, global::FireURQ.Runtime.D3D8.D3DZB_TRUE);")
+            .Replace("f_D3DDevice.SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);",
+                "global::FireURQ.Runtime.D3D8.SetRenderState(f_D3DDevice, global::FireURQ.Runtime.D3D8.D3DRS_ZENABLE, global::FireURQ.Runtime.D3D8.D3DZB_FALSE);")
+            .Replace("TD3DMatrix l_Temp;", "")
+            .Replace("D3DXMatrixScaling(f_matProj, 1.0, ( - 1.0), 1.0);", """
+f_matProj = new TD3DMatrix
+        {
+            _11 = 2f / aWidth,
+            _22 = -2f / aHeight,
+            _33 = 1f,
+            _41 = -1f - 1f / aWidth,
+            _42 = 1f + 1f / aHeight,
+            _44 = 1f
+        };
+""")
+            .Replace("D3DXMatrixTranslation(l_Temp, ( - 0.5), (aHeight + 0.5), 0.0);", "")
+            .Replace("D3DXMatrixMultiply(f_matProj, f_matProj, l_Temp);", "")
+            .Replace("D3DXMatrixOrthoOffCenterLH(l_Temp, 0, aWidth, 0, aHeight, 0, 1.0);", "")
+            .Replace("D3DXMatrixIdentity(f_matView);",
+                "f_matView = new TD3DMatrix { _11 = 1f, _22 = 1f, _33 = 1f, _44 = 1f };")
+            .Replace("f_D3DDevice.SetTransform(D3DTS_PROJECTION, f_matProj);",
+                "f_D3DDevice.SetTransform(3, ref f_matProj);")
+            .Replace("f_D3DDevice.SetTransform(D3DTS_VIEW, f_matView);",
+                "f_D3DDevice.SetTransform(2, ref f_matView);")
+            .Replace("New(l_Target);", "l_Target = new Td2dRenderTarget();")
+            .Replace("Dispose(l_Target);", "ReleaseTargetResources(l_Target);")
+            .Replace("if (~(f_CurTarget != null))", "if (f_CurTarget == null)")
+            .Replace("if (~(f_D3DDevice != null))", "if (f_D3DDevice == null)")
+            .Replace("f_D3DDevice.TestCooperativeLevel == D3DERR_DEVICELOST",
+                "f_D3DDevice.TestCooperativeLevel() == unchecked((int)0x88760868)")
+            .Replace("f_D3DDevice.Reset(ref f_D3DPP);",
+                "if (f_D3DDevice.Reset(ref f_D3DPP) < 0) return;")
+            .Replace("Failed(D3DXCreateTexture(f_D3DDevice, aWidth, aHeight, 1, D3DUSAGE_RENDERTARGET, f_D3DPP.BackBufferFormat, D3DPOOL_DEFAULT, l_Target.Tex))",
+                "f_D3DDevice.CreateTexture(unchecked((uint)aWidth), unchecked((uint)aHeight), 1, 1u, f_D3DPP.BackBufferFormat, 0, out l_Target.Tex) < 0")
+            .Replace("D3DXCreateTexture(f_D3DDevice, l_Target.Width, l_Target.Height, 1, D3DUSAGE_RENDERTARGET, f_D3DPP.BackBufferFormat, D3DPOOL_DEFAULT, l_Target.Tex);",
+                "f_D3DDevice.CreateTexture(unchecked((uint)l_Target.Width), unchecked((uint)l_Target.Height), 1, 1u, f_D3DPP.BackBufferFormat, 0, out l_Target.Tex);")
+            .Replace("l_Target.Tex.GetLevelDesc(0, l_Desc);",
+                "if (l_Target.Tex.GetLevelDesc(0, out l_Desc) < 0) { ReleaseTargetResources(l_Target); return null; }")
+            .Replace("l_Target.Width = l_Desc.Width;", "l_Target.Width = unchecked((int)l_Desc.Width);")
+            .Replace("l_Target.Height = l_Desc.Height;", "l_Target.Height = unchecked((int)l_Desc.Height);")
+            .Replace("private void ClearTargets()", """
+private static void ReleaseTargetResources(Td2dRenderTarget target)
+    {
+        target.Depth = null;
+        target.Tex = null;
+    }
+
+    private void ClearTargets()
+""");
     }
 
     private int AppendTopLevelImplementations(
@@ -452,10 +576,35 @@ public sealed class ProjectTranslator
                     continue;
                 }
 
+                // Route base-typed Windows context output to the text buffer.
+                if (input.SemanticModel.Name.Equals("furqContext", StringComparison.OrdinalIgnoreCase) &&
+                    group.Key.Equals("TFURQWinContext", StringComparison.OrdinalIgnoreCase) &&
+                    function.Name.Equals("OutText", StringComparison.OrdinalIgnoreCase) &&
+                    function.IsProcedure && !function.IsClassMethod &&
+                    function.Parameters.Count == 1 &&
+                    function.Parameters[0].Kind.Equals("const", StringComparison.OrdinalIgnoreCase) &&
+                    function.Parameters[0].Type.Equals("string", StringComparison.OrdinalIgnoreCase) &&
+                    !function.Modifiers.Contains("override", StringComparer.OrdinalIgnoreCase))
+                {
+                    function = function with
+                    {
+                        Modifiers = function.Modifiers.Append("override").ToArray()
+                    };
+                }
+
                 function = NormalizeOverrideVisibility(
                     function, group.Key, input.SemanticModel);
                 string translated = _functionTranslator.TranslateFunction(
                     function, body.Behavior, manageDestructorLifetime: true);
+                if (input.SemanticModel.Name.Equals("furqContext", StringComparison.OrdinalIgnoreCase) &&
+                    group.Key.Equals("TFURQCode", StringComparison.OrdinalIgnoreCase) &&
+                    function.Name.Equals("Load", StringComparison.OrdinalIgnoreCase) &&
+                    function.Parameters.Count == 2 &&
+                    function.Parameters[1].Type.Equals("TFURQCodeLoadProc", StringComparison.OrdinalIgnoreCase))
+                {
+                    translated = AdaptQuestLoader(translated);
+                }
+
                 builder.Append(IndentAndModifySignature(
                     translated, GetInstanceImplementationPrefix(function), 1));
                 builder.AppendLine();
@@ -467,6 +616,46 @@ public sealed class ProjectTranslator
         }
 
         return translatedCount;
+    }
+
+    private static string AdaptQuestLoader(string source)
+    {
+        // Delphi string offsets are one-based, and Delete mutates its argument.
+        return source
+            .Replace("uint l_OpenPos;", "")
+            .Replace("uint l_ClosePos;", "")
+            .Replace("uint l_Pos;", "int l_Pos;")
+            .Replace("uint l_Pos2;", "int l_Pos2;")
+            .Replace("l_Pos = Pos(\"*/\", l_Str);", "l_Pos = l_Str.IndexOf(\"*/\", StringComparison.Ordinal) + 1;")
+            .Replace("l_Pos = Pos(\"/*\", l_Str);", "l_Pos = l_Str.IndexOf(\"/*\", StringComparison.Ordinal) + 1;")
+            .Replace("l_Pos = Pos(\";\", aList[I]);", "l_Pos = aList[I].IndexOf(';') + 1;")
+            .Replace("PosEx(\"*/\", l_Str, (l_Pos + 2))", "(l_Str.IndexOf(\"*/\", l_Pos + 1, StringComparison.Ordinal) + 1)")
+            .Replace("Delete(l_Str, 1, (l_Pos + 1));", "l_Str = l_Str[(l_Pos + 1)..];")
+            .Replace("Delete(l_Str, l_Pos, ((l_Pos2 - l_Pos) + 2));", "l_Str = l_Str.Remove(l_Pos - 1, l_Pos2 - l_Pos + 2);")
+            .Replace("Delete(l_Str, l_Pos, MaxInt);", "l_Str = l_Str[..(l_Pos - 1)];")
+            .Replace("Copy(aList[I], 1, (l_Pos - 1))", "aList[I][..(l_Pos - 1)]")
+            .Replace("Pred(aList.Count)", "(aList.Count - 1)")
+            .Replace("Pred(f_Source.Count)", "(f_Source.Count - 1)")
+            .Replace("Pred(l_Buf.Count)", "(l_Buf.Count - 1)")
+            .Replace("Pred(l_Includes.Count)", "(l_Includes.Count - 1)")
+            .Replace("AnsiReplaceStr(f_Source[I], '\\t', \"    \")", "f_Source[I].Replace(\"\\t\", \"    \")")
+            .Replace("Length(l_Str)", "l_Str.Length")
+            .Replace("for (J = 1; J <= l_Len; J++)", "var chars = l_Str.ToCharArray();\n        for (J = 0; J < l_Len; J++)")
+            .Replace("l_Str[J]", "chars[J]")
+            .Replace("TrimLeft(l_Str)", "new string(chars).TrimStart()")
+            .Replace("AnsiStartsStr(\":\", l_Str)", "l_Str.StartsWith(\":\", StringComparison.Ordinal)")
+            .Replace("Delete(l_Str, 1, 1);", "l_Str = l_Str[1..];")
+            .Replace("Trim(l_Str)", "l_Str.Trim()")
+            .Replace("Trim(l_Buf[I])", "l_Buf[I].Trim()")
+            .Replace("AnsiStartsText(c_sUsePrefix, l_Label)", "l_Label.StartsWith(c_sUsePrefix, StringComparison.OrdinalIgnoreCase)")
+            .Replace("AnsiStartsText(c_sInclude, l_Str)", "l_Str.StartsWith(c_sInclude, StringComparison.OrdinalIgnoreCase)")
+            .Replace("Copy(l_Label, 5, MaxInt)", "l_Label[Math.Min(4, l_Label.Length)..]")
+            .Replace("Trim(Copy(l_Str, 10, MaxInt))", "l_Str[Math.Min(9, l_Str.Length)..].Trim()")
+            .Replace("aLoadProc(aOneFileName)", "aLoadProc(aOneFilename)")
+            .Replace("ExtractFilePath(aFilename)", "System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(aFilename))!")
+            .Replace("ExtractFilePath(aOneFilename)", "System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(aOneFilename))!")
+            .Replace("ExtractRelativePath(l_BasePath, aOneFilename)", "System.IO.Path.GetRelativePath(l_BasePath, aOneFilename)")
+            .Replace("(l_Path + l_Includes[I])", "System.IO.Path.Combine(l_Path, l_Includes[I])");
     }
 
     private SemanticFunction NormalizeOverrideVisibility(

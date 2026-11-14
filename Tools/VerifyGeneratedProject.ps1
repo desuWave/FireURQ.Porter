@@ -1,6 +1,8 @@
 param(
     [string]$RootPath = (Split-Path -Parent $PSScriptRoot),
     [int]$PreviousErrorCount = 142,
+    [switch]$CheckD3D8RenderTargets,
+    [switch]$CheckQuestEntryPoints,
     [string[]]$SourceRoots = @(
         'E:\EVI_DATA\EVI_Projects\fireurq-master',
         'E:\EVI_DATA\EVI_Projects\d2dge-furq_2_2_4'
@@ -12,10 +14,15 @@ $utf8 = [System.Text.UTF8Encoding]::new($false)
 $report = [System.Collections.Generic.List[string]]::new()
 
 try {
-    $directory = Join-Path ([System.IO.Path]::GetTempPath()) (
+    $workRoot = Join-Path $RootPath '.fireurq-work'
+    $directory = Join-Path $workRoot (
         'FireURQ.ProjectVerification.' + [Guid]::NewGuid().ToString('N'))
     [System.IO.Directory]::CreateDirectory($directory) | Out-Null
     $report.Add("Verification directory: $directory")
+    $oldTemp = $env:TEMP
+    $oldTmp = $env:TMP
+    $env:TEMP = $directory
+    $env:TMP = $directory
 
     function Invoke-DotnetLogged {
         param([string[]]$ToolArguments, [string]$LogName)
@@ -30,6 +37,7 @@ try {
         return @{ Lines = $lines; ExitCode = $code }
     }
 
+    $SourceRoots = @($SourceRoots | ForEach-Object { (Resolve-Path -LiteralPath $_).Path })
     $ready = $true
     foreach ($sourceRoot in $SourceRoots) {
         if (-not [System.IO.Directory]::Exists($sourceRoot)) {
@@ -85,6 +93,51 @@ try {
             [System.IO.Directory]::Exists($generatedRoot)
 
         if ($ready) {
+            if ($CheckQuestEntryPoints) {
+                $quest = Join-Path $SourceRoots[0] 'tests\ver1.8\202.simple_links.qst'
+                $report.Add("=== Quest entry point audit ===")
+                $report.Add("Author fixture present: $(Test-Path -LiteralPath $quest -PathType Leaf)")
+                $generatedFiles = @(
+                    @{ Path = 'fireurq-master\furqContext.cs'; Names = @('Load', 'DeleteComments') }
+                    @{ Path = 'fireurq-master\f2\f2ScnMain.cs'; Names = @('DoOpenQuest', 'OpenCodeFileProc', 'StartOver') }
+                )
+                foreach ($entry in $generatedFiles) {
+                    $file = Join-Path $generatedRoot $entry.Path
+                    if (!(Test-Path -LiteralPath $file -PathType Leaf)) {
+                        $report.Add("Missing generated file: $($entry.Path)")
+                        continue
+                    }
+                    foreach ($name in $entry.Names) {
+                        $pattern = '^\s*(?:(?:public|private|protected|internal|static|virtual|override)\s+)*(?:void|string)\s+' + $name + '\('
+                        $hits = @(Select-String -LiteralPath $file -Pattern $pattern)
+                        if (!$hits.Count) { $report.Add("No generated declaration: $name"); continue }
+                        foreach ($hit in $hits) {
+                            $report.Add(('{0}:{1}: {2}' -f $entry.Path, $hit.LineNumber, $hit.Line.Trim()))
+                        }
+                    }
+                }
+            }
+
+            if ($CheckD3D8RenderTargets) {
+                $core = [IO.File]::ReadAllText((Join-Path $generatedRoot 'd2dge-furq_2_2_4\d2dCore.cs'))
+                $types = [IO.File]::ReadAllText((Join-Path $generatedRoot 'd2dge-furq_2_2_4\d2dTypes.cs'))
+                $checks = [ordered]@{
+                    'Reference type' = ($types -match '\bsealed class Td2dRenderTarget\b')
+                    'Current target' = ($core -match '\bTd2dRenderTarget f_CurTarget;')
+                    'Typed target list' = ($core -match '\bList<Td2dRenderTarget> f_Targets;')
+                    'Optional screen target' = ($core -match '\bGfx_BeginScene\(Td2dRenderTarget aTarget = default\)')
+                    'Target creation' = ($core -match '\bTd2dRenderTarget Target_Create\(' -and $core -match 'out l_Target\.Tex\)')
+                    'Texture description' = ($core -match '\bGetLevelDesc\(0, out l_Desc\)')
+                    'Target removal' = ($core -match '\bf_Targets\.RemoveAt\(l_Idx\)')
+                    'Reset HRESULT' = ($core -match 'Reset\(ref f_D3DPP\) < 0')
+                    'Legacy target operations removed' = ($core -notmatch '\b(?:New\(l_Target\)|Dispose\(l_Target\)|Pd2dRenderTarget\(|f_Targets\.Items\b)')
+                }
+                foreach ($check in $checks.GetEnumerator()) {
+                    $status = if ($check.Value) { 'PASS' } else { 'FAIL' }
+                    $report.Add("[$status] $($check.Key)")
+                }
+            }
+
             $count = @(
                 Get-ChildItem $generatedRoot -Recurse -File -Filter '*.cs'
             ).Count
@@ -221,6 +274,12 @@ try {
 }
 catch {
     $report.Add("STOP: $($_.Exception.Message)")
+}
+finally {
+    if (Test-Path Variable:oldTemp) {
+        $env:TEMP = $oldTemp
+        $env:TMP = $oldTmp
+    }
 }
 
 $output = $report -join [Environment]::NewLine

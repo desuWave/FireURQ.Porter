@@ -199,6 +199,7 @@ public static SemanticFunction? Match(
             Modifiers = member.Modifiers
                 .Concat(implementation.Modifiers)
                 .Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
+            LocalFunctions = implementation.LocalFunctions,
             Visibility = member.Visibility
         };
     }

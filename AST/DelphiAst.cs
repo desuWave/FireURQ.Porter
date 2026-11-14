@@ -145,6 +145,7 @@ public sealed record DelphiFunction(
     IReadOnlyList<LexerToken> BodyTokens
 ) : DelphiNode
 {
+    public IReadOnlyList<DelphiFunction> LocalFunctions { get; init; } = Array.Empty<DelphiFunction>();
     public bool IsClassMethod { get; init; }
     public bool IsConstructor { get; init; }
     public bool IsDestructor { get; init; }

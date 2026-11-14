@@ -861,11 +861,24 @@ private BehaviorStatement ParseCase()
         string label =
             JoinTokens(labelTokens);
 
-        string[] labels =
-            label.Split(
-                ',',
-                StringSplitOptions.RemoveEmptyEntries |
-                StringSplitOptions.TrimEntries);
+        var labels = new List<string>();
+        var part = new List<LexerToken>();
+        foreach (LexerToken token in labelTokens)
+        {
+            if (token.Text == "," && token.Kind != TokenKind.String &&
+                token.Kind != TokenKind.Character)
+            {
+                if (part.Count > 0)
+                    labels.Add(JoinTokens(part));
+                part.Clear();
+            }
+            else
+            {
+                part.Add(token);
+            }
+        }
+        if (part.Count > 0)
+            labels.Add(JoinTokens(part));
 
         var armChildren =
             new List<BehaviorStatement>();
@@ -903,7 +916,7 @@ private BehaviorStatement ParseCase()
             new BehaviorStatement(
                 StatementKind.Expression,
                 $"case {label}",
-                labels.Length > 0 &&
+                labels.Count > 0 &&
                 labelTokens.Count > 0
                     ? labelTokens[0].Line
                     : line,

@@ -21,6 +21,7 @@ File.WriteAllText(
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -159,6 +160,16 @@ finally
 {
     Marshal.FreeHGlobal(memory);
 }
+
+TPoint callerPoint = default;
+int result = WithPointAddress(ref callerPoint, address =>
+{
+    Marshal.StructureToPtr(Point(-123, 456), address, false);
+    return 17;
+});
+Check(callerPoint.X == -123 && callerPoint.Y == 456,
+    "WithPointAddress updates the caller's point");
+Check(result == 17, "WithPointAddress returns the callback result");
 
 Console.WriteLine($"Geometry checks: {passed}/{total} passed.");
 Environment.ExitCode = passed == total ? 0 : 1;

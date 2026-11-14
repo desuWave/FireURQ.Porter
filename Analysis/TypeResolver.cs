@@ -141,6 +141,8 @@ public sealed class TypeResolver
                     "pbyte" => "Byte",
                     "plongword" => "Longword",
                     "pguid" => "TGUID",
+                    "ppoint" => "TPoint",
+                    "pword" => "Word",
                     _ => null
                 };
 

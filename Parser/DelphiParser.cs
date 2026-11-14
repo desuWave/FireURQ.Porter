@@ -1932,10 +1932,11 @@ IReadOnlyList<DelphiVariable> localVariables =
 IReadOnlyList<LexerToken> bodyTokens =
     Array.Empty<LexerToken>();
 
+var localFunctions = new List<DelphiFunction>();
 if (readBody)
 {
     localVariables =
-        ParseLocalDeclarations();
+        ParseLocalDeclarations(localFunctions);
 
     bodyTokens =
         ReadFunctionBody();
@@ -1949,7 +1950,8 @@ return new DelphiFunction(
     localVariables,
     bodyTokens)
 {
-    Modifiers = modifiers
+    Modifiers = modifiers,
+    LocalFunctions = localFunctions.ToArray()
 };
     }
 
@@ -1957,7 +1959,7 @@ return new DelphiFunction(
     // LOCAL DECLARATIONS
     // ========================================================
 
-private IReadOnlyList<DelphiVariable> ParseLocalDeclarations()
+private IReadOnlyList<DelphiVariable> ParseLocalDeclarations(List<DelphiFunction> localFunctions)
 {
     var variables =
         new List<DelphiVariable>();
@@ -1987,7 +1989,9 @@ private IReadOnlyList<DelphiVariable> ParseLocalDeclarations()
         if (PeekKeyword("function") ||
             PeekKeyword("procedure"))
         {
-            SkipLocalCallableDeclaration();
+            bool isProcedure = PeekKeyword("procedure");
+            Advance();
+            localFunctions.Add(ParseFunction(isProcedure, readBody: true));
 
             continue;
         }
@@ -2055,6 +2059,7 @@ private void ParseLocalVariableSection(
     private void SkipLocalDeclarationSection()
     {
         while (!IsEnd() &&
+               !PeekKeyword("var") &&
                !PeekKeyword("begin") &&
                !PeekKeyword("function") &&
                !PeekKeyword("procedure"))
@@ -2063,15 +2068,6 @@ private void ParseLocalVariableSection(
         }
     }
 
-    private void SkipLocalCallableDeclaration()
-    {
-        bool isProcedure = PeekKeyword("procedure");
-        Advance();
-
-        // Reuse full parameter, local-declaration and block parsing.
-        // Nested case/try blocks must not terminate the enclosing routine.
-        _ = ParseFunction(isProcedure, readBody: true);
-    }
     // ========================================================
     // FUNCTION BODY
     // ========================================================

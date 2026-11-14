@@ -20,20 +20,29 @@ public sealed class DelphiToCSharpTranslator
         !string.IsNullOrWhiteSpace(type) && MapType(type) == "bool";
 
     private string MapType(string? type) =>
-        CSharpTypeMapper.Map(type, _resolver, _unitName);
+        string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(type?.Trim(), "Pd2dRenderTarget", StringComparison.OrdinalIgnoreCase)
+            ? "Td2dRenderTarget"
+            : CSharpTypeMapper.Map(type, _resolver, _unitName);
 
     private FunctionTypeContext? _currentTypeContext;
 
     public string TranslateFunction(
         SemanticFunction function,
         BehaviorAnalyzer.BehaviorInfo behavior,
-        bool manageDestructorLifetime = false)
+        bool manageDestructorLifetime = false) =>
+        TranslateFunctionCore(function, behavior, manageDestructorLifetime, null);
+
+    private string TranslateFunctionCore(
+        SemanticFunction function, BehaviorAnalyzer.BehaviorInfo behavior,
+        bool manageDestructorLifetime, FunctionTypeContext? parent)
     {
         FunctionTypeContext? previous =
             _currentTypeContext;
 
         _currentTypeContext =
-            new FunctionTypeContext(function);
+            new FunctionTypeContext(function, parent);
+        FunctionTypeContext context = _currentTypeContext;
 
         try
         {
@@ -58,15 +67,84 @@ public sealed class DelphiToCSharpTranslator
                 SemanticParameter parameter =
                     function.Parameters[i];
 
+                bool isLogArgumentArray =
+                    i == 1 &&
+                    string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+                    function.IsProcedure &&
+                    function.Name.Equals("System_Log", StringComparison.OrdinalIgnoreCase) &&
+                    function.Parameters.Count == 2 &&
+                    MapType(function.Parameters[0].Type) == "string" &&
+                    MapType(parameter.Type) == "TVarRec[]";
+
                 builder
                     .Append(MapParameterKind(parameter.Kind))
-                    .Append(MapType(parameter.Type))
+                    .Append(isLogArgumentArray ? "object[]" : MapType(parameter.Type))
                     .Append(' ')
-                    .Append(parameter.Name);
+                    .Append(parameter.Name)
+                    // Preserve the RenderBatch default.
+                    .Append(string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+                            function.Name.Equals("RenderBatch", StringComparison.OrdinalIgnoreCase) &&
+                            function.Parameters.Count() == 1 &&
+                            parameter.Name.Equals("aEndScene", StringComparison.OrdinalIgnoreCase) &&
+                            MapType(parameter.Type) == "bool"
+                        ? " = false"
+                        : string.Empty);
+
+                // Preserve the defaults of Td2dCore render-target calls.
+                if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (function.Name.Equals("Gfx_BeginScene", StringComparison.OrdinalIgnoreCase) &&
+                        function.Parameters.Count() == 1 &&
+                        parameter.Name.Equals("aTarget", StringComparison.OrdinalIgnoreCase))
+                    {
+                        builder.Append(" = default");
+                    }
+                    else if (function.Name.Equals("Target_Create", StringComparison.OrdinalIgnoreCase) &&
+                             i == 2 && function.Parameters.Count() == 3 &&
+                             parameter.Name.Equals("aZBuffer", StringComparison.OrdinalIgnoreCase) &&
+                             MapType(parameter.Type) == "bool")
+                    {
+                        builder.Append(" = false");
+                    }
+                }
+
+                // Preserve the defaults of Td2dCore.Texture_Load.
+                if (i > 0 &&
+                    string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+                    function.Name.Equals("Texture_Load", StringComparison.OrdinalIgnoreCase) &&
+                    function.Parameters.Select(p => p.Name).SequenceEqual(
+                        new[] { "aFileName", "aPackOnly", "aUseCache", "aMipMap", "aPicSize" },
+                        StringComparer.OrdinalIgnoreCase) &&
+                    function.Parameters.Select(p => MapType(p.Type)).SequenceEqual(
+                        new[] { "string", "bool", "bool", "bool", "IntPtr" }))
+                {
+                    builder.Append(i switch
+                    {
+                        2 => " = true",
+                        4 => " = default",
+                        _ => " = false"
+                    });
+                }
             }
 
             builder.AppendLine(")");
             builder.AppendLine("{");
+            foreach (var copy in context.ConstCopies)
+                builder.AppendLine($"    var {copy.Value} = {copy.Key};");
+
+            if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+                function.Name.Equals("System_Log", StringComparison.OrdinalIgnoreCase) &&
+                function.IsProcedure && !function.IsClassMethod &&
+                function.Parameters.Count == 1 &&
+                function.Parameters[0].Name.Equals("aString", StringComparison.OrdinalIgnoreCase) &&
+                function.Parameters[0].Kind.Equals("const", StringComparison.OrdinalIgnoreCase) &&
+                MapType(function.Parameters[0].Type) == "string")
+            {
+                builder.AppendLine(
+                    $"    global::FireURQ.Runtime.D2dLogFormat.AppendLine(f_LogFileName, {function.Parameters[0].Name});");
+                builder.AppendLine("}");
+                return builder.ToString();
+            }
 
             if (manageDestructorLifetime && function.IsDestructor)
             {
@@ -116,15 +194,32 @@ public sealed class DelphiToCSharpTranslator
                     builder.AppendLine(
                         $"    {MapType(variable.Type)} " +
                         $"{variable.Name}" +
-                        (MapType(variable.Type) == "AnsiString" ? " = default;" : ";"));
+                        (MapType(variable.Type) == "AnsiString" ||
+                         (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+                          variable.Name.Equals("l_DevInfo", StringComparison.OrdinalIgnoreCase) &&
+                          MapType(variable.Type) == "BASS_DEVICEINFO") ||
+                         (string.Equals(_unitName, "f2PicturePool", StringComparison.OrdinalIgnoreCase) &&
+                          variable.Name.Equals("l_PicSize", StringComparison.OrdinalIgnoreCase) &&
+                          MapType(variable.Type) == "TPoint")
+                            ? " = default;" : ";"));
                 }
             }
 
             if (!function.IsProcedure)
             {
                 builder.AppendLine(
-                    $"    {MapType(function.ReturnType)} result" +
+                    $"    {MapType(function.ReturnType)} {context.ResultName}" +
                     (MapType(function.ReturnType) == "AnsiString" ? " = default;" : ";"));
+            }
+
+            foreach (var local in function.LocalFunctions)
+            {
+                var localBehavior = BehaviorAnalyzer.Analyze(behavior.FilePath, local.Name, local.BodyTokens);
+                string translated = TranslateFunctionCore(
+                    SemanticModelBuilder.BuildFunction(local), localBehavior, false, context);
+                foreach (string line in translated.TrimEnd().Split('\n'))
+                    builder.AppendLine("    " + line.TrimEnd('\r'));
+                builder.AppendLine();
             }
 
             if (function.LocalVariables.Count > 0)
@@ -148,7 +243,7 @@ public sealed class DelphiToCSharpTranslator
                 AppendLine(
                     builder,
                     1,
-                    "return result;");
+                    $"return {_currentTypeContext?.ResultName ?? "result"};");
             }
 
             builder.AppendLine("}");
@@ -278,7 +373,7 @@ public sealed class DelphiToCSharpTranslator
                     indent,
                     function.IsProcedure
                         ? "return;"
-                        : "return result;");
+                        : $"return {_currentTypeContext?.ResultName ?? "result"};");
                 break;
 
             case BehaviorAnalyzer.StatementKind.Continue:
@@ -366,7 +461,7 @@ public sealed class DelphiToCSharpTranslator
                     AppendLine(
                         builder,
                         indent + 1,
-                        $"case {label}:");
+                        $"case {TranslateCaseLabel(label)}:");
                 }
             }
 
@@ -391,6 +486,30 @@ public sealed class DelphiToCSharpTranslator
             builder,
             indent,
             "}");
+    }
+
+    private static string TranslateCaseLabel(string label)
+    {
+        // A quoted '..' is a literal. Range separators follow a complete endpoint.
+        var range = System.Text.RegularExpressions.Regex.Match(
+            label, @"^('(?:''|[^'])*'|[^.]+?)\s*\.\.\s*(.+)$");
+        if (range.Success)
+            return $">= {TranslateCaseConstant(range.Groups[1].Value.Trim())} and <= {TranslateCaseConstant(range.Groups[2].Value.Trim())}";
+
+        return TranslateCaseConstant(label);
+    }
+
+    private static string TranslateCaseConstant(string label)
+    {
+        if (label.Length == 3 && label[0] == '\'' && label[2] == '\'')
+            return "'" + EscapeCSharpCharacter(label[1]) + "'";
+        if (label == "''''")
+            return "'" + EscapeCSharpCharacter('\'') + "'";
+        if (TryTranslatePascalStringLiteral(label, out string literal))
+            return literal;
+        if (label.StartsWith('$'))
+            return "0x" + label[1..];
+        return label;
     }
 
     private void TranslateIf(
@@ -761,6 +880,27 @@ public sealed class DelphiToCSharpTranslator
     private string TranslateIdentifier(
         string text)
     {
+        if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+            _resolver is not null &&
+            _currentTypeContext?.ResolveIdentifier(text) is null)
+        {
+            string? constant = text.ToUpperInvariant() switch
+            {
+                "D3DADAPTER_DEFAULT" => "D3DADAPTER_DEFAULT",
+                "D3DENUM_NO_WHQL_LEVEL" => "D3DENUM_NO_WHQL_LEVEL",
+                "D3DFMT_UNKNOWN" => "D3DFMT_UNKNOWN",
+                "D3DFMT_D16" => "D3DFMT_D16",
+                "D3DMULTISAMPLE_NONE" => "D3DMULTISAMPLE_NONE",
+                "D3DDEVTYPE_HAL" => "D3DDEVTYPE_HAL",
+                "D3DCREATE_FPU_PRESERVE" => "D3DCREATE_FPU_PRESERVE",
+                "D3DCREATE_SOFTWARE_VERTEXPROCESSING" => "D3DCREATE_SOFTWARE_VERTEXPROCESSING",
+                "D3DCREATE_HARDWARE_VERTEXPROCESSING" => "D3DCREATE_HARDWARE_VERTEXPROCESSING",
+                _ => null
+            };
+            if (constant is not null && !_resolver.HasVisibleValueDeclaration(text, _unitName!))
+                return "global::FireURQ.Runtime.D3D8." + constant;
+        }
+
         if (text.Equals("true", StringComparison.OrdinalIgnoreCase))
             return "true";
 
@@ -771,7 +911,7 @@ public sealed class DelphiToCSharpTranslator
             "Result",
             StringComparison.OrdinalIgnoreCase))
         {
-            return "result";
+            return _currentTypeContext?.ResultName ?? "result";
         }
 
         if (text.Equals(
@@ -781,7 +921,7 @@ public sealed class DelphiToCSharpTranslator
             return "null";
         }
 
-        return text;
+        return _currentTypeContext?.ResolveSpelling(text) ?? text;
     }
 
     private void TranslateAssignment(
@@ -814,6 +954,50 @@ public sealed class DelphiToCSharpTranslator
             targetExpression = targetExpression.Children[0];
         }
 
+        if (_resolver is not null &&
+            targetExpression.Kind == ExpressionParser.ExpressionKind.Dereference &&
+            targetExpression.Children.Count == 1)
+        {
+            var pointer = targetExpression.Children[0];
+            string? pointerType = ResolveExpressionType(pointer);
+            if (pointerType is not null &&
+                _resolver.Resolve(pointerType, _unitName) is
+                {
+                    IsResolved: true,
+                    PointerDepth: 1,
+                    DeclaringUnitName: null
+                } resolution &&
+                string.Equals(resolution.ResolvedName, "TPoint",
+                    StringComparison.OrdinalIgnoreCase) &&
+                _resolver.Resolve("TPoint", _unitName).Chain.Count == 0)
+            {
+                var point = statement.Assignment.Value;
+                string translatedPoint;
+                if (point.Kind == ExpressionParser.ExpressionKind.Call &&
+                    point.Children.Count == 3 &&
+                    point.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+                    string.Equals(point.Children[0].Text, "Point",
+                        StringComparison.OrdinalIgnoreCase) &&
+                    _unitName is not null &&
+                    ResolveExpressionType(point.Children[0]) is null &&
+                    !_resolver.HasVisibleValueDeclaration("Point", _unitName))
+                {
+                    string x = TranslateExpression(point.Children[1]);
+                    string y = TranslateExpression(point.Children[2]);
+                    translatedPoint =
+                        $"global::FireURQ.Runtime.DelphiGeometry.Point({x}, {y})";
+                }
+                else
+                {
+                    translatedPoint = TranslateExpression(point);
+                }
+
+                AppendLine(builder, indent,
+                    $"global::System.Runtime.InteropServices.Marshal.StructureToPtr<global::FireURQ.Runtime.TPoint>({translatedPoint}, {TranslateExpression(pointer)}, false);");
+                return;
+            }
+        }
+
         string target =
             TranslateExpression(targetExpression);
 
@@ -823,12 +1007,45 @@ public sealed class DelphiToCSharpTranslator
                 ? "IntPtr.Zero"
                 : TranslateExpression(statement.Assignment.Value);
 
+        if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(_currentTypeContext?.ResolveIdentifier("l_Index"), "PWord",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            if (targetExpression.Kind == ExpressionParser.ExpressionKind.Dereference &&
+                targetExpression.Children.Count == 1 &&
+                targetExpression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+                targetExpression.Children[0].Text.Equals("l_Index", StringComparison.OrdinalIgnoreCase))
+            {
+                AppendLine(builder, indent,
+                    $"global::System.Runtime.InteropServices.Marshal.WriteInt16(l_Index, unchecked((short)({value})));");
+                return;
+            }
+
+            if (target.Equals("(uint)(l_Index)", StringComparison.OrdinalIgnoreCase) &&
+                value.Equals("((uint)(l_Index) + 2)", StringComparison.OrdinalIgnoreCase))
+            {
+                AppendLine(builder, indent, "l_Index = global::System.IntPtr.Add(l_Index, 2);");
+                return;
+            }
+        }
+
+        // D3DX reports unsigned dimensions; Delphi TPoint stores signed coordinates.
+        if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+            function.Name.Equals("Texture_Load", StringComparison.OrdinalIgnoreCase) &&
+            ((target.Equals("l_PicSize.X", StringComparison.OrdinalIgnoreCase) &&
+              value.Equals("l_ImgInfo.Width", StringComparison.OrdinalIgnoreCase)) ||
+             (target.Equals("l_PicSize.Y", StringComparison.OrdinalIgnoreCase) &&
+              value.Equals("l_ImgInfo.Height", StringComparison.OrdinalIgnoreCase))))
+        {
+            value = $"unchecked((int)({value}))";
+        }
+
         if (!function.IsProcedure &&
             target.Equals(
                 "Result",
                 StringComparison.OrdinalIgnoreCase))
         {
-            target = "result";
+            target = _currentTypeContext?.ResultName ?? "result";
         }
 
         AppendLine(
@@ -1116,6 +1333,15 @@ public sealed class DelphiToCSharpTranslator
         ExpressionParser.ExpressionNode expression)
     {
         string? typeName = ResolveExpressionType(expression);
+
+        // Resolve the native D2D vertex-buffer field when no local shadows it.
+        if (typeName is null &&
+            string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+            expression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            expression.Text.Equals("f_VertArray", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
         if (string.IsNullOrWhiteSpace(typeName))
             return false;
 
@@ -1452,6 +1678,493 @@ private string TranslateCall(
 
     ExpressionParser.ExpressionNode targetExpression =
         expression.Children[0];
+
+    if (string.Equals(_unitName, "f2PicturePool", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count == 6 &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+        targetExpression.Children.Count == 2 &&
+        targetExpression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Children[0].Text.Equals("gD2DE", StringComparison.OrdinalIgnoreCase) &&
+        targetExpression.Children[1].Text.Equals("Texture_Load", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children[5] is { Kind: ExpressionParser.ExpressionKind.AddressOf } address &&
+        address.Children.Count == 1 &&
+        address.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } point &&
+        point.Text.Equals("l_PicSize", StringComparison.OrdinalIgnoreCase) &&
+        MapType(ResolveExpressionType(point)) == "TPoint")
+    {
+        string call = TranslateCallTarget(targetExpression);
+        string textureArguments = string.Join(", ", expression.Children.Skip(1)
+            .Take(4).Select(TranslateExpression));
+        return "global::FireURQ.Runtime.DelphiGeometry.WithPointAddress(" +
+            $"ref {TranslateExpression(point)}, __fireurqPointAddress => " +
+            $"{call}({textureArguments}, __fireurqPointAddress))";
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Text.Equals("D3DXGetImageInfoFromFileInMemory",
+            StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count == 4 &&
+        expression.Children[3].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        string.Equals(ResolveExpressionType(expression.Children[3]), "TD3DXImageInfo",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        string data = TranslateExpression(expression.Children[1]);
+        string size = TranslateExpression(expression.Children[2]);
+        string info = TranslateExpression(expression.Children[3]);
+
+        return "global::FireURQ.Runtime.D3DX8.D3DXGetImageInfoFromFileInMemory" +
+            $"({data}, {size}, out {info})";
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Text.Equals("Format", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count == 3 &&
+        expression.Children[1].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        expression.Children[1].Text.Equals("aFormat", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children[2].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        expression.Children[2].Text.Equals("Args", StringComparison.OrdinalIgnoreCase) &&
+        MapType(ResolveExpressionType(expression.Children[1])) == "string" &&
+        MapType(ResolveExpressionType(expression.Children[2])) == "TVarRec[]")
+    {
+        string format = TranslateExpression(expression.Children[1]);
+        string args = TranslateExpression(expression.Children[2]);
+        return $"global::FireURQ.Runtime.D2dLogFormat.Format({format}, {args})";
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Text.Equals("BASS_GetDeviceInfo", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count == 3 &&
+        expression.Children[2].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        expression.Children[2].Text.Equals("l_DevInfo", StringComparison.OrdinalIgnoreCase) &&
+        MapType(ResolveExpressionType(expression.Children[2])) == "BASS_DEVICEINFO")
+    {
+        string device = TranslateExpression(expression.Children[1]);
+        string info = TranslateExpression(expression.Children[2]);
+        return $"BASS_GetDeviceInfo({device}, ref {info})";
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count == 4)
+    {
+        var destination = expression.Children[3];
+        if (targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+            targetExpression.Children.Count == 2 &&
+            targetExpression.Children[0].Text.Equals("f_D3D", StringComparison.OrdinalIgnoreCase) &&
+            targetExpression.Children[1].Text.Equals("GetAdapterIdentifier", StringComparison.OrdinalIgnoreCase) &&
+            destination.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            MapType(ResolveExpressionType(destination)) == "D3DADAPTER_IDENTIFIER8")
+        {
+            string adapter = TranslateExpression(expression.Children[1]);
+            string flags = TranslateExpression(expression.Children[2]);
+            return $"f_D3D.GetAdapterIdentifier({adapter}, {flags}, out {TranslateExpression(destination)})";
+        }
+
+        // Preserve the two one-based reads of the copied driver version.
+        if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            targetExpression.Text.Equals("Move", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(TranslateExpression(expression.Children[1]),
+                "l_AdID.DriverVersion", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(TranslateExpression(expression.Children[2]),
+                "l_DVer", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(TranslateExpression(destination),
+                "SizeOf(Cardinal)", StringComparison.OrdinalIgnoreCase) &&
+            MapType(ResolveExpressionType(expression.Children[2])) == "ushort[]")
+        {
+            return "l_DVer = new ushort[] { 0, " +
+                "(ushort)l_AdID.DriverVersionSecondWord, " +
+                "(ushort)l_AdID.DriverVersionFirstWord }";
+        }
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase))
+    {
+        if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            targetExpression.Text.Equals("Direct3DCreate8", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children.Count == 2)
+        {
+            return "global::FireURQ.Runtime.D3D8.Create(" +
+                TranslateExpression(expression.Children[1]) + ")";
+        }
+
+        if (targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+            targetExpression.Children.Count == 2 &&
+            targetExpression.Children[0].Text.Equals("f_D3D", StringComparison.OrdinalIgnoreCase) &&
+            targetExpression.Children[1].Text.Equals("GetAdapterDisplayMode", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children.Count == 3 &&
+            expression.Children[2].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            MapType(ResolveExpressionType(expression.Children[2])) == "D3DDISPLAYMODE")
+        {
+            string adapter = TranslateExpression(expression.Children[1]);
+            string mode = TranslateExpression(expression.Children[2]);
+            return $"f_D3D.GetAdapterDisplayMode({adapter}, out {mode})";
+        }
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        _resolver is not null &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Text.Equals("Failed", StringComparison.OrdinalIgnoreCase) &&
+        ResolveExpressionType(targetExpression) is null &&
+        !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName!) &&
+        expression.Children.Count == 2)
+    {
+        var argument = expression.Children[1];
+        if (argument.Kind == ExpressionParser.ExpressionKind.Call &&
+            argument.Children.Count == 3 &&
+            argument.Children[0] is { Kind: ExpressionParser.ExpressionKind.MemberAccess } method &&
+            method.Children.Count == 2 &&
+            method.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            method.Children[0].Text.Equals("f_D3D", StringComparison.OrdinalIgnoreCase) &&
+            method.Children[1].Text.Equals("GetAdapterDisplayMode", StringComparison.OrdinalIgnoreCase) &&
+            argument.Children[2].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            MapType(ResolveExpressionType(argument.Children[2])) == "D3DDISPLAYMODE")
+        {
+            return $"({TranslateExpression(argument)} < 0)";
+        }
+    }
+
+    // Preserve both CreateDevice attempts in Td2dCore.GfxInit.
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Text.Equals("Failed", StringComparison.OrdinalIgnoreCase) &&
+        _resolver is not null &&
+        ResolveExpressionType(targetExpression) is null &&
+        !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName!) &&
+        expression.Children.Count == 2 &&
+        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Call } create &&
+        create.Children.Count == 7 &&
+        create.Children[0] is { Kind: ExpressionParser.ExpressionKind.MemberAccess } createTarget &&
+        createTarget.Children.Count == 2 &&
+        createTarget.Children[0].Text.Equals("f_D3D", StringComparison.OrdinalIgnoreCase) &&
+        createTarget.Children[1].Text.Equals("CreateDevice", StringComparison.OrdinalIgnoreCase) &&
+        create.Children[5].Text.Equals("f_D3DPP", StringComparison.OrdinalIgnoreCase) &&
+        create.Children[6].Text.Equals("f_D3DDevice", StringComparison.OrdinalIgnoreCase))
+    {
+        var createArgs = create.Children.Skip(1).Select(TranslateExpression).ToArray();
+        createArgs[4] = "ref " + createArgs[4];
+        createArgs[5] = "out " + createArgs[5];
+        return $"(f_D3D.CreateDevice({string.Join(", ", createArgs)}) < 0)";
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+        targetExpression.Children.Count == 2 &&
+        targetExpression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Children[0].Text.Equals("f_D3DDevice", StringComparison.OrdinalIgnoreCase) &&
+        targetExpression.Children[1].Kind == ExpressionParser.ExpressionKind.Identifier)
+    {
+        string method = targetExpression.Children[1].Text;
+        if (method.Equals("Reset", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children.Count == 2 &&
+            expression.Children[1].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            expression.Children[1].Text.Equals("f_D3DPP", StringComparison.OrdinalIgnoreCase))
+        {
+            return $"f_D3DDevice.Reset(ref {TranslateExpression(expression.Children[1])})";
+        }
+
+        if (method.Equals("Present", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children.Count == 5)
+        {
+            var presentArgs = expression.Children.Skip(1).Select((argument, index) => (IsNilLiteral(argument) || (index == 2 && TranslateExpression(argument) == "0")) ? "global::System.IntPtr.Zero" : TranslateExpression(argument));
+            return $"f_D3DDevice.Present({string.Join(", ", presentArgs)})";
+        }
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase))
+    {
+        ExpressionParser.ExpressionNode surfaceCall = expression;
+        bool checkHresult =
+            targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            targetExpression.Text.Equals("Failed", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children.Count == 2 &&
+            expression.Children[1].Kind == ExpressionParser.ExpressionKind.Call &&
+            ResolveExpressionType(targetExpression) is null &&
+            _resolver is not null &&
+            !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName!);
+
+        if (checkHresult)
+            surfaceCall = expression.Children[1];
+
+        if (surfaceCall.Children.Count > 0 &&
+            surfaceCall.Children[0] is { Kind: ExpressionParser.ExpressionKind.MemberAccess } surfaceTarget &&
+            surfaceTarget.Children.Count == 2 &&
+            surfaceTarget.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            surfaceTarget.Children[0].Text.Equals("f_D3DDevice", StringComparison.OrdinalIgnoreCase))
+        {
+            string? surfaceMethod = surfaceTarget.Children[1].Text.ToUpperInvariant() switch
+            {
+                "GETRENDERTARGET" when surfaceCall.Children.Count == 2 => "GetRenderTarget",
+                "GETDEPTHSTENCILSURFACE" when surfaceCall.Children.Count == 2 => "GetDepthStencilSurface",
+                "CREATEDEPTHSTENCILSURFACE" when surfaceCall.Children.Count == 6 => "CreateDepthStencilSurface",
+                "SETRENDERTARGET" when surfaceCall.Children.Count == 3 => "SetRenderTarget",
+                _ => null
+            };
+
+            if (surfaceMethod is not null)
+            {
+                var surfaceArgs = surfaceCall.Children.Skip(1)
+                    .Select(TranslateExpression).ToArray();
+
+                if (surfaceMethod == "CreateDepthStencilSurface")
+                {
+                    surfaceArgs[0] = $"unchecked((uint)({surfaceArgs[0]}))";
+                    surfaceArgs[1] = $"unchecked((uint)({surfaceArgs[1]}))";
+                }
+
+                if (surfaceMethod != "SetRenderTarget")
+                    surfaceArgs[^1] = "out " + surfaceArgs[^1];
+
+                string translatedSurfaceCall =
+                    $"f_D3DDevice.{surfaceMethod}({string.Join(", ", surfaceArgs)})";
+                return checkHresult ? $"({translatedSurfaceCall} < 0)" : translatedSurfaceCall;
+            }
+        }
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count == 3 &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+        targetExpression.Children.Count == 2 &&
+        targetExpression.Children[1].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Children[1].Text.Equals("GetSurfaceLevel", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children[2].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        MapType(ResolveExpressionType(expression.Children[2])) == "IDirect3DSurface8")
+    {
+        var textureTarget = targetExpression.Children[0];
+        if (textureTarget.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+            textureTarget.Children.Count == 2 &&
+            textureTarget.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            textureTarget.Children[0].Text.Equals("aTarget", StringComparison.OrdinalIgnoreCase) &&
+            textureTarget.Children[1].Text.Equals("Tex", StringComparison.OrdinalIgnoreCase))
+        {
+            string receiver = TranslateExpression(textureTarget);
+            string level = TranslateExpression(expression.Children[1]);
+            string surface = TranslateExpression(expression.Children[2]);
+            return $"{receiver}.GetSurfaceLevel({level}, out {surface})";
+        }
+    }
+
+    // Bind the two buffer allocations in Td2dCore.
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        _resolver is not null &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Text.Equals("Failed", StringComparison.OrdinalIgnoreCase) &&
+        ResolveExpressionType(targetExpression) is null &&
+        !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName!) &&
+        expression.Children.Count == 2 &&
+        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Call } bufferCall &&
+        bufferCall.Children.Count == 6 &&
+        bufferCall.Children[0] is { Kind: ExpressionParser.ExpressionKind.MemberAccess } bufferTarget &&
+        bufferTarget.Children.Count == 2 &&
+        bufferTarget.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        bufferTarget.Children[0].Text.Equals("f_D3DDevice", StringComparison.OrdinalIgnoreCase) &&
+        bufferCall.Children[2].Text.Equals("D3DUSAGE_WRITEONLY", StringComparison.OrdinalIgnoreCase) &&
+        bufferCall.Children[4].Text.Equals("D3DPOOL_DEFAULT", StringComparison.OrdinalIgnoreCase) &&
+        bufferCall.Children[5].Kind == ExpressionParser.ExpressionKind.Identifier)
+    {
+        string method = bufferTarget.Children[1].Text;
+        string destination = bufferCall.Children[5].Text;
+        string length = TranslateExpression(bufferCall.Children[1]);
+
+        if (method.Equals("CreateVertexBuffer", StringComparison.OrdinalIgnoreCase) &&
+            destination.Equals("f_VB", StringComparison.OrdinalIgnoreCase) &&
+            bufferCall.Children[3].Text.Equals("D3DFVF_D2DVERTEX", StringComparison.OrdinalIgnoreCase) &&
+            length == "(VertexBufferSize * SizeOf(Td2dVertex))")
+        {
+            return "(f_D3DDevice.CreateVertexBuffer(" +
+                "checked((uint)(VertexBufferSize * global::System.Runtime.InteropServices.Marshal.SizeOf<Td2dVertex>())), " +
+                "0x08u, 0x0142u, 0, out f_VB) < 0)";
+        }
+
+        if (method.Equals("CreateIndexBuffer", StringComparison.OrdinalIgnoreCase) &&
+            destination.Equals("f_IB", StringComparison.OrdinalIgnoreCase) &&
+            bufferCall.Children[3].Text.Equals("D3DFMT_INDEX16", StringComparison.OrdinalIgnoreCase) &&
+            length == "((VertexBufferSize * (6 / 4)) * SizeOf(Word))")
+        {
+            return "(f_D3DDevice.CreateIndexBuffer(" +
+                "checked((uint)((VertexBufferSize * 6 / 4) * sizeof(ushort))), " +
+                "0x08u, 101, 0, out f_IB) < 0)";
+        }
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase))
+    {
+        var lockCall = expression;
+        bool checkLockResult =
+            _resolver is not null &&
+            targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            targetExpression.Text.Equals("Failed", StringComparison.OrdinalIgnoreCase) &&
+            ResolveExpressionType(targetExpression) is null &&
+            !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName!) &&
+            expression.Children.Count == 2 &&
+            expression.Children[1].Kind == ExpressionParser.ExpressionKind.Call;
+
+        if (checkLockResult)
+            lockCall = expression.Children[1];
+
+        if (lockCall.Children.Count == 5 &&
+            lockCall.Children[0] is { Kind: ExpressionParser.ExpressionKind.MemberAccess } lockTarget &&
+            lockTarget.Children.Count == 2 &&
+            lockTarget.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            lockTarget.Children[1].Text.Equals("Lock", StringComparison.OrdinalIgnoreCase))
+        {
+            string buffer = lockTarget.Children[0].Text;
+            string lockAddress = TranslateExpression(lockCall.Children[3]);
+            string? destination = null;
+
+            if (buffer.Equals("f_VB", StringComparison.OrdinalIgnoreCase) &&
+                lockAddress.Equals("PByte(f_VertArray)", StringComparison.OrdinalIgnoreCase))
+            {
+                buffer = "f_VB";
+                destination = "f_VertArray";
+            }
+            else if (buffer.Equals("f_IB", StringComparison.OrdinalIgnoreCase) &&
+                lockAddress.Equals("PByte(l_Index)", StringComparison.OrdinalIgnoreCase))
+            {
+                buffer = "f_IB";
+                destination = "l_Index";
+            }
+
+            if (destination is not null)
+            {
+                string offset = TranslateExpression(lockCall.Children[1]);
+                string size = TranslateExpression(lockCall.Children[2]);
+                string flags = TranslateExpression(lockCall.Children[4]);
+                string call = $"{buffer}.Lock({offset}, {size}, out {destination}, {flags})";
+                return checkLockResult ? $"({call} < 0)" : call;
+            }
+        }
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+        targetExpression.Children.Count == 2 &&
+        targetExpression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Children[0].Text.Equals("f_D3DDevice", StringComparison.OrdinalIgnoreCase))
+    {
+        string streamMethod = targetExpression.Children[1].Text;
+        if (streamMethod.Equals("SetStreamSource", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children.Count == 4 &&
+            TranslateExpression(expression.Children[3]) == "SizeOf(Td2dVertex)")
+        {
+            string streamNumber = TranslateExpression(expression.Children[1]);
+            string vertexBuffer = TranslateExpression(expression.Children[2]);
+            return "global::FireURQ.Runtime.D3D8.SetStreamSource(f_D3DDevice, " +
+                $"checked((uint)({streamNumber})), {vertexBuffer}, " +
+                "checked((uint)global::System.Runtime.InteropServices.Marshal.SizeOf<Td2dVertex>()))";
+        }
+
+        if (streamMethod.Equals("SetIndices", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children.Count == 3)
+        {
+            string indexBuffer = TranslateExpression(expression.Children[1]);
+            string baseVertex = TranslateExpression(expression.Children[2]);
+            return "global::FireURQ.Runtime.D3D8.SetIndices(f_D3DDevice, " +
+                $"{indexBuffer}, checked((uint)({baseVertex})))";
+        }
+    }
+
+    if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+        targetExpression.Children.Count == 2 &&
+        targetExpression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Children[0].Text.Equals("f_D3DDevice", StringComparison.OrdinalIgnoreCase))
+    {
+        string drawMethod = targetExpression.Children[1].Text.ToUpperInvariant();
+        var drawArgs = expression.Children.Skip(1).ToArray();
+        const string d3dRuntime = "global::FireURQ.Runtime.D3D8.";
+
+        if (drawMethod == "CLEAR" && drawArgs.Length == 6 &&
+            IsNilLiteral(drawArgs[1]) && TranslateExpression(drawArgs[4]) == "1.0")
+        {
+            string clearFlags = TranslateExpression(drawArgs[2])
+                .Replace("D3DCLEAR_TARGET", "1u", StringComparison.OrdinalIgnoreCase)
+                .Replace("D3DCLEAR_ZBUFFER", "2u", StringComparison.OrdinalIgnoreCase);
+            return "f_D3DDevice.Clear(" +
+                $"{TranslateExpression(drawArgs[0])}, global::System.IntPtr.Zero, {clearFlags}, " +
+                $"{TranslateExpression(drawArgs[3])}, 1.0f, {TranslateExpression(drawArgs[5])})";
+        }
+
+        if (drawMethod == "SETVERTEXSHADER" && drawArgs.Length == 1 &&
+            drawArgs[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            drawArgs[0].Text.Equals("D3DFVF_D2DVERTEX", StringComparison.OrdinalIgnoreCase))
+        {
+            return d3dRuntime + "SetVertexShader(f_D3DDevice, 0x0142u)";
+        }
+
+        if (((drawMethod == "DRAWPRIMITIVE" && drawArgs.Length == 3) ||
+             (drawMethod == "DRAWINDEXEDPRIMITIVE" && drawArgs.Length == 5)) &&
+            drawArgs[0].Kind == ExpressionParser.ExpressionKind.Identifier)
+        {
+            string? primitiveType = drawArgs[0].Text.ToUpperInvariant() switch
+            {
+                "D3DPT_LINELIST" => "2",
+                "D3DPT_TRIANGLELIST" => "4",
+                _ => null
+            };
+            if (primitiveType is not null)
+            {
+                string name = drawMethod == "DRAWPRIMITIVE" ? "DrawPrimitive" : "DrawIndexedPrimitive";
+                string counts = string.Join(", ", drawArgs.Skip(1)
+                    .Select(arg => $"checked((uint)({TranslateExpression(arg)}))"));
+                return $"{d3dRuntime}{name}(f_D3DDevice, {primitiveType}, {counts})";
+            }
+        }
+    }
+
+    bool isSystemLog =
+        (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+         string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+         targetExpression.Text.Equals("System_Log", StringComparison.OrdinalIgnoreCase)) ||
+        (targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+         targetExpression.Children.Count == 2 &&
+         targetExpression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+         targetExpression.Children[0].Text.Equals("gD2DE", StringComparison.OrdinalIgnoreCase) &&
+         targetExpression.Children[1].Text.Equals("System_Log", StringComparison.OrdinalIgnoreCase));
+
+    if (isSystemLog && expression.Children.Count == 3 &&
+        expression.Children[2].Kind == ExpressionParser.ExpressionKind.Set &&
+        !expression.Children[2].Children.Any(element =>
+            element.Kind == ExpressionParser.ExpressionKind.Binary && element.Text == ".."))
+    {
+        string format = TranslateExpression(expression.Children[1]);
+        string values = string.Join(", ",
+            expression.Children[2].Children.Select(element =>
+            {
+                if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+                    element.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+                    element.Children.Count == 2 &&
+                    MapType(ResolveExpressionType(element.Children[0])) == "D3DADAPTER_IDENTIFIER8")
+                {
+                    string adapter = TranslateExpression(element.Children[0]);
+                    string field = element.Children[1].Text;
+                    if (field.Equals("Driver", StringComparison.OrdinalIgnoreCase))
+                        return $"{adapter}.DriverText";
+                    if (field.Equals("Description", StringComparison.OrdinalIgnoreCase))
+                        return $"{adapter}.DescriptionText";
+                }
+
+                string value = TranslateExpression(element);
+                if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+                    element.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+                    element.Children.Count == 2 &&
+                    element.Children[0].Text.Equals("l_DevInfo", StringComparison.OrdinalIgnoreCase) &&
+                    element.Children[1].Text.Equals("name", StringComparison.OrdinalIgnoreCase) &&
+                    MapType(ResolveExpressionType(element.Children[0])) == "BASS_DEVICEINFO")
+                {
+                    return $"global::System.Runtime.InteropServices.Marshal.PtrToStringAnsi({value}) ?? string.Empty";
+                }
+
+                return value;
+            }));
+        string method = targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier
+            ? "System_Log"
+            : $"{TranslateExpression(targetExpression.Children[0])}.System_Log";
+        return $"{method}({format}, new object[] {{ {values} }})";
+    }
 
     if (TryTranslateStreamCall(expression, targetExpression, out string streamCall))
         return streamCall;
@@ -1907,10 +2620,16 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
             new(StringComparer.OrdinalIgnoreCase);
 
         private readonly string _returnType;
+        private readonly FunctionTypeContext? _parent;
+        private readonly int _depth;
+        public string ResultName { get; }
+        public Dictionary<string, string> ConstCopies { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-        public FunctionTypeContext(
-            SemanticFunction function)
+        public FunctionTypeContext(SemanticFunction function, FunctionTypeContext? parent)
         {
+            _parent = parent;
+            _depth = parent is null ? 0 : parent._depth + 1;
+            ResultName = _depth == 0 ? "result" : $"__localResult{_depth}";
             foreach (
                 SemanticParameter parameter
                 in function.Parameters)
@@ -1927,8 +2646,22 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
                     variable.Type;
             }
 
-            _returnType =
-                function.ReturnType;
+            if (function.LocalFunctions.Count != 0)
+            {
+                foreach (var parameter in function.Parameters)
+                {
+                    if (!parameter.Kind.Equals("const", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    string copy = $"__captured{_depth}_{parameter.Name}";
+                    while (_identifiers.ContainsKey(copy) || parent?.ResolveIdentifier(copy) is not null)
+                        copy += "_";
+                    ConstCopies.Add(parameter.Name, copy);
+                    _identifiers.Add(copy, parameter.Type);
+                }
+            }
+
+            _returnType = function.ReturnType;
         }
 
         public string? ResolveIdentifier(
@@ -1945,7 +2678,17 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
                 name,
                 out string? type)
                 ? type
-                : null;
+                : _parent?.ResolveIdentifier(name);
         }
+
+        public string ResolveSpelling(string name)
+        {
+            if (_identifiers.ContainsKey(name))
+                return name;
+            return _parent?.ResolveCapturedSpelling(name) ?? name;
+        }
+
+        private string ResolveCapturedSpelling(string name) =>
+            ConstCopies.TryGetValue(name, out string? copy) ? copy : ResolveSpelling(name);
     }
 }

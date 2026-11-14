@@ -17,6 +17,8 @@ public static class CSharpTypeMapper
             "tstrings" => "TStrings",
             "tstringlist" => "TStringList",
             "tstringlistsortcompare" => "TStringListSortCompare",
+            "tpoint" => "TPoint",
+            "trect" => "TRect",
             _ => null
         };
 
@@ -105,7 +107,7 @@ public static class CSharpTypeMapper
         if (resolver is null &&
             type.ToLowerInvariant() is
                 "pointer" or "pchar" or "pansichar" or "pwidechar" or
-                "pbyte" or "plongword" or "pguid")
+                "pbyte" or "plongword" or "pguid" or "ppoint" or "pword")
             return "IntPtr";
 
         return type.ToLowerInvariant() switch

@@ -132,6 +132,20 @@ public sealed class CSharpDeclarationTranslator
                 continue;
             }
 
+            if (unit.Name.Equals("d2dTypes", StringComparison.OrdinalIgnoreCase) &&
+                constant.Name.Equals("D3DFVF_D2DVERTEX", StringComparison.OrdinalIgnoreCase) &&
+                global::System.Text.RegularExpressions.Regex.IsMatch(
+                    constant.Value.Trim(),
+                    @"^D3DFVF_XYZ\s+or\s+D3DFVF_DIFFUSE\s+or\s+D3DFVF_TEX1$",
+                    global::System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+                    global::System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+            {
+                // Direct3D 8 FVF flags: XYZ | DIFFUSE | TEX1.
+                builder.AppendLine(
+                    "public const uint D3DFVF_D2DVERTEX = 0x0002u | 0x0040u | 0x0100u;");
+                continue;
+            }
+
             string sourceType = constant.Type;
 
             if (string.IsNullOrWhiteSpace(sourceType))
