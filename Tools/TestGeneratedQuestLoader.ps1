@@ -50,9 +50,41 @@ Console.OutputEncoding = new UTF8Encoding(false);
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 var loader = new LoaderProbe();
 var reads = new List<string>();
-loader.Load(args[0], (in string path) =>
+bool packed = Path.GetExtension(args[0]).Equals(".qsz", StringComparison.OrdinalIgnoreCase);
+using var archive = packed ? System.IO.Compression.ZipFile.OpenRead(args[0]) : null;
+string archiveRoot = Path.GetFullPath("__qsz_virtual__");
+var entries = new Dictionary<string, System.IO.Compression.ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
+string entryPath = args[0];
+if (archive != null)
+{
+    foreach (var entry in archive.Entries)
+    {
+        if (entry.Name.Length != 0)
+            entries.TryAdd(entry.FullName.Replace('\\', '/'), entry);
+    }
+
+    string? main = entries.ContainsKey("main.qst") ? "main.qst" :
+        entries.ContainsKey("game.qst") ? "game.qst" :
+        entries.Keys.FirstOrDefault(name => name.EndsWith(".qst", StringComparison.OrdinalIgnoreCase));
+    if (main == null)
+        throw new InvalidOperationException("QSZ preview requires a QST entry.");
+    entryPath = Path.GetFullPath(Path.Combine(archiveRoot, main));
+    Console.WriteLine("QSZ entry: " + main);
+}
+loader.Load(entryPath, (in string path) =>
 {
     reads.Add(path);
+    if (archive != null)
+    {
+        string relative = Path.GetRelativePath(archiveRoot, Path.GetFullPath(path)).Replace('\\', '/');
+        if (!entries.TryGetValue(relative, out var entry))
+        {
+            Console.WriteLine("Missing quest include: " + relative);
+            return string.Empty;
+        }
+        using var reader = new StreamReader(entry.Open(), Encoding.GetEncoding(1251));
+        return reader.ReadToEnd();
+    }
     try
     {
         return File.ReadAllText(path, Encoding.GetEncoding(1251));
