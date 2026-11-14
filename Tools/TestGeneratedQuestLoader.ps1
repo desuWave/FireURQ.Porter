@@ -9,6 +9,7 @@ $root = Split-Path -Parent $PSScriptRoot
 $work = Join-Path $root ('.fireurq-work\QuestLoad-' + [Guid]::NewGuid().ToString('N'))
 $oldTemp = $env:TEMP
 $oldTmp = $env:TMP
+$oldConsoleEncoding = [Console]::OutputEncoding
 $exitCode = 1
 try {
     $generated = Join-Path (Resolve-Path -LiteralPath $VerificationDirectory).Path 'translation-output'
@@ -42,6 +43,7 @@ using System.Text;
 using FireURQ.Runtime;
 using static FireURQ.Runtime.DelphiJclStringLists;
 
+Console.OutputEncoding = new UTF8Encoding(false);
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 var loader = new LoaderProbe();
 var reads = new List<string>();
@@ -192,6 +194,7 @@ static class QuestWindow
     $source.Replace('__GENERATED_LOAD__', $methods[0].Value) |
         Set-Content -LiteralPath (Join-Path $work 'Program.cs') -Encoding UTF8
 
+    [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
     $ErrorActionPreference = 'Continue'
     $output = @(& dotnet run --project (Join-Path $work 'QuestLoad.csproj') -c Release -- $quest 2>&1 |
         ForEach-Object { [string]$_ })
@@ -203,6 +206,7 @@ static class QuestWindow
 } finally {
     $env:TEMP = $oldTemp
     $env:TMP = $oldTmp
+    [Console]::OutputEncoding = $oldConsoleEncoding
 }
 
 Write-Output $report
