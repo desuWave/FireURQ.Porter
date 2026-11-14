@@ -37,6 +37,7 @@ try {
         return @{ Lines = $lines; ExitCode = $code }
     }
 
+    $SourceRoots = @($SourceRoots | ForEach-Object { (Resolve-Path -LiteralPath $_).Path })
     $ready = $true
     foreach ($sourceRoot in $SourceRoots) {
         if (-not [System.IO.Directory]::Exists($sourceRoot)) {
