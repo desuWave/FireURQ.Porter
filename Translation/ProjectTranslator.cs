@@ -405,7 +405,7 @@ public sealed class ProjectTranslator
                     builder,
                     input);
 
-                string outputText = builder.ToString();
+                string outputText = AdaptD2dRenderTargets(input.SemanticModel.Name, builder.ToString());
                 File.WriteAllText(outputFile, outputText, Encoding.UTF8);
 
                 return new TranslationResult(
@@ -418,7 +418,7 @@ public sealed class ProjectTranslator
             }
 
             int onlyClassFunctionsTranslated = AppendClassImplementations(builder, input);
-            string finalOutput = builder.ToString();
+            string finalOutput = AdaptD2dRenderTargets(input.SemanticModel.Name, builder.ToString());
             File.WriteAllText(outputFile, finalOutput, Encoding.UTF8);
 
             return new TranslationResult(
@@ -433,6 +433,66 @@ public sealed class ProjectTranslator
         {
             return new TranslationResult(input.FilePath, outputFile, false, 0, 0, ex.ToString());
         }
+    }
+
+
+    private static string AdaptD2dRenderTargets(string unitName, string source)
+    {
+        // Render targets contain COM references and are used by identity in D2D.
+        if (unitName.Equals("d2dTypes", StringComparison.OrdinalIgnoreCase))
+        {
+            return source
+                .Replace("using Pd2dRenderTarget = global::System.IntPtr;", "")
+                .Replace("public struct Td2dRenderTarget", "public sealed class Td2dRenderTarget");
+        }
+
+        if (!unitName.Equals("d2dCore", StringComparison.OrdinalIgnoreCase))
+            return source;
+
+        source = global::System.Text.RegularExpressions.Regex.Replace(
+            source, @"\bIntPtr(?=\s+(?:aTarget|l_Target|f_CurTarget|Target_Create)\b)", "Td2dRenderTarget");
+        source = global::System.Text.RegularExpressions.Regex.Replace(
+            source, @"\b(aTarget|l_Target)\s*!=\s*(?:global::System\.)?IntPtr\.Zero\b", "$1 != null");
+
+        return source
+            .Replace("TList f_Targets;", "List<Td2dRenderTarget> f_Targets;")
+            .Replace("f_Targets = TList.Create();", "f_Targets = new List<Td2dRenderTarget>();")
+            .Replace("f_Targets.Free();", "ClearTargets();")
+            .Replace("f_Targets.Pack();", "f_CurTarget = null;")
+            .Replace("Pd2dRenderTarget(f_Targets.Items[I])", "f_Targets[I]")
+            .Replace("Dispose(f_Targets[I]);", "ReleaseTargetResources(f_Targets[I]);")
+            .Replace("Dispose(Pd2dRenderTarget(f_Targets.Items[l_Idx]));",
+                "ReleaseTargetResources(f_Targets[l_Idx]);")
+            .Replace("f_Targets.Delete(l_Idx);", "f_Targets.RemoveAt(l_Idx);")
+            .Replace("if (aTarget != f_CurTarget)",
+                "if (!ReferenceEquals(aTarget, f_CurTarget) || (aTarget != null && aTarget.Tex == null))")
+            .Replace("aTarget.Tex.GetSurfaceLevel(0, out l_Surf);",
+                "if (aTarget.Tex == null || aTarget.Tex.GetSurfaceLevel(0, out l_Surf) < 0) return false;")
+            .Replace("New(l_Target);", "l_Target = new Td2dRenderTarget();")
+            .Replace("Dispose(l_Target);", "ReleaseTargetResources(l_Target);")
+            .Replace("if (~(f_CurTarget != null))", "if (f_CurTarget == null)")
+            .Replace("if (~(f_D3DDevice != null))", "if (f_D3DDevice == null)")
+            .Replace("f_D3DDevice.TestCooperativeLevel == D3DERR_DEVICELOST",
+                "f_D3DDevice.TestCooperativeLevel() == unchecked((int)0x88760868)")
+            .Replace("f_D3DDevice.Reset(ref f_D3DPP);",
+                "if (f_D3DDevice.Reset(ref f_D3DPP) < 0) return;")
+            .Replace("Failed(D3DXCreateTexture(f_D3DDevice, aWidth, aHeight, 1, D3DUSAGE_RENDERTARGET, f_D3DPP.BackBufferFormat, D3DPOOL_DEFAULT, l_Target.Tex))",
+                "f_D3DDevice.CreateTexture(unchecked((uint)aWidth), unchecked((uint)aHeight), 1, 1u, f_D3DPP.BackBufferFormat, 0, out l_Target.Tex) < 0")
+            .Replace("D3DXCreateTexture(f_D3DDevice, l_Target.Width, l_Target.Height, 1, D3DUSAGE_RENDERTARGET, f_D3DPP.BackBufferFormat, D3DPOOL_DEFAULT, l_Target.Tex);",
+                "f_D3DDevice.CreateTexture(unchecked((uint)l_Target.Width), unchecked((uint)l_Target.Height), 1, 1u, f_D3DPP.BackBufferFormat, 0, out l_Target.Tex);")
+            .Replace("l_Target.Tex.GetLevelDesc(0, l_Desc);",
+                "if (l_Target.Tex.GetLevelDesc(0, out l_Desc) < 0) { ReleaseTargetResources(l_Target); return null; }")
+            .Replace("l_Target.Width = l_Desc.Width;", "l_Target.Width = unchecked((int)l_Desc.Width);")
+            .Replace("l_Target.Height = l_Desc.Height;", "l_Target.Height = unchecked((int)l_Desc.Height);")
+            .Replace("private void ClearTargets()", """
+private static void ReleaseTargetResources(Td2dRenderTarget target)
+    {
+        target.Depth = null;
+        target.Tex = null;
+    }
+
+    private void ClearTargets()
+""");
     }
 
     private int AppendTopLevelImplementations(
