@@ -1,0 +1,57 @@
+name: QSZ diagnostic on Windows
+
+on:
+  push:
+    branches: [chan989/d3d8-render-target]
+    paths:
+      - .github/workflows/qsz-windows.yml
+      - Tools/VerifyGeneratedProject.ps1
+      - Tools/TestGeneratedQuestLoader.ps1
+      - Tools/ShowD3D8RenderTexture.ps1
+
+permissions:
+  contents: read
+
+jobs:
+  qsz:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - uses: actions/checkout@v4
+        with:
+          repository: fireton/fireurq
+          ref: master
+          path: .fireurq-work/fireurq-master
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: fireton/d2dge
+          ref: furq_2_2_4
+          path: .fireurq-work/d2dge-furq_2_2_4
+          persist-credentials: false
+      - name: Verify generated QSZ loader
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $fireurq = (Resolve-Path '.fireurq-work/fireurq-master').Path
+          $d2dge = (Resolve-Path '.fireurq-work/d2dge-furq_2_2_4').Path
+          $sources = @($fireurq, $d2dge)
+          $report = @(& ./Tools/VerifyGeneratedProject.ps1 -SourceRoots $sources 6>&1 |
+              ForEach-Object { [string]$_ -split '\r?\n' })
+          $directoryLine = $report | Where-Object { $_ -like 'Verification directory:*' } | Select-Object -First 1
+          if (!$directoryLine) { throw ($report -join [Environment]::NewLine) }
+          $directory = ($directoryLine -replace '^Verification directory:[ \t]*', '').Trim()
+          $xmlPath = Join-Path $directory 'qsz-diagnostic.xml'
+          $quest = Join-Path $fireurq 'tests/ver1.8/167.includes/167.includes.qsz'
+          & powershell.exe -NoProfile -File ./Tools/TestGeneratedQuestLoader.ps1 -VerificationDirectory $directory -QuestPath $quest -ExportLocations $xmlPath
+          if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $xmlPath)) {
+              throw 'QSZ diagnostic export failed.'
+          }
+          $diagnostics = @(Select-Xml -LiteralPath $xmlPath -XPath '/quest/diagnostic')
+          if ($diagnostics.Count -ne 1 -or $diagnostics[0].Node.InnerText -notmatch '\bbla\.qst\b') {
+              throw 'Expected one diagnostic for bla.qst.'
+          }
+          Write-Host 'PASS: Windows QSZ diagnostic export.'
