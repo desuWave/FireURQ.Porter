@@ -154,14 +154,20 @@ try {
         $verificationParameters.SourceRoots = $SourceRoots
     }
     $verification = @(& (Join-Path $PSScriptRoot 'VerifyGeneratedProject.ps1') @verificationParameters 6>&1 |
-        ForEach-Object { $line = [string]$_; Write-Host $line; $line })
+        ForEach-Object {
+            Write-Host ([string]$_)
+            [string]$_ -split '\r?\n'
+        })
 
     $directoryLine = $verification |
         Where-Object { $_ -like 'Verification directory:*' } |
         Select-Object -First 1
     if (!$directoryLine) { throw 'Verification directory was not reported.' }
 
-    $verificationDirectory = $directoryLine -replace '^Verification directory:\s*', ''
+    $verificationDirectory = ($directoryLine -replace '^Verification directory:[ \t]*', '').Trim()
+    if (!(Test-Path -LiteralPath $verificationDirectory -PathType Container)) {
+        throw "Verification directory does not exist: [$verificationDirectory]"
+    }
     $generated = Join-Path $verificationDirectory 'translation-output'
     $env:FIREURQ_PROBE_QUEST_LOADER = Join-Path $PSScriptRoot 'TestGeneratedQuestLoader.ps1'
     $env:FIREURQ_PROBE_VERIFICATION = $verificationDirectory
