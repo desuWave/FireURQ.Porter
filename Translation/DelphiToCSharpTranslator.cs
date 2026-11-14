@@ -20,7 +20,10 @@ public sealed class DelphiToCSharpTranslator
         !string.IsNullOrWhiteSpace(type) && MapType(type) == "bool";
 
     private string MapType(string? type) =>
-        CSharpTypeMapper.Map(type, _resolver, _unitName);
+        string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(type?.Trim(), "Pd2dRenderTarget", StringComparison.OrdinalIgnoreCase)
+            ? "Td2dRenderTarget"
+            : CSharpTypeMapper.Map(type, _resolver, _unitName);
 
     private FunctionTypeContext? _currentTypeContext;
 
