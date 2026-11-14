@@ -1,4 +1,4 @@
-﻿param([string]$TexturePath, [string]$SplashPak, [string]$VersionExe, [switch]$AutoTest, [string]$QuestPath)
+﻿param([string]$TexturePath, [string]$SplashPak, [string]$VersionExe, [switch]$AutoTest, [string]$QuestPath, [string[]]$SourceRoots)
 
 $ErrorActionPreference = 'Stop'
 
@@ -149,8 +149,12 @@ try {
     $env:TEMP = $runDir
     $env:TMP = $runDir
     Write-Host 'Generating fresh C# for the render texture probe...'
-    $verification = @(powershell.exe -NoProfile -File .\Tools\VerifyGeneratedProject.ps1 -PreviousErrorCount 74 |
-        ForEach-Object { Write-Host $_; $_ })
+    $verificationParameters = @{ PreviousErrorCount = 71 }
+    if ($PSBoundParameters.ContainsKey('SourceRoots')) {
+        $verificationParameters.SourceRoots = $SourceRoots
+    }
+    $verification = @(& (Join-Path $PSScriptRoot 'VerifyGeneratedProject.ps1') @verificationParameters 6>&1 |
+        ForEach-Object { $line = [string]$_; Write-Host $line; $line })
 
     $directoryLine = $verification |
         Where-Object { $_ -like 'Verification directory:*' } |
