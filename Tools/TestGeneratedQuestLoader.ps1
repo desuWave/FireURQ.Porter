@@ -50,6 +50,14 @@ Console.OutputEncoding = new UTF8Encoding(false);
 Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 var loader = new LoaderProbe();
 var reads = new List<string>();
+var missingIncludes = new List<string>();
+void ReportMissingInclude(string path)
+{
+    string message = "\u0424\u0430\u0439\u043b " + Path.GetFileName(path) +
+        " \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d";
+    missingIncludes.Add(message);
+    Console.WriteLine(message);
+}
 bool packed = Path.GetExtension(args[0]).Equals(".qsz", StringComparison.OrdinalIgnoreCase);
 using var archive = packed ? System.IO.Compression.ZipFile.OpenRead(args[0]) : null;
 string archiveRoot = Path.GetFullPath("__qsz_virtual__");
@@ -79,7 +87,7 @@ loader.Load(entryPath, (in string path) =>
         string relative = Path.GetRelativePath(archiveRoot, Path.GetFullPath(path)).Replace('\\', '/');
         if (!entries.TryGetValue(relative, out var entry))
         {
-            Console.WriteLine("Missing quest include: " + relative);
+            ReportMissingInclude(relative);
             return string.Empty;
         }
         using var reader = new StreamReader(entry.Open(), Encoding.GetEncoding(1251));
@@ -91,12 +99,12 @@ loader.Load(entryPath, (in string path) =>
     }
     catch (FileNotFoundException) when (!String.Equals(path, args[0], StringComparison.OrdinalIgnoreCase))
     {
-        Console.WriteLine("Missing quest include: " + path);
+        ReportMissingInclude(path);
         return string.Empty;
     }
     catch (DirectoryNotFoundException) when (!String.Equals(path, args[0], StringComparison.OrdinalIgnoreCase))
     {
-        Console.WriteLine("Missing quest include: " + path);
+        ReportMissingInclude(path);
         return string.Empty;
     }
 });
@@ -104,7 +112,7 @@ if (args.Length == 2)
 {
     if (!loader.HasLocation("0"))
         throw new InvalidOperationException("Missing starting location: 0");
-    loader.Export(args[1]);
+    loader.Export(args[1], missingIncludes);
     foreach (string read in reads)
         Console.WriteLine("Quest source requested: " + read);
 }
@@ -190,9 +198,10 @@ sealed class LoaderProbe
 
     public bool HasLocation(string name) => f_Labels.IndexOf(name) >= 0;
 
-    public void Export(string path)
+    public void Export(string path, IEnumerable<string> diagnostics)
     {
-        var document = new System.Xml.Linq.XElement("quest");
+        var document = new System.Xml.Linq.XElement("quest",
+            diagnostics.Select(message => new System.Xml.Linq.XElement("diagnostic", message)));
         for (int i = 0; i < f_Labels.Count; i++)
         {
             string name = f_Labels[i];
