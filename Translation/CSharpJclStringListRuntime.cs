@@ -5,6 +5,8 @@ public static class CSharpJclStringListRuntime
     public const string Source = """
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 
 namespace FireURQ.Runtime;
 
@@ -29,6 +31,7 @@ public interface IJclStringList
 {
     int Count { get; }
     int LastIndex { get; }
+    string Text { get; set; }
     bool CaseSensitive { get; set; }
     bool Sorted { get; set; }
     TDuplicates Duplicates { get; set; }
@@ -173,6 +176,24 @@ public sealed class TJclStringList : TInterfacedObject, IJclStringList
 
     public int Count => entries.Count;
     public int LastIndex => Count - 1;
+
+    public string Text
+    {
+        get
+        {
+            var text = new StringBuilder();
+            foreach (Entry entry in entries)
+                text.Append(entry.Text).Append("\r\n");
+            return text.ToString();
+        }
+        set
+        {
+            Clear();
+            using var reader = new StringReader(value ?? string.Empty);
+            while (reader.ReadLine() is string line)
+                Add(line);
+        }
+    }
 
     public TJclStringListObjectsMode ObjectsMode => associatedValues switch
     {
