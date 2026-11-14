@@ -186,6 +186,13 @@ public struct D3DSURFACE_DESC
     public uint Height;
 }
 
+[StructLayout(LayoutKind.Sequential)]
+public struct D3DLOCKED_RECT
+{
+    public int Pitch;
+    public IntPtr Bits;
+}
+
 [ComImport]
 [Guid("E4CDD575-2866-4F01-B12E-7EECE1EC9358")]
 [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
@@ -208,6 +215,8 @@ public interface IDirect3DTexture8
 
     [PreserveSig] int GetLevelDesc(uint level, out D3DSURFACE_DESC description);
     [PreserveSig] int GetSurfaceLevel(uint level, out IDirect3DSurface8 surface);
+    [PreserveSig] int LockRect(uint level, out D3DLOCKED_RECT lockedRect, IntPtr rect, uint flags);
+    [PreserveSig] int UnlockRect(uint level);
 }
 
 [ComImport]
