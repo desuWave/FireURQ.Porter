@@ -19,7 +19,7 @@ try {
     New-Item -ItemType Directory -Path $work -Force | Out-Null
     $env:TEMP = $work
     $env:TMP = $work
-    foreach ($file in @('Variant.cs', 'JclStringLists.cs', 'StringListCommon.cs')) {
+    foreach ($file in @('TObject.cs', 'Variant.cs', 'JclStringLists.cs', 'StringListCommon.cs')) {
         Copy-Item -LiteralPath (Join-Path $generated "__runtime\$file") -Destination $work
     }
     @'
