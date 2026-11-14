@@ -468,6 +468,10 @@ public sealed class ProjectTranslator
                 "if (!ReferenceEquals(aTarget, f_CurTarget) || (aTarget != null && aTarget.Tex == null))")
             .Replace("aTarget.Tex.GetSurfaceLevel(0, out l_Surf);",
                 "if (aTarget.Tex == null || aTarget.Tex.GetSurfaceLevel(0, out l_Surf) < 0) return false;")
+            .Replace("f_D3DDevice.SetTransform(D3DTS_PROJECTION, f_matProj);",
+                "f_D3DDevice.SetTransform(3, ref f_matProj);")
+            .Replace("f_D3DDevice.SetTransform(D3DTS_VIEW, f_matView);",
+                "f_D3DDevice.SetTransform(2, ref f_matView);")
             .Replace("New(l_Target);", "l_Target = new Td2dRenderTarget();")
             .Replace("Dispose(l_Target);", "ReleaseTargetResources(l_Target);")
             .Replace("if (~(f_CurTarget != null))", "if (f_CurTarget == null)")
