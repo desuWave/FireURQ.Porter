@@ -55,13 +55,20 @@ loader.Load(args[0], (in string path) =>
     reads.Add(path);
     return File.ReadAllText(path, Encoding.GetEncoding(1251));
 });
-if (reads.Count != 1 || reads[0] != args[0])
-    throw new InvalidOperationException("Unexpected source reads: " + string.Join(", ", reads));
-loader.CheckLocation("0", "pln ");
-loader.CheckLocation("steklo", "pln It is GLAAAAS!!!!");
-Console.WriteLine("PASS: generated Load read the author fixture and registered both locations.");
 if (args.Length == 2)
+{
+    if (!loader.HasLocation("0"))
+        throw new InvalidOperationException("Missing starting location: 0");
     loader.Export(args[1]);
+}
+else
+{
+    if (reads.Count != 1 || reads[0] != args[0])
+        throw new InvalidOperationException("Unexpected source reads: " + string.Join(", ", reads));
+    loader.CheckLocation("0", "pln ");
+    loader.CheckLocation("steklo", "pln It is GLAAAAS!!!!");
+    Console.WriteLine("PASS: generated Load read the author fixture and registered both locations.");
+}
 
 #if QUEST_WINDOW
 QuestWindow.Run(loader);
@@ -103,6 +110,8 @@ sealed class LoaderProbe
                 yield return source[4..];
         }
     }
+
+    public bool HasLocation(string name) => f_Labels.IndexOf(name) >= 0;
 
     public void Export(string path)
     {
