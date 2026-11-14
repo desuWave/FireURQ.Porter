@@ -163,6 +163,7 @@ public interface IDirect3DDevice8
     [PreserveSig] int BeginScene();
     [PreserveSig] int EndScene();
     [PreserveSig] int Clear(uint count, IntPtr rects, uint flags, uint color, float z, uint stencil);
+    [PreserveSig] int SetTransform(int state, [In] ref TD3DMatrix matrix);
 }
 
 [ComImport]
@@ -245,6 +246,15 @@ public interface IDirect3DIndexBuffer8
 
     [PreserveSig] int Lock(uint offset, uint size, out IntPtr data, uint flags);
     [PreserveSig] int Unlock();
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct TD3DMatrix
+{
+    public float _11, _12, _13, _14;
+    public float _21, _22, _23, _24;
+    public float _31, _32, _33, _34;
+    public float _41, _42, _43, _44;
 }
 
 public static class D3D8
