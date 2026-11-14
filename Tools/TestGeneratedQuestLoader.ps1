@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$VerificationDirectory,
     [switch]$ShowWindow,
+    [string]$ExportLocations,
     [string]$QuestPath = 'E:\EVI_DATA\EVI_Projects\fireurq-master\tests\ver1.8\202.simple_links.qst'
 )
 
@@ -13,6 +14,8 @@ $oldConsoleEncoding = [Console]::OutputEncoding
 $exitCode = 1
 try {
     $generated = Join-Path (Resolve-Path -LiteralPath $VerificationDirectory).Path 'translation-output'
+    if ($ExportLocations -and $ShowWindow) { throw 'Choose ShowWindow or ExportLocations.' }
+    if ($ExportLocations) { $ExportLocations = [IO.Path]::GetFullPath($ExportLocations) }
     $quest = (Resolve-Path -LiteralPath $QuestPath).Path
     $context = [IO.File]::ReadAllText((Join-Path $generated 'fireurq-master\furqContext.cs'))
     $pattern = '(?ms)^    public void Load\(in string aFilename, TFURQCodeLoadProc aLoadProc\)\s*\r?\n    \{.*?^    \}'
@@ -57,6 +60,8 @@ if (reads.Count != 1 || reads[0] != args[0])
 loader.CheckLocation("0", "pln ");
 loader.CheckLocation("steklo", "pln It is GLAAAAS!!!!");
 Console.WriteLine("PASS: generated Load read the author fixture and registered both locations.");
+if (args.Length == 2)
+    loader.Export(args[1]);
 
 #if QUEST_WINDOW
 QuestWindow.Run(loader);
@@ -97,6 +102,19 @@ sealed class LoaderProbe
             if (source.StartsWith("pln ", StringComparison.OrdinalIgnoreCase))
                 yield return source[4..];
         }
+    }
+
+    public void Export(string path)
+    {
+        var document = new System.Xml.Linq.XElement("quest");
+        for (int i = 0; i < f_Labels.Count; i++)
+        {
+            string name = f_Labels[i];
+            document.Add(new System.Xml.Linq.XElement("location",
+                new System.Xml.Linq.XAttribute("name", name),
+                ReadLocation(name).Select(line => new System.Xml.Linq.XElement("line", line))));
+        }
+        document.Save(path);
     }
 
     public void CheckLocation(string name, string expectedText)
@@ -196,7 +214,9 @@ static class QuestWindow
 
     [Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
     $ErrorActionPreference = 'Continue'
-    $output = @(& dotnet run --project (Join-Path $work 'QuestLoad.csproj') -c Release -- $quest 2>&1 |
+    $arguments = @('run', '--project', (Join-Path $work 'QuestLoad.csproj'), '-c', 'Release', '--', $quest)
+    if ($ExportLocations) { $arguments += $ExportLocations }
+    $output = @(& dotnet @arguments 2>&1 |
         ForEach-Object { [string]$_ })
     $exitCode = $LASTEXITCODE
     $ErrorActionPreference = 'Stop'
@@ -210,5 +230,5 @@ static class QuestWindow
 }
 
 Write-Output $report
-Set-Clipboard -Value $report -ErrorAction Stop
+if (!$ExportLocations) { Set-Clipboard -Value $report -ErrorAction Stop }
 exit $exitCode
