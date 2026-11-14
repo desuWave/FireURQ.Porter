@@ -109,30 +109,50 @@ sealed class LoaderProbe
     // Source hashing is outside this fixture's loader assertions.
     private void CalcSourceHash() { }
 
-    public IEnumerable<string> ReadLocation(string name)
+    public IEnumerable<string> ReadLocation(string name) =>
+        ReadLocation(name, new HashSet<int>());
+
+    private IEnumerable<string> ReadLocation(string name, HashSet<int> active)
     {
         int index = f_Labels.IndexOf(name);
         if (index < 0)
             throw new InvalidOperationException("Missing label: " + name);
 
-        int start = (int)(double)f_Labels.Variants[index] + 1;
-        for (int line = start; line < f_Source.Count; line++)
+        if (active.Count >= 64 || !active.Add(index))
+            throw new InvalidOperationException("Recursive or too deeply nested preview proc: " + name);
+        try
         {
-            string source = f_Source[line];
-            if (source.Equals("end", StringComparison.OrdinalIgnoreCase) || source.StartsWith(":"))
-                yield break;
-            if (source.StartsWith("pln ", StringComparison.OrdinalIgnoreCase))
-                yield return source[4..];
-            else if (source.StartsWith("btn ", StringComparison.OrdinalIgnoreCase))
+            int start = (int)(double)f_Labels.Variants[index] + 1;
+            for (int line = start; line < f_Source.Count; line++)
             {
-                int comma = source.IndexOf(',', 4);
-                if (comma < 0)
-                    continue;
-                string target = source[4..comma].Trim();
-                string caption = source[(comma + 1)..].Trim();
-                if (target.Length != 0 && caption.Length != 0)
-                    yield return "[[" + caption + "|" + target + "]]";
+                string source = f_Source[line];
+                if (source.Equals("end", StringComparison.OrdinalIgnoreCase) || source.StartsWith(":"))
+                    yield break;
+                if (source.StartsWith("pln ", StringComparison.OrdinalIgnoreCase))
+                    yield return source[4..];
+                else if (source.StartsWith("proc ", StringComparison.OrdinalIgnoreCase))
+                {
+                    string target = source[5..].Trim();
+                    if (!HasLocation(target))
+                        continue;
+                    foreach (string output in ReadLocation(target, active))
+                        yield return output;
+                }
+                else if (source.StartsWith("btn ", StringComparison.OrdinalIgnoreCase))
+                {
+                    int comma = source.IndexOf(',', 4);
+                    if (comma < 0)
+                        continue;
+                    string target = source[4..comma].Trim();
+                    string caption = source[(comma + 1)..].Trim();
+                    if (target.Length != 0 && caption.Length != 0)
+                        yield return "[[" + caption + "|" + target + "]]";
+                }
             }
+        }
+        finally
+        {
+            active.Remove(index);
         }
     }
 
