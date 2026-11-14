@@ -53,13 +53,28 @@ var reads = new List<string>();
 loader.Load(args[0], (in string path) =>
 {
     reads.Add(path);
-    return File.ReadAllText(path, Encoding.GetEncoding(1251));
+    try
+    {
+        return File.ReadAllText(path, Encoding.GetEncoding(1251));
+    }
+    catch (FileNotFoundException) when (!String.Equals(path, args[0], StringComparison.OrdinalIgnoreCase))
+    {
+        Console.WriteLine("Missing quest include: " + path);
+        return string.Empty;
+    }
+    catch (DirectoryNotFoundException) when (!String.Equals(path, args[0], StringComparison.OrdinalIgnoreCase))
+    {
+        Console.WriteLine("Missing quest include: " + path);
+        return string.Empty;
+    }
 });
 if (args.Length == 2)
 {
     if (!loader.HasLocation("0"))
         throw new InvalidOperationException("Missing starting location: 0");
     loader.Export(args[1]);
+    foreach (string read in reads)
+        Console.WriteLine("Quest source requested: " + read);
 }
 else
 {
@@ -108,6 +123,16 @@ sealed class LoaderProbe
                 yield break;
             if (source.StartsWith("pln ", StringComparison.OrdinalIgnoreCase))
                 yield return source[4..];
+            else if (source.StartsWith("btn ", StringComparison.OrdinalIgnoreCase))
+            {
+                int comma = source.IndexOf(',', 4);
+                if (comma < 0)
+                    continue;
+                string target = source[4..comma].Trim();
+                string caption = source[(comma + 1)..].Trim();
+                if (target.Length != 0 && caption.Length != 0)
+                    yield return "[[" + caption + "|" + target + "]]";
+            }
         }
     }
 
