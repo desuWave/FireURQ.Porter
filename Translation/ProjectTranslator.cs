@@ -468,6 +468,10 @@ public sealed class ProjectTranslator
                 "if (!ReferenceEquals(aTarget, f_CurTarget) || (aTarget != null && aTarget.Tex == null))")
             .Replace("aTarget.Tex.GetSurfaceLevel(0, out l_Surf);",
                 "if (aTarget.Tex == null || aTarget.Tex.GetSurfaceLevel(0, out l_Surf) < 0) return false;")
+            .Replace("f_D3DDevice.SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);",
+                "global::FireURQ.Runtime.D3D8.SetRenderState(f_D3DDevice, global::FireURQ.Runtime.D3D8.D3DRS_ZENABLE, global::FireURQ.Runtime.D3D8.D3DZB_TRUE);")
+            .Replace("f_D3DDevice.SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);",
+                "global::FireURQ.Runtime.D3D8.SetRenderState(f_D3DDevice, global::FireURQ.Runtime.D3D8.D3DRS_ZENABLE, global::FireURQ.Runtime.D3D8.D3DZB_FALSE);")
             .Replace("f_D3DDevice.SetTransform(D3DTS_PROJECTION, f_matProj);",
                 "f_D3DDevice.SetTransform(3, ref f_matProj);")
             .Replace("f_D3DDevice.SetTransform(D3DTS_VIEW, f_matView);",
