@@ -1,3 +1,5 @@
+using FireURQ.Porter.AST;
+
 namespace FireURQ.Porter.Analysis;
 
 public sealed record SemanticUnit(
@@ -108,6 +110,7 @@ public sealed record SemanticFunction(
     public bool IsDestructor { get; init; }
     public IReadOnlyList<string> Modifiers { get; init; } = Array.Empty<string>();
     public string? Visibility { get; init; }
+    public IReadOnlyList<DelphiFunction> LocalFunctions { get; init; } = Array.Empty<DelphiFunction>();
 }
 
 public sealed record SemanticParameter(
