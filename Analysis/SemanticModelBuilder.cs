@@ -213,7 +213,7 @@ public static class SemanticModelBuilder
         };
     }
 
-    private static SemanticFunction BuildFunction(DelphiFunction function)
+    internal static SemanticFunction BuildFunction(DelphiFunction function)
     {
         return new SemanticFunction(
             function.Name,
@@ -231,7 +231,8 @@ public static class SemanticModelBuilder
             IsConstructor = function.IsConstructor,
             IsDestructor = function.IsDestructor,
             IsClassMethod = function.IsClassMethod,
-            Modifiers = function.Modifiers
+            Modifiers = function.Modifiers,
+            LocalFunctions = function.LocalFunctions
         };
     }
 
