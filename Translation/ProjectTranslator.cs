@@ -472,6 +472,23 @@ public sealed class ProjectTranslator
                 "global::FireURQ.Runtime.D3D8.SetRenderState(f_D3DDevice, global::FireURQ.Runtime.D3D8.D3DRS_ZENABLE, global::FireURQ.Runtime.D3D8.D3DZB_TRUE);")
             .Replace("f_D3DDevice.SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE);",
                 "global::FireURQ.Runtime.D3D8.SetRenderState(f_D3DDevice, global::FireURQ.Runtime.D3D8.D3DRS_ZENABLE, global::FireURQ.Runtime.D3D8.D3DZB_FALSE);")
+            .Replace("TD3DMatrix l_Temp;", "")
+            .Replace("D3DXMatrixScaling(f_matProj, 1.0, ( - 1.0), 1.0);", """
+f_matProj = new TD3DMatrix
+        {
+            _11 = 2f / aWidth,
+            _22 = -2f / aHeight,
+            _33 = 1f,
+            _41 = -1f - 1f / aWidth,
+            _42 = 1f + 1f / aHeight,
+            _44 = 1f
+        };
+""")
+            .Replace("D3DXMatrixTranslation(l_Temp, ( - 0.5), (aHeight + 0.5), 0.0);", "")
+            .Replace("D3DXMatrixMultiply(f_matProj, f_matProj, l_Temp);", "")
+            .Replace("D3DXMatrixOrthoOffCenterLH(l_Temp, 0, aWidth, 0, aHeight, 0, 1.0);", "")
+            .Replace("D3DXMatrixIdentity(f_matView);",
+                "f_matView = new TD3DMatrix { _11 = 1f, _22 = 1f, _33 = 1f, _44 = 1f };")
             .Replace("f_D3DDevice.SetTransform(D3DTS_PROJECTION, f_matProj);",
                 "f_D3DDevice.SetTransform(3, ref f_matProj);")
             .Replace("f_D3DDevice.SetTransform(D3DTS_VIEW, f_matView);",
