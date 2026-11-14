@@ -596,6 +596,15 @@ private static void ReleaseTargetResources(Td2dRenderTarget target)
                     function, group.Key, input.SemanticModel);
                 string translated = _functionTranslator.TranslateFunction(
                     function, body.Behavior, manageDestructorLifetime: true);
+                if (input.SemanticModel.Name.Equals("furqContext", StringComparison.OrdinalIgnoreCase) &&
+                    group.Key.Equals("TFURQCode", StringComparison.OrdinalIgnoreCase) &&
+                    function.Name.Equals("Load", StringComparison.OrdinalIgnoreCase) &&
+                    function.Parameters.Count == 2 &&
+                    function.Parameters[1].Type.Equals("TFURQCodeLoadProc", StringComparison.OrdinalIgnoreCase))
+                {
+                    translated = AdaptQuestLoader(translated);
+                }
+
                 builder.Append(IndentAndModifySignature(
                     translated, GetInstanceImplementationPrefix(function), 1));
                 builder.AppendLine();
@@ -607,6 +616,46 @@ private static void ReleaseTargetResources(Td2dRenderTarget target)
         }
 
         return translatedCount;
+    }
+
+    private static string AdaptQuestLoader(string source)
+    {
+        // Delphi string offsets are one-based, and Delete mutates its argument.
+        return source
+            .Replace("uint l_OpenPos;", "")
+            .Replace("uint l_ClosePos;", "")
+            .Replace("uint l_Pos;", "int l_Pos;")
+            .Replace("uint l_Pos2;", "int l_Pos2;")
+            .Replace("l_Pos = Pos(\"*/\", l_Str);", "l_Pos = l_Str.IndexOf(\"*/\", StringComparison.Ordinal) + 1;")
+            .Replace("l_Pos = Pos(\"/*\", l_Str);", "l_Pos = l_Str.IndexOf(\"/*\", StringComparison.Ordinal) + 1;")
+            .Replace("l_Pos = Pos(\";\", aList[I]);", "l_Pos = aList[I].IndexOf(';') + 1;")
+            .Replace("PosEx(\"*/\", l_Str, (l_Pos + 2))", "(l_Str.IndexOf(\"*/\", l_Pos + 1, StringComparison.Ordinal) + 1)")
+            .Replace("Delete(l_Str, 1, (l_Pos + 1));", "l_Str = l_Str[(l_Pos + 1)..];")
+            .Replace("Delete(l_Str, l_Pos, ((l_Pos2 - l_Pos) + 2));", "l_Str = l_Str.Remove(l_Pos - 1, l_Pos2 - l_Pos + 2);")
+            .Replace("Delete(l_Str, l_Pos, MaxInt);", "l_Str = l_Str[..(l_Pos - 1)];")
+            .Replace("Copy(aList[I], 1, (l_Pos - 1))", "aList[I][..(l_Pos - 1)]")
+            .Replace("Pred(aList.Count)", "(aList.Count - 1)")
+            .Replace("Pred(f_Source.Count)", "(f_Source.Count - 1)")
+            .Replace("Pred(l_Buf.Count)", "(l_Buf.Count - 1)")
+            .Replace("Pred(l_Includes.Count)", "(l_Includes.Count - 1)")
+            .Replace("AnsiReplaceStr(f_Source[I], '\\t', \"    \")", "f_Source[I].Replace(\"\\t\", \"    \")")
+            .Replace("Length(l_Str)", "l_Str.Length")
+            .Replace("for (J = 1; J <= l_Len; J++)", "var chars = l_Str.ToCharArray();\n        for (J = 0; J < l_Len; J++)")
+            .Replace("l_Str[J]", "chars[J]")
+            .Replace("TrimLeft(l_Str)", "new string(chars).TrimStart()")
+            .Replace("AnsiStartsStr(\":\", l_Str)", "l_Str.StartsWith(\":\", StringComparison.Ordinal)")
+            .Replace("Delete(l_Str, 1, 1);", "l_Str = l_Str[1..];")
+            .Replace("Trim(l_Str)", "l_Str.Trim()")
+            .Replace("Trim(l_Buf[I])", "l_Buf[I].Trim()")
+            .Replace("AnsiStartsText(c_sUsePrefix, l_Label)", "l_Label.StartsWith(c_sUsePrefix, StringComparison.OrdinalIgnoreCase)")
+            .Replace("AnsiStartsText(c_sInclude, l_Str)", "l_Str.StartsWith(c_sInclude, StringComparison.OrdinalIgnoreCase)")
+            .Replace("Copy(l_Label, 5, MaxInt)", "l_Label[Math.Min(4, l_Label.Length)..]")
+            .Replace("Trim(Copy(l_Str, 10, MaxInt))", "l_Str[Math.Min(9, l_Str.Length)..].Trim()")
+            .Replace("aLoadProc(aOneFileName)", "aLoadProc(aOneFilename)")
+            .Replace("ExtractFilePath(aFilename)", "System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(aFilename))!")
+            .Replace("ExtractFilePath(aOneFilename)", "System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(aOneFilename))!")
+            .Replace("ExtractRelativePath(l_BasePath, aOneFilename)", "System.IO.Path.GetRelativePath(l_BasePath, aOneFilename)")
+            .Replace("(l_Path + l_Includes[I])", "System.IO.Path.Combine(l_Path, l_Includes[I])");
     }
 
     private SemanticFunction NormalizeOverrideVisibility(
