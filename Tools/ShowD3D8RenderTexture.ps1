@@ -36,7 +36,15 @@ try {
                 try {
                     $skin = New-Object System.Xml.XmlDocument
                     $skin.XmlResolver = $null
-                    $skin.Load($skinStream)
+                    # The original skin declares "window-1251". Decode its bytes
+                    # before parsing so XmlDocument does not resolve that alias.
+                    $reader = [IO.StreamReader]::new(
+                        $skinStream, [Text.Encoding]::GetEncoding(1251), $true)
+                    try {
+                        $skin.LoadXml($reader.ReadToEnd())
+                    } finally {
+                        $reader.Dispose()
+                    }
                     $node = $skin.SelectSingleNode('/skin/splash')
                     if ($node -and $node.HasAttribute('bgcolor')) {
                         $hex = $node.GetAttribute('bgcolor').Trim() -replace '^(?:\$|0x)', ''
