@@ -26,6 +26,8 @@ namespace FireURQ.Runtime
         internal global::System.ReadOnlySpan<byte> SimpleXmlPayload => simpleXmlPayload;
         internal bool HasSimpleXmlPayload => simpleXmlPayload is not null;
 
+        internal object? BoxedValue => value;
+
         public ushort TypeCode => typeCode;
         public static Variant Unassigned => default;
         public static Variant Null => new Variant(1, null);

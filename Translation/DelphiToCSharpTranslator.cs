@@ -16,6 +16,12 @@ public sealed class DelphiToCSharpTranslator
         _unitName = unitName;
     }
 
+    private bool IsSimpleXmlVariantFormatter(SemanticFunction function) =>
+        string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
+        function.Name.Equals("VarToXSTR", StringComparison.OrdinalIgnoreCase) &&
+        function.Parameters.Count == 1 &&
+        function.Parameters[0].Type.Equals("TVarData", StringComparison.OrdinalIgnoreCase);
+
     private bool IsBooleanType(string? type) =>
         !string.IsNullOrWhiteSpace(type) && MapType(type) == "bool";
 
@@ -47,6 +53,7 @@ public sealed class DelphiToCSharpTranslator
         try
         {
             var builder = new StringBuilder();
+            bool isSimpleXmlVariantFormatter = IsSimpleXmlVariantFormatter(function);
 
             string returnType =
                 function.IsProcedure
@@ -78,7 +85,8 @@ public sealed class DelphiToCSharpTranslator
 
                 builder
                     .Append(MapParameterKind(parameter.Kind))
-                    .Append(isLogArgumentArray ? "object[]" : MapType(parameter.Type))
+                    .Append(isLogArgumentArray ? "object[]" :
+                        isSimpleXmlVariantFormatter ? "Variant" : MapType(parameter.Type))
                     .Append(' ')
                     .Append(parameter.Name)
                     // Preserve the RenderBatch default.
@@ -152,6 +160,26 @@ public sealed class DelphiToCSharpTranslator
                 function.Parameters.Count == 1 && MapType(function.Parameters[0].Type) == "string")
             {
                 builder.AppendLine($"    SetUnicodeText({function.Parameters[0].Name});");
+                builder.AppendLine("}");
+                return builder.ToString();
+            }
+
+            if (isSimpleXmlVariantFormatter)
+            {
+                string value = function.Parameters[0].Name;
+                builder.AppendLine($$"""
+    return {{value}}.TypeCode switch
+    {
+        1 => XSTR_NULL,
+        2 or 3 or 16 or 17 or 18 or 19 or 20 =>
+            global::System.Convert.ToString({{value}}.BoxedValue, global::System.Globalization.CultureInfo.InvariantCulture) ?? "",
+        4 or 5 or 6 => FloatToXSTR((double){{value}}),
+        7 => DateTimeToXSTR((double){{value}}),
+        11 => {{value}}.TryGetBoolean(out bool flag) && flag ? "1" : "0",
+        0x2011 => global::System.Convert.ToBase64String((byte[]){{value}}.BoxedValue!),
+        _ => (string){{value}}
+    };
+""");
                 builder.AppendLine("}");
                 return builder.ToString();
             }
@@ -1719,6 +1747,16 @@ private bool TryTranslateStreamCall(
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
+    if (string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count == 2 &&
+        expression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        expression.Children[0].Text.Equals("VarToXSTR", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Call } cast &&
+        cast.Children.Count == 2 &&
+        cast.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        cast.Children[0].Text.Equals("TVarData", StringComparison.OrdinalIgnoreCase))
+        return $"VarToXSTR({TranslateExpression(cast.Children[1])})";
+
     if (TryTranslateDeclaredTypeCast(expression, out string declaredCast))
         return declaredCast;
 
