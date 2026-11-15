@@ -220,6 +220,13 @@ sealed class LoaderProbe
                             new System.Xml.Linq.XAttribute("id", script.Groups["id"].Value),
                             script.Groups["steps"].Value));
                 }
+                else if (source.StartsWith("goto ", StringComparison.OrdinalIgnoreCase))
+                {
+                    string destination = source[5..].Trim();
+                    if (decorations != null && destination.Length != 0)
+                        decorations.Add(new System.Xml.Linq.XElement("goto", destination));
+                    yield break;
+                }
                 else if (decorations != null && source.StartsWith("inv+", StringComparison.OrdinalIgnoreCase))
                 {
                     string item = source[4..].Trim();
