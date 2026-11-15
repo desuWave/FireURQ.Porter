@@ -185,7 +185,7 @@ sealed class LoaderProbe
                     if (decor.Success)
                     {
                         string id = decor.Groups["id"].Value;
-                        decorations.RemoveAll(item => String.Equals((string?)item.Attribute("id"), id,
+                        decorations.RemoveAll(item => item.Name == "text-decoration" && String.Equals((string?)item.Attribute("id"), id,
                             StringComparison.OrdinalIgnoreCase));
                         decorations.Add(new System.Xml.Linq.XElement("text-decoration",
                             new System.Xml.Linq.XAttribute("id", id),
@@ -196,6 +196,19 @@ sealed class LoaderProbe
                             new System.Xml.Linq.XAttribute("link-color", decor.Groups["link"].Value),
                             decor.Groups["text"].Value));
                     }
+                }
+                else if (decorations != null && source.StartsWith("decorcol ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var color = System.Text.RegularExpressions.Regex.Match(source,
+                        @"^decorcol\s+(?<id>\w+)\s+0x(?<color>[a-f0-9]{6})\s*,\s*0x(?<link>[a-f0-9]{6})\s*,\s*0x(?<hover>[a-f0-9]{6})\s*,\s*(?<duration>\d{1,9})\s*$",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (color.Success)
+                        decorations.Add(new System.Xml.Linq.XElement("decoration-color",
+                            new System.Xml.Linq.XAttribute("id", color.Groups["id"].Value),
+                            new System.Xml.Linq.XAttribute("color", color.Groups["color"].Value),
+                            new System.Xml.Linq.XAttribute("link-color", color.Groups["link"].Value),
+                            new System.Xml.Linq.XAttribute("hover-color", color.Groups["hover"].Value),
+                            new System.Xml.Linq.XAttribute("duration", color.Groups["duration"].Value)));
                 }
                 else if (source.StartsWith("btn ", StringComparison.OrdinalIgnoreCase))
                 {
