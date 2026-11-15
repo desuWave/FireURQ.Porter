@@ -36,6 +36,11 @@ public
   function GetMask: Integer;
   function InvertMask: Integer;
   function IsOtherNotReady(Other: TBase): Boolean;
+  function Accepts(Value: Integer): Boolean;
+  function MaskOf(Value: Integer): Integer;
+  function Rejects(Value: Integer): Boolean;
+  function OtherRejects(Other: TBase; Value: Integer): Boolean;
+  function InvertArgument(Value: Integer): Integer;
   function Value: Integer; virtual;
   function ReadHidden: Integer;
   function ReadSecret: Integer;
@@ -80,6 +85,26 @@ end;
 function TBase.IsOtherNotReady(Other: TBase): Boolean;
 begin
   Result := not Other.ready;
+end;
+function TBase.Accepts(Value: Integer): Boolean;
+begin
+  Result := Stored = Value;
+end;
+function TBase.MaskOf(Value: Integer): Integer;
+begin
+  Result := Value;
+end;
+function TBase.Rejects(Value: Integer): Boolean;
+begin
+  Result := not Accepts(Value);
+end;
+function TBase.OtherRejects(Other: TBase; Value: Integer): Boolean;
+begin
+  Result := not Other.Accepts(Value);
+end;
+function TBase.InvertArgument(Value: Integer): Integer;
+begin
+  Result := not MaskOf(Value);
 end;
 function TChild.IsNotReady: Boolean;
 begin
@@ -160,8 +185,11 @@ Check("Protected override method emitted",
     generated.Contains("protected override int Hidden("));
 Check("Private method visibility preserved",
     generated.Contains("private int Secret("));
-Check("All sixteen implementations emitted",
-    results[0].FunctionsTranslated == 16);
+Check("All twenty-one implementations emitted",
+    results[0].FunctionsTranslated == 21);
+Check("Calls with arguments preserve Boolean and integer not",
+    generated.Contains("!Accepts(Value)") && generated.Contains("!Other.Accepts(Value)") &&
+    generated.Contains("~MaskOf(Value)"));
 Check("Bare Boolean functions use logical not and receive parentheses",
     generated.Contains("!Ready()") && generated.Contains("!Other.Ready()"));
 Check("Bare integer function uses bitwise not and receives parentheses",
@@ -200,6 +228,9 @@ public static class Program
             child.IsNotLoaded() && plain.InvertStored() == ~42 &&
             child.IsNotReady() && plain.IsOtherNotReady(child) &&
             !child.IsOtherNotReady(plain) && plain.InvertMask() == ~42 &&
+            plain.Rejects(19) && !plain.Rejects(42) &&
+            plain.OtherRejects(child, 42) && !plain.OtherRejects(child, 19) &&
+            plain.InvertArgument(23) == ~23 &&
             plain.DirectSetting == 42 &&
             child.Setting == 19 &&
             plain.Value() == 1 &&

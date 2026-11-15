@@ -261,14 +261,14 @@ public sealed class TypeResolver
     }
 
     internal TypeResolution? ResolveDataMemberType(string receiver, string memberName, string? unitName) =>
-        ResolveValueMember(receiver, memberName, unitName, function: false)?.Type;
+        ResolveValueMember(receiver, memberName, unitName, argumentCount: null)?.Type;
 
-    internal (string Name, TypeResolution Type)? ResolveParameterlessFunction(
-        string receiver, string memberName, string? unitName) =>
-        ResolveValueMember(receiver, memberName, unitName, function: true);
+    internal (string Name, TypeResolution Type)? ResolveFunctionMember(
+        string receiver, string memberName, string? unitName, int argumentCount) =>
+        ResolveValueMember(receiver, memberName, unitName, argumentCount);
 
     private (string Name, TypeResolution Type)? ResolveValueMember(
-        string receiver, string memberName, string? unitName, bool function)
+        string receiver, string memberName, string? unitName, int? argumentCount)
     {
         string? context = unitName;
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -292,8 +292,8 @@ public sealed class TypeResolver
                 if (named.Length > 0)
                 {
                     var candidates = named.Where(member =>
-                        member.Parameters.Count == 0 &&
-                        (function
+                        member.Parameters.Count == (argumentCount ?? 0) &&
+                        (argumentCount.HasValue
                             ? member.Kind == SemanticMemberKind.Method &&
                               !member.IsConstructor && !member.IsDestructor &&
                               !string.IsNullOrWhiteSpace(member.Type)
