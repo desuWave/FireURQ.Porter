@@ -255,8 +255,11 @@ sealed class LoaderProbe
                     {
                         int destinationIndex = f_Labels.IndexOf(destination);
                         if (active.Count < 64 && !active.Contains(destinationIndex))
+                        {
+                            decorations?.Add(new System.Xml.Linq.XElement("continuation", destination));
                             foreach (var output in ReadLocation(destination, active, decorations, variables))
                                 yield return output;
+                        }
                     }
                     else if (decorations != null && destination.Length != 0)
                     {
@@ -282,7 +285,7 @@ sealed class LoaderProbe
                     decorations.Add(new System.Xml.Linq.XElement("clear-links"));
                 else if (source.StartsWith("btn ", StringComparison.OrdinalIgnoreCase))
                 {
-                    int comma = source.IndexOf(',', 4);
+                    int comma = FindButtonSeparator(source);
                     if (comma < 0)
                         continue;
                     string target = source[4..comma].Trim();
@@ -338,6 +341,28 @@ sealed class LoaderProbe
         }
     }
 
+    private static int FindButtonSeparator(string source)
+    {
+        int depth = 0;
+        bool quoted = false;
+        for (int index = 4; index < source.Length; index++)
+        {
+            char ch = source[index];
+            if (ch == '"')
+                quoted = !quoted;
+            else if (!quoted)
+            {
+                if (ch == '(')
+                    depth++;
+                else if (ch == ')')
+                    depth--;
+                else if (ch == ',' && depth == 0)
+                    return index;
+            }
+        }
+        return -1;
+    }
+
     private static string ExpandValues(string source, Dictionary<string, string> variables) =>
         Regex.Replace(source, @"#(%?)([^#$]+)\$", match =>
         {
@@ -363,7 +388,7 @@ sealed class LoaderProbe
     private static bool TryNumber(string expression, Dictionary<string, string> variables, out string value)
     {
         var culture = CultureInfo.InvariantCulture;
-        string numeric = Regex.Replace(expression, @"[\p{L}_][\p{L}\p{N}_]*", match =>
+        string numeric = Regex.Replace(expression, @"[\p{L}_][\p{L}\p{N}_]*(?:[ \t]+[\p{L}_][\p{L}\p{N}_]*)*", match =>
             variables.TryGetValue(match.Value, out string? item) &&
                 decimal.TryParse(item, NumberStyles.Number, culture, out decimal number)
                 ? "(" + number.ToString(culture) + ")"
