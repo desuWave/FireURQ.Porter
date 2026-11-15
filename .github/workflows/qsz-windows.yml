@@ -81,3 +81,16 @@ jobs:
               $fade[0].Node.GetAttribute('link-color') -ine 'C2BB47') {
               throw 'Expected the timed body and link colors in the author fixture.'
           }
+          $vulcanoQuest = Join-Path $fireurq 'tests/ver1.8.1/AV_Vulcano.qst'
+          $vulcanoXml = Join-Path $directory 'vulcano.xml'
+          & powershell.exe -NoProfile -File ./Tools/TestGeneratedQuestLoader.ps1 -VerificationDirectory $directory -QuestPath $vulcanoQuest -ExportLocations $vulcanoXml
+          if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $vulcanoXml)) {
+              throw 'Vulcano startup export failed.'
+          }
+          $entry = (Select-Xml -LiteralPath $vulcanoXml -XPath '/quest/location[@name="0"]').Node
+          $intro = $entry.SelectSingleNode('line[not(@button)]')
+          if ($intro -eq $null -or $intro.InnerText.Length -lt 300 -or
+              $entry.SelectNodes('line[@button="true"]').Count -ne 1 -or
+              $entry.SelectNodes('inventory-add').Count -ne 1) {
+              throw 'Expected the Vulcano introduction, combat button and inventory item.'
+          }
