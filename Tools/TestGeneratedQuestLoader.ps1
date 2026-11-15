@@ -148,9 +148,9 @@ sealed class LoaderProbe
     private void CalcSourceHash() { }
 
     public IEnumerable<string> ReadLocation(string name) =>
-        ReadLocation(name, new HashSet<int>());
+        ReadLocation(name, new HashSet<int>()).Select(line => line.Text);
 
-    private IEnumerable<string> ReadLocation(string name, HashSet<int> active,
+    private IEnumerable<(string Text, bool IsButton)> ReadLocation(string name, HashSet<int> active,
         List<System.Xml.Linq.XElement>? decorations = null)
     {
         int index = f_Labels.IndexOf(name);
@@ -168,13 +168,13 @@ sealed class LoaderProbe
                 if (source.Equals("end", StringComparison.OrdinalIgnoreCase) || source.StartsWith(":"))
                     yield break;
                 if (source.StartsWith("pln ", StringComparison.OrdinalIgnoreCase))
-                    yield return source[4..];
+                    yield return (source[4..], false);
                 else if (source.StartsWith("proc ", StringComparison.OrdinalIgnoreCase))
                 {
                     string target = source[5..].Trim();
                     if (!HasLocation(target))
                         continue;
-                    foreach (string output in ReadLocation(target, active, decorations))
+                    foreach (var output in ReadLocation(target, active, decorations))
                         yield return output;
                 }
                 else if (decorations != null && source.StartsWith("decoradd ", StringComparison.OrdinalIgnoreCase))
@@ -220,6 +220,8 @@ sealed class LoaderProbe
                             new System.Xml.Linq.XAttribute("id", script.Groups["id"].Value),
                             script.Groups["steps"].Value));
                 }
+                else if (decorations != null && source.Equals("clsl", StringComparison.OrdinalIgnoreCase))
+                    decorations.Add(new System.Xml.Linq.XElement("clear-links"));
                 else if (source.StartsWith("btn ", StringComparison.OrdinalIgnoreCase))
                 {
                     int comma = source.IndexOf(',', 4);
@@ -228,7 +230,7 @@ sealed class LoaderProbe
                     string target = source[4..comma].Trim();
                     string caption = source[(comma + 1)..].Trim();
                     if (target.Length != 0 && caption.Length != 0)
-                        yield return "[[" + caption + "|" + target + "]]";
+                        yield return ("[[" + caption + "|" + target + "]]", true);
                 }
             }
         }
@@ -251,7 +253,8 @@ sealed class LoaderProbe
         {
             var decorations = new List<System.Xml.Linq.XElement>();
             var lines = ReadLocation(name, new HashSet<int>(), decorations)
-                .Select(line => new System.Xml.Linq.XElement("line", line)).ToArray();
+                .Select(line => new System.Xml.Linq.XElement("line",
+                    line.IsButton ? new System.Xml.Linq.XAttribute("button", true) : null, line.Text)).ToArray();
             document.Add(new System.Xml.Linq.XElement("location",
                 new System.Xml.Linq.XAttribute("name", name), lines, decorations));
         }
