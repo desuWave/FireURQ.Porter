@@ -340,11 +340,13 @@ public sealed class ProjectTranslator
         return false;
     }
 
-    private static bool UsesManagedSimpleXmlIo(string unitName, string className) =>
-        unitName.Equals("SimpleXML", StringComparison.OrdinalIgnoreCase) &&
-        className.ToUpperInvariant() is
-            "TBINXMLREADER" or "TSTMXMLREADER" or "TSTRXMLREADER" or
-            "TBINXMLWRITER" or "TSTMXMLWRITER" or "TSTRXMLWRITER";
+    private static bool UsesManagedStandaloneClass(string unitName, string className) =>
+        (unitName.Equals("d2dGIF", StringComparison.OrdinalIgnoreCase) &&
+         className.Equals("Td2dGIFSprite", StringComparison.OrdinalIgnoreCase)) ||
+        (unitName.Equals("SimpleXML", StringComparison.OrdinalIgnoreCase) &&
+         className.ToUpperInvariant() is
+             "TBINXMLREADER" or "TSTMXMLREADER" or "TSTRXMLREADER" or
+             "TBINXMLWRITER" or "TSTMXMLWRITER" or "TSTRXMLWRITER");
 
     private TranslationResult TranslateUnit(
         ProjectTranslationInput input,
@@ -382,7 +384,7 @@ public sealed class ProjectTranslator
             var declarationModel = input.SemanticModel with
             {
                 Classes = input.SemanticModel.Classes.Where(owner =>
-                    !UsesManagedSimpleXmlIo(input.SemanticModel.Name, owner.Name)).ToArray()
+                    !UsesManagedStandaloneClass(input.SemanticModel.Name, owner.Name)).ToArray()
             };
             string declarations = _declarationTranslator.Translate(declarationModel);
             if (!string.IsNullOrWhiteSpace(declarations))
@@ -578,7 +580,7 @@ private static void ReleaseTargetResources(Td2dRenderTarget target)
 
         foreach (var group in classBodies.GroupBy(body => GetOwnerName(body.Body.Name)))
         {
-            if (UsesManagedSimpleXmlIo(input.SemanticModel.Name, group.Key))
+            if (UsesManagedStandaloneClass(input.SemanticModel.Name, group.Key))
                 continue;
 
             builder.AppendLine($"public partial class {group.Key}");

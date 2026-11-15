@@ -56,6 +56,54 @@ internal sealed class GifFrames : IDisposable
 
     public int DelayMilliseconds(int index) => delays[index];
 
+    // TGIFPainter 2.x default timing uses 12 ms per GIF tick and a minimum of 3 ticks.
+    public int PlaybackDelayMilliseconds(int index, int percent)
+    {
+        int ticks = delays[index] / 10;
+        if (ticks == 0)
+            ticks = 10;
+        return (int)Math.Round(Math.Max(3, ticks) * 1200.0 / percent, MidpointRounding.AwayFromZero);
+    }
+
+    public byte[] EncodeFrameBitmap(int index)
+    {
+        int[] pixels = DecodeArgb(index);
+        int stride = checked((Width * 3 + 3) & ~3);
+        int imageSize = checked(stride * Height);
+        using var data = new MemoryStream(checked(54 + imageSize));
+        using var writer = new BinaryWriter(data);
+        writer.Write((ushort)0x4D42);
+        writer.Write(54 + imageSize);
+        writer.Write(0);
+        writer.Write(54);
+        writer.Write(40);
+        writer.Write(Width);
+        writer.Write(Height);
+        writer.Write((ushort)1);
+        writer.Write((ushort)24);
+        writer.Write(0);
+        writer.Write(imageSize);
+        for (int i = 0; i < 4; i++)
+            writer.Write(0);
+
+        var padding = new byte[stride - Width * 3];
+        for (int y = Height - 1; y >= 0; y--)
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                int pixel = pixels[y * Width + x];
+                // Match the magenta background passed to D3DX as the color key.
+                if ((pixel >>> 24) == 0)
+                    pixel = 0xFF00FF;
+                writer.Write((byte)pixel);
+                writer.Write((byte)(pixel >> 8));
+                writer.Write((byte)(pixel >> 16));
+            }
+            writer.Write(padding);
+        }
+        return data.ToArray();
+    }
+
     public unsafe int[] DecodeArgb(int index)
     {
         ObjectDisposedException.ThrowIf(image == IntPtr.Zero, this);

@@ -27,4 +27,19 @@ for (int i = 0; i < gif.Count; i++)
 if (!gif.DecodeArgb(0).AsSpan().SequenceEqual(frames[0]))
     throw new InvalidDataException("Seeking from the last frame to the first changed its pixels.");
 
+if (gif.PlaybackDelayMilliseconds(0, 100) != 240 ||
+    gif.PlaybackDelayMilliseconds(0, 200) != 120)
+    throw new InvalidDataException("GIF playback delay calculation failed.");
+
+byte[] bitmap = gif.EncodeFrameBitmap(0);
+using var header = new BinaryReader(new MemoryStream(bitmap));
+if (header.ReadUInt16() != 0x4D42 || header.ReadInt32() != bitmap.Length)
+    throw new InvalidDataException("Invalid bitmap file header.");
+header.BaseStream.Position = 18;
+if (header.ReadInt32() != 400 || header.ReadInt32() != 100 ||
+    header.ReadUInt16() != 1 || header.ReadUInt16() != 24 ||
+    bitmap.Length != 54 + 400 * 100 * 3)
+    throw new InvalidDataException("Invalid GIF frame bitmap layout.");
+
 Console.WriteLine("FireURQ line.gif frame decoding passed.");
+Console.WriteLine("FireURQ GIF delay and texture bitmap checks passed.");
