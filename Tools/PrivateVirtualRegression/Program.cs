@@ -45,6 +45,8 @@ public
   function LocalInvert: Integer;
   function MissingObject(Other: TBase): Boolean;
   function MissingPointer(Address: Pointer): Boolean;
+  function IsNonNumericVariant(Input: Variant): Boolean;
+  function InvertLocalVarIsNumeric(Input: Integer): Integer;
   function Value: Integer; virtual;
   function ReadHidden: Integer;
   function ReadSecret: Integer;
@@ -138,6 +140,18 @@ function TBase.MissingPointer(Address: Pointer): Boolean;
 begin
   Result := not Assigned(Address);
 end;
+function TBase.IsNonNumericVariant(Input: Variant): Boolean;
+begin
+  Result := (not VarIsNumeric(Input)) and (not VarIsEmpty(Input)) and (not VarIsNull(Input));
+end;
+function TBase.InvertLocalVarIsNumeric(Input: Integer): Integer;
+  function VarIsNumeric(Value: Integer): Integer;
+  begin
+    Result := Value;
+  end;
+begin
+  Result := not VarIsNumeric(Input);
+end;
 function TChild.IsNotReady: Boolean;
 begin
   Result := not Ready;
@@ -217,8 +231,11 @@ Check("Protected override method emitted",
     generated.Contains("protected override int Hidden("));
 Check("Private method visibility preserved",
     generated.Contains("private int Secret("));
-Check("All twenty-five implementations emitted",
-    results[0].FunctionsTranslated == 25);
+Check("All twenty-seven implementations emitted",
+    results[0].FunctionsTranslated == 27);
+Check("Variant predicates use logical not and respect a nested routine",
+    generated.Contains("!VarIsNumeric(Input)") && generated.Contains("!VarIsEmpty(Input)") &&
+    generated.Contains("!VarIsNull(Input)") && generated.Contains("~VarIsNumeric(Input)"));
 Check("Assigned predicates use logical not for references and pointers",
     generated.Contains("!(Other != null)") && generated.Contains("!(Address != IntPtr.Zero)"));
 Check("Nested functions use their declared return types under not",
@@ -270,6 +287,8 @@ public static class Program
             plain.LocalRejects(42) && !plain.LocalRejects(7) && plain.LocalInvert() == ~19 &&
             plain.MissingObject(null) && !plain.MissingObject(child) &&
             plain.MissingPointer(System.IntPtr.Zero) && !plain.MissingPointer(new System.IntPtr(1)) &&
+            plain.IsNonNumericVariant("text") && !plain.IsNonNumericVariant(42) &&
+            plain.InvertLocalVarIsNumeric(23) == ~23 &&
             plain.DirectSetting == 42 &&
             child.Setting == 19 &&
             plain.Value() == 1 &&

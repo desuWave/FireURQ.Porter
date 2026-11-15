@@ -1600,6 +1600,17 @@ public sealed class DelphiToCSharpTranslator
             return function.Type.IsResolved && !function.Type.IsPointer &&
                 CSharpTypeMapper.Map(function.Type.ResolvedName) == "bool";
 
+        if (operand.Kind == ExpressionParser.ExpressionKind.Call && operand.Children.Count == 2)
+        {
+            var target = operand.Children[0];
+            if (target.Kind == ExpressionParser.ExpressionKind.Identifier &&
+                target.Text.ToUpperInvariant() is ("VARISNUMERIC" or "VARISEMPTY" or "VARISNULL") &&
+                _currentTypeContext?.ResolveLocalFunction(target.Text, 1).Found != true &&
+                ResolveExpressionType(target) is null &&
+                (_unitName is null || _resolver?.HasVisibleNonTypeDeclaration(target.Text, _unitName) != true))
+                return true;
+        }
+
         if (TryTranslateBareUnaryFunction(operand, out _, out bool returnsBoolean))
             return returnsBoolean;
 
