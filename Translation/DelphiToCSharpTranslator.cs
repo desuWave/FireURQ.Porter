@@ -1272,12 +1272,12 @@ public sealed class DelphiToCSharpTranslator
         if (TryGetStandardListFactoryTarget(expression, out string factoryTarget))
             return factoryTarget + "()";
 
-        bool isFontBitmapDimension =
+        bool isFontMemberCall =
             string.Equals(_unitName, "f2FontGen", StringComparison.OrdinalIgnoreCase) &&
             expression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
             expression.Children.Count == 2 &&
-            expression.Children[1].Text.ToUpperInvariant() is "GETWIDTH" or "GETHEIGHT";
-        if (IsF2LinkParserBareCall(expression) || IsSimpleXmlBareCall(expression) || isFontBitmapDimension)
+            expression.Children[1].Text.ToUpperInvariant() is "GETWIDTH" or "GETHEIGHT" or "FIRST" or "NEXT";
+        if (IsF2LinkParserBareCall(expression) || IsSimpleXmlBareCall(expression) || isFontMemberCall)
             return TranslateCallTarget(expression) + "()";
 
         return expression.Kind switch

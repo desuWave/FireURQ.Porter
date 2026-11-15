@@ -189,8 +189,30 @@ TObject.Free((TObject)list);
 TObject.Free((TObject)first);
 TObject.Free((TObject)second);
 
+IJclIntfCollection glyphs = TJclIntfArrayList.Create();
+Glyph[] items = [new('a', 2), new('b', 1), new('c', 2), new('d', 1), new('e', 3)];
+Check("JCL collection starts empty", glyphs.IsEmpty);
+foreach (Glyph item in items)
+    glyphs.Add(item);
+DelphiJclIntfLists.QuickSort((IJclIntfList)glyphs, 0, glyphs.Size - 1,
+    (in IInterface left, in IInterface right) => ((Glyph)right).Size.CompareTo(((Glyph)left).Size));
+var sequence = new System.Text.StringBuilder();
+IJclIntfIterator iterator = glyphs.First();
+while (iterator.HasNext)
+    sequence.Append(((Glyph)iterator.Next()).Id);
+Check("JCL glyph sorting preserves the original tie order", sequence.ToString() == "ecadb");
+Check("JCL sorting and iteration keep one reference per glyph", items.All(item => item.RefCount == 1));
+glyphs.Clear();
+Check("JCL Clear releases all glyphs", glyphs.IsEmpty && items.All(item => item.RefCount == 0));
+
 Console.WriteLine($"Interface-list checks: {passed}/{passed + failed} passed.");
 return failed == 0 ? 0 : 1;
+
+sealed class Glyph(char id, int size) : TInterfacedObject
+{
+    public char Id { get; } = id;
+    public int Size { get; } = size;
+}
 
 sealed class Tracked : TInterfacedObject
 {

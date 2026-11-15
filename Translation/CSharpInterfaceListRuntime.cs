@@ -196,5 +196,91 @@ public class TInterfaceList : TInterfacedObject, IInterfaceList
         }
     }
 }
+public interface IJclIntfCollection : IInterface
+{
+    int Size { get; }
+    bool IsEmpty { get; }
+    bool Add(IInterface value);
+    void Clear();
+    IJclIntfIterator First();
+}
+
+public interface IJclIntfList : IJclIntfCollection, IInterfaceList
+{
+}
+
+public interface IJclIntfIterator : IInterface
+{
+    bool HasNext { get; }
+    IInterface Next();
+}
+
+public sealed class TJclIntfArrayList : TInterfaceList, IJclIntfList
+{
+    public new static TJclIntfArrayList Create() => new();
+
+    public int Size => Count;
+    public bool IsEmpty => Count == 0;
+    bool IJclIntfCollection.Add(IInterface value)
+    {
+        Add(value);
+        return true;
+    }
+
+    public IJclIntfIterator First() => new Iterator(this);
+
+    private sealed class Iterator(TJclIntfArrayList list) : TInterfacedObject, IJclIntfIterator
+    {
+        private int index;
+
+        public bool HasNext => index < list.Count;
+        public IInterface Next()
+        {
+            if (!HasNext)
+                throw new InvalidOperationException("JCL iterator has no next element.");
+            return list[index++]!;
+        }
+    }
+}
+
+public delegate int JclIntfCompare(in IInterface left, in IInterface right);
+
+public static class DelphiJclIntfLists
+{
+    public static void QuickSort(IJclIntfList list, int left, int right, JclIntfCompare compare)
+    {
+        // Keep the JCL pivot and swap order, including swaps of equal keys.
+        while (left < right)
+        {
+            int first = left;
+            int last = right;
+            int pivotIndex = left + ((right - left) >> 1);
+            while (first <= last)
+            {
+                IInterface pivot = list[pivotIndex]!;
+                while (compare(list[first]!, pivot) < 0)
+                    first++;
+                while (compare(list[last]!, pivot) > 0)
+                    last--;
+                if (first > last)
+                    break;
+
+                if (first != last)
+                    list.Exchange(first, last);
+                if (pivotIndex == first)
+                    pivotIndex = last;
+                else if (pivotIndex == last)
+                    pivotIndex = first;
+
+                first++;
+                last--;
+            }
+
+            if (left < last)
+                QuickSort(list, left, last, compare);
+            left = first;
+        }
+    }
+}
 """;
 }

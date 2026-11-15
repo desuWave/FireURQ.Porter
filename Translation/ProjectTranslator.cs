@@ -83,9 +83,9 @@ public sealed class ProjectTranslator
                 Encoding.UTF8);
         }
 
-        if (RequiresListRuntime(
-            inputs.Select(input => input.SemanticModel), resolver,
-            "IInterfaceList", "TInterfaceList"))
+        if (inputs.Any(input => input.SemanticModel.Name.Equals("f2FontGen", StringComparison.OrdinalIgnoreCase)) ||
+            RequiresListRuntime(inputs.Select(input => input.SemanticModel), resolver,
+                "IInterfaceList", "TInterfaceList"))
         {
             File.WriteAllText(
                 Path.Combine(runtimeDirectory, "InterfaceLists.cs"),
@@ -376,6 +376,7 @@ public sealed class ProjectTranslator
             if (input.SemanticModel.Name.Equals("f2FontGen", StringComparison.OrdinalIgnoreCase))
             {
                 builder.AppendLine("using static global::FireURQ.Runtime.GdiPlusFontBitmaps;");
+                builder.AppendLine("using static global::FireURQ.Runtime.DelphiJclIntfLists;");
                 builder.AppendLine("using IStream = global::System.Runtime.InteropServices.ComTypes.IStream;");
                 builder.AppendLine("using TStatus = global::System.Int32;");
             }
