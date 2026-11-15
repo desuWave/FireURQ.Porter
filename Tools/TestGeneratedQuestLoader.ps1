@@ -210,6 +210,16 @@ sealed class LoaderProbe
                             new System.Xml.Linq.XAttribute("hover-color", color.Groups["hover"].Value),
                             new System.Xml.Linq.XAttribute("duration", color.Groups["duration"].Value)));
                 }
+                else if (decorations != null && source.StartsWith("decorscr ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var script = System.Text.RegularExpressions.Regex.Match(source,
+                        @"^decorscr\s+(?<id>\w+)\s+""(?<steps>[^""]+)""\s*$",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (script.Success)
+                        decorations.Add(new System.Xml.Linq.XElement("decoration-script",
+                            new System.Xml.Linq.XAttribute("id", script.Groups["id"].Value),
+                            script.Groups["steps"].Value));
+                }
                 else if (source.StartsWith("btn ", StringComparison.OrdinalIgnoreCase))
                 {
                     int comma = source.IndexOf(',', 4);
