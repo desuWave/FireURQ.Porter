@@ -13,8 +13,9 @@
   <ItemGroup>
     <FireURQSource Include="src/**/*.cs" />
     <!-- furqWinMain and furqAbout belong to FireURQ.dpr. The installer ships f2/fireURQ2.dpr. -->
+    <!-- F2 uses f2SettingsStorage; no release unit imports d2dStorage. -->
     <FireURQSource Include="$(FireURQSourceRoot)/**/*.cs"
-                   Exclude="$(FireURQSourceRoot)/**/furqWinMain.cs;$(FireURQSourceRoot)/**/furqAbout.cs" />
+                   Exclude="$(FireURQSourceRoot)/**/furqWinMain.cs;$(FireURQSourceRoot)/**/furqAbout.cs;$(FireURQSourceRoot)/**/d2dStorage.cs" />
     <Compile Include="@(FireURQSource)" />
   </ItemGroup>
 
