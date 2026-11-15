@@ -118,7 +118,7 @@ public static class CSharpTypeMapper
         {
             "integer" or "int" => "int",
             "boolean" or "bool" or "longbool" => "bool",
-            "string" => "string",
+            "string" or "widestring" => "string",
             "real" or "double" or "tdatetime" => "double",
             "single" => "float",
             "char" => "char",
