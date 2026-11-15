@@ -76,3 +76,8 @@ jobs:
           if ($decor.Count -ne 1 -or !$decor[0].Node.InnerText.Contains('|!blendtext]]')) {
               throw 'Expected the positioned text decoration and its link in the author fixture.'
           }
+          $fade = @(Select-Xml -LiteralPath $decorXml -XPath '/quest/location[@name="blendtext"]/decoration-color[@id="test" and @duration="2000"]')
+          if ($fade.Count -ne 1 -or $fade[0].Node.GetAttribute('color') -ine 'C1968A' -or
+              $fade[0].Node.GetAttribute('link-color') -ine 'C2BB47') {
+              throw 'Expected the timed body and link colors in the author fixture.'
+          }
