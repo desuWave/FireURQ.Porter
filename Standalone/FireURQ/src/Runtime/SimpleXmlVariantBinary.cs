@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.IO;
 
 namespace FireURQ.Runtime;
@@ -11,9 +12,12 @@ internal static class SimpleXmlVariantBinary
     private const ushort AnsiString = 256;
     private const ushort ByteArray = 0x2011;
 
-    internal static (ushort TypeCode, byte[] Payload) Read(BinaryReader reader)
+    internal delegate void ReadBuffer(Span<byte> buffer);
+    internal delegate void WriteBuffer(ReadOnlySpan<byte> buffer);
+
+    internal static (ushort TypeCode, byte[] Payload) Read(ReadBuffer readExactly)
     {
-        int tag = ReadLongint(reader);
+        int tag = ReadLongint(readExactly);
         if (tag is < 0 or > ushort.MaxValue)
             throw new InvalidDataException($"Invalid SimpleXML variant type {tag}.");
 
@@ -21,7 +25,7 @@ internal static class SimpleXmlVariantBinary
         int length = FixedSize(type);
         if (length < 0)
         {
-            int units = ReadLongint(reader);
+            int units = ReadLongint(readExactly);
             int unitSize = type == WideString ? 2 : 1;
             if (units < 0 || units > int.MaxValue / unitSize)
                 throw new InvalidDataException($"Invalid SimpleXML variant length {units}.");
@@ -29,29 +33,36 @@ internal static class SimpleXmlVariantBinary
             length = units * unitSize;
         }
 
-        Stream stream = reader.BaseStream;
-        if (stream.CanSeek && length > stream.Length - stream.Position)
-            throw new EndOfStreamException("Truncated SimpleXML variant payload.");
+        if (length == 0)
+            return (type, Array.Empty<byte>());
 
-        byte[] payload = reader.ReadBytes(length);
-        if (payload.Length != length)
-            throw new EndOfStreamException("Truncated SimpleXML variant payload.");
+        // Read incrementally so a truncated length cannot force a large allocation.
+        using var data = new MemoryStream();
+        Span<byte> buffer = stackalloc byte[4096];
+        for (int remaining = length; remaining > 0;)
+        {
+            Span<byte> chunk = buffer[..Math.Min(remaining, buffer.Length)];
+            readExactly(chunk);
+            data.Write(chunk);
+            remaining -= chunk.Length;
+        }
 
-        return (type, payload);
+        return (type, data.ToArray());
     }
 
-    internal static void Write(BinaryWriter writer, ushort type, ReadOnlySpan<byte> payload)
+    internal static void Write(WriteBuffer write, ushort type, ReadOnlySpan<byte> payload)
     {
         int fixedSize = FixedSize(type);
         int unitSize = type == WideString ? 2 : 1;
         if (fixedSize >= 0 ? payload.Length != fixedSize : payload.Length % unitSize != 0)
             throw new ArgumentException("Payload length does not match the variant type.", nameof(payload));
 
-        WriteLongint(writer, type);
+        WriteLongint(write, type);
         if (fixedSize < 0)
-            WriteLongint(writer, payload.Length / unitSize);
+            WriteLongint(write, payload.Length / unitSize);
 
-        writer.Write(payload);
+        if (!payload.IsEmpty)
+            write(payload);
     }
 
     private static int FixedSize(ushort type) => type switch
@@ -65,34 +76,46 @@ internal static class SimpleXmlVariantBinary
         _ => throw new InvalidDataException($"Unsupported SimpleXML variant type {type}.")
     };
 
-    private static int ReadLongint(BinaryReader reader)
+    private static int ReadLongint(ReadBuffer readExactly)
     {
-        byte first = reader.ReadByte();
+        Span<byte> buffer = stackalloc byte[sizeof(int)];
+        readExactly(buffer[..1]);
+        byte first = buffer[0];
         if (first < 0x80)
             return first;
         if (first == 0xFF)
-            return reader.ReadInt32();
+        {
+            readExactly(buffer);
+            return BinaryPrimitives.ReadInt32LittleEndian(buffer);
+        }
 
-        return ((first & 0x7F) << 8) | reader.ReadByte();
+        readExactly(buffer[..1]);
+        return ((first & 0x7F) << 8) | buffer[0];
     }
 
-    private static void WriteLongint(BinaryWriter writer, int value)
+    private static void WriteLongint(WriteBuffer write, int value)
     {
+        Span<byte> buffer = stackalloc byte[1 + sizeof(int)];
+        int length;
         if (value < 0x80)
         {
-            writer.Write((byte)value);
+            buffer[0] = (byte)value;
+            length = 1;
         }
         else if (value < 0x7F00)
         {
-            writer.Write((byte)((value >> 8) | 0x80));
-            writer.Write((byte)(value & 0xFF));
+            buffer[0] = (byte)((value >> 8) | 0x80);
+            buffer[1] = (byte)(value & 0xFF);
+            length = 2;
         }
         else
         {
-            // Delphi's reader reserves FF; its two-byte writer collides with
-            // that marker at 7F00..7FFF. The reader also accepts this long form.
-            writer.Write((byte)0xFF);
-            writer.Write(value);
+            // The original reader reserves FF for a full 32-bit integer.
+            buffer[0] = 0xFF;
+            BinaryPrimitives.WriteInt32LittleEndian(buffer[1..], value);
+            length = buffer.Length;
         }
+
+        write(buffer[..length]);
     }
 }
