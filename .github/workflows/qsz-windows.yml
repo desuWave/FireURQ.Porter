@@ -94,3 +94,10 @@ jobs:
               $entry.SelectNodes('inventory-add').Count -ne 1) {
               throw 'Expected the Vulcano introduction, combat button and inventory item.'
           }
+          $battle = (Select-Xml -LiteralPath $vulcanoXml -XPath '/quest/location[@name="Вбой"]').Node
+          $battleLines = @($battle.SelectNodes('line') | ForEach-Object { $_.InnerText })
+          if ($battleLines -notcontains 'БОЙ!' -or
+              $battleLines -notcontains 'Ваш противник - Большая пиявка. Сила: 9.' -or
+              $battle.SelectNodes('line[@button="true"]').Count -ne 2) {
+              throw 'Expected the Vulcano combat introduction and both action buttons.'
+          }
