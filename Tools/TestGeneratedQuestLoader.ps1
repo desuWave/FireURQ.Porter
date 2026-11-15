@@ -334,9 +334,17 @@ sealed class LoaderProbe
             var conditional = Regex.Match(source, @"^if\s+(.+?)\s+then\s+(.+)$", RegexOptions.IgnoreCase);
             if (source.StartsWith("if ", StringComparison.OrdinalIgnoreCase))
             {
-                if (!conditional.Success || !ConditionMatches(conditional.Groups[1].Value, variables))
+                if (!conditional.Success)
                     continue;
-                source = conditional.Groups[2].Value;
+
+                string body = conditional.Groups[2].Value;
+                var alternative = Regex.Match(body,
+                    @"^(?<then>(?:""[^""]*""|[^""])*?)(?<![\p{L}\p{N}_])else(?=\s|&|$)(?<else>.*)$",
+                    RegexOptions.IgnoreCase);
+                bool condition = ConditionMatches(conditional.Groups[1].Value, variables);
+                source = alternative.Success
+                    ? alternative.Groups[condition ? "then" : "else"].Value
+                    : condition ? body : string.Empty;
             }
             foreach (Match statement in Regex.Matches(source, @"(?:""[^""]*""|[^""&])+"))
                 yield return (statement.Value.Trim(), conditional.Success);
@@ -412,6 +420,12 @@ sealed class LoaderProbe
 
     private static bool ConditionMatches(string expression, Dictionary<string, string> variables)
     {
+        var conjunction = Regex.Match(expression,
+            @"^(?<left>(?:""[^""]*""|[^""])*?)\s+and\s+(?<right>.+)$", RegexOptions.IgnoreCase);
+        if (conjunction.Success)
+            return ConditionMatches(conjunction.Groups["left"].Value, variables) &&
+                ConditionMatches(conjunction.Groups["right"].Value, variables);
+
         var match = Regex.Match(expression, @"^([^=<>]+?)(<=|>=|<>|=|<|>)([^=<>]+)$");
         if (!match.Success)
             return false;
