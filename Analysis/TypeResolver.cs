@@ -260,7 +260,15 @@ public sealed class TypeResolver
         return false;
     }
 
-    internal TypeResolution? ResolveDataMemberType(string receiver, string memberName, string? unitName)
+    internal TypeResolution? ResolveDataMemberType(string receiver, string memberName, string? unitName) =>
+        ResolveValueMember(receiver, memberName, unitName, function: false)?.Type;
+
+    internal (string Name, TypeResolution Type)? ResolveParameterlessFunction(
+        string receiver, string memberName, string? unitName) =>
+        ResolveValueMember(receiver, memberName, unitName, function: true);
+
+    private (string Name, TypeResolution Type)? ResolveValueMember(
+        string receiver, string memberName, string? unitName, bool function)
     {
         string? context = unitName;
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -277,13 +285,24 @@ public sealed class TypeResolver
             var interfaceType = classType is null ? unit.Interfaces.FirstOrDefault(candidate =>
                 candidate.Name.Equals(type.ResolvedName, StringComparison.OrdinalIgnoreCase)) : null;
             var members = classType?.Members ?? interfaceType?.Members;
-            var member = members?.FirstOrDefault(candidate =>
-                candidate.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase));
-            if (member is not null)
-                return member.Kind is SemanticMemberKind.Field or SemanticMemberKind.Property &&
-                    member.Parameters.Count == 0
-                    ? Resolve(member.Type, owner)
-                    : null;
+            if (members is not null)
+            {
+                var named = members.Where(candidate =>
+                    candidate.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase)).ToArray();
+                if (named.Length > 0)
+                {
+                    var candidates = named.Where(member =>
+                        member.Parameters.Count == 0 &&
+                        (function
+                            ? member.Kind == SemanticMemberKind.Method &&
+                              !member.IsConstructor && !member.IsDestructor &&
+                              !string.IsNullOrWhiteSpace(member.Type)
+                            : member.Kind is SemanticMemberKind.Field or SemanticMemberKind.Property)).ToArray();
+                    return candidates.Length == 1
+                        ? (candidates[0].Name, Resolve(candidates[0].Type, owner))
+                        : null;
+                }
+            }
 
             receiver = classType?.BaseType ?? interfaceType?.BaseType ?? string.Empty;
             context = owner;

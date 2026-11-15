@@ -1486,9 +1486,12 @@ public sealed class DelphiToCSharpTranslator
         if (expression.Children.Count == 0)
             return expression.Text;
 
-        string operand =
-            TranslateExpression(
-                expression.Children[0]);
+        var operandExpression = expression.Children[0];
+        if (expression.Text.Equals("not", StringComparison.OrdinalIgnoreCase) &&
+            TryTranslateBareUnaryFunction(operandExpression, out string call, out bool returnsBoolean))
+            return (returnsBoolean ? "!" : "~") + call;
+
+        string operand = TranslateExpression(operandExpression);
 
         string op =
             expression.Text.ToLowerInvariant() switch
@@ -1500,6 +1503,49 @@ public sealed class DelphiToCSharpTranslator
             };
 
         return $"{op}{operand}";
+    }
+
+    private bool TryTranslateBareUnaryFunction(
+        ExpressionParser.ExpressionNode expression, out string call, out bool returnsBoolean)
+    {
+        call = string.Empty;
+        returnsBoolean = false;
+        if (_resolver is null)
+            return false;
+
+        (string Name, TypeResolution Type)? function = null;
+        string receiverPrefix = "";
+        if (expression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            ResolveExpressionType(expression) is null &&
+            _currentTypeContext?.OwnerClass is { } owner)
+        {
+            function = _resolver.ResolveParameterlessFunction(owner, expression.Text, _unitName);
+        }
+        else if (expression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+                 expression.Children.Count == 2)
+        {
+            var receiver = expression.Children[0];
+            string? receiverName = ResolveExpressionType(receiver);
+            string? unitName = _unitName;
+            if (receiverName is null &&
+                ResolveUnaryMemberType(receiver) is { IsResolved: true, IsPointer: false } member)
+            {
+                receiverName = member.ResolvedName;
+                unitName = member.DeclaringUnitName ?? _unitName;
+            }
+            if (receiverName is not null)
+            {
+                function = _resolver.ResolveParameterlessFunction(receiverName, expression.Children[1].Text, unitName);
+                receiverPrefix = TranslateExpression(receiver) + ".";
+            }
+        }
+
+        if (function is not { } resolved || !resolved.Type.IsResolved || resolved.Type.IsPointer)
+            return false;
+
+        returnsBoolean = CSharpTypeMapper.Map(resolved.Type.ResolvedName) == "bool";
+        call = receiverPrefix + resolved.Name + "()";
+        return true;
     }
 
     private bool IsBooleanUnaryOperand(ExpressionParser.ExpressionNode operand)
@@ -1530,6 +1576,9 @@ public sealed class DelphiToCSharpTranslator
         string? localType = ResolveExpressionType(operand);
         if (localType is not null)
             return IsBooleanType(localType);
+
+        if (TryTranslateBareUnaryFunction(operand, out _, out bool returnsBoolean))
+            return returnsBoolean;
 
         TypeResolution? member = ResolveUnaryMemberType(operand);
         return member is { IsResolved: true, IsPointer: false } &&

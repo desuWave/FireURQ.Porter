@@ -32,6 +32,10 @@ public
   property Enabled: Boolean read Loaded write Loaded;
   function IsDisabledFor(Other: TBase): Boolean;
   function InvertStored: Integer;
+  function Ready: Boolean;
+  function GetMask: Integer;
+  function InvertMask: Integer;
+  function IsOtherNotReady(Other: TBase): Boolean;
   function Value: Integer; virtual;
   function ReadHidden: Integer;
   function ReadSecret: Integer;
@@ -42,6 +46,7 @@ private
 public
   function Value: Integer; override;
   function IsNotLoaded: Boolean;
+  function IsNotReady: Boolean;
 end;
 implementation
 function TBase.Hidden: Integer;
@@ -59,6 +64,26 @@ end;
 function TBase.InvertStored: Integer;
 begin
   Result := not Stored;
+end;
+function TBase.Ready: Boolean;
+begin
+  Result := Loaded;
+end;
+function TBase.GetMask: Integer;
+begin
+  Result := Stored;
+end;
+function TBase.InvertMask: Integer;
+begin
+  Result := not GetMask;
+end;
+function TBase.IsOtherNotReady(Other: TBase): Boolean;
+begin
+  Result := not Other.ready;
+end;
+function TChild.IsNotReady: Boolean;
+begin
+  Result := not Ready;
 end;
 function TChild.IsNotLoaded: Boolean;
 begin
@@ -135,8 +160,12 @@ Check("Protected override method emitted",
     generated.Contains("protected override int Hidden("));
 Check("Private method visibility preserved",
     generated.Contains("private int Secret("));
-Check("All eleven implementations emitted",
-    results[0].FunctionsTranslated == 11);
+Check("All sixteen implementations emitted",
+    results[0].FunctionsTranslated == 16);
+Check("Bare Boolean functions use logical not and receive parentheses",
+    generated.Contains("!Ready()") && generated.Contains("!Other.Ready()"));
+Check("Bare integer function uses bitwise not and receives parentheses",
+    generated.Contains("~GetMask()"));
 Check("Boolean property and inherited field use logical not",
     generated.Contains("!Other.Enabled") && generated.Contains("!Loaded"));
 Check("Integer field uses bitwise not", generated.Contains("~Stored"));
@@ -169,6 +198,8 @@ public static class Program
         bool passed =
             plain.IsDisabledFor(child) && !child.IsDisabledFor(plain) &&
             child.IsNotLoaded() && plain.InvertStored() == ~42 &&
+            child.IsNotReady() && plain.IsOtherNotReady(child) &&
+            !child.IsOtherNotReady(plain) && plain.InvertMask() == ~42 &&
             plain.DirectSetting == 42 &&
             child.Setting == 19 &&
             plain.Value() == 1 &&
