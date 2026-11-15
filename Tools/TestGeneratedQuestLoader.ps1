@@ -110,8 +110,6 @@ loader.Load(entryPath, (in string path) =>
 });
 if (args.Length == 2)
 {
-    if (!loader.HasLocation("0"))
-        throw new InvalidOperationException("Missing starting location: 0");
     loader.Export(args[1], missingIncludes);
     foreach (string read in reads)
         Console.WriteLine("Quest source requested: " + read);
@@ -155,14 +153,14 @@ sealed class LoaderProbe
     private IEnumerable<string> ReadLocation(string name, HashSet<int> active)
     {
         int index = f_Labels.IndexOf(name);
-        if (index < 0)
+        if (index < 0 && name != "0")
             throw new InvalidOperationException("Missing label: " + name);
 
         if (active.Count >= 64 || !active.Add(index))
             throw new InvalidOperationException("Recursive or too deeply nested preview proc: " + name);
         try
         {
-            int start = (int)(double)f_Labels.Variants[index] + 1;
+            int start = index < 0 ? 0 : (int)(double)f_Labels.Variants[index] + 1;
             for (int line = start; line < f_Source.Count; line++)
             {
                 string source = f_Source[line];
@@ -196,15 +194,17 @@ sealed class LoaderProbe
         }
     }
 
-    public bool HasLocation(string name) => f_Labels.IndexOf(name) >= 0;
+    public bool HasLocation(string name) => name == "0" || f_Labels.IndexOf(name) >= 0;
 
     public void Export(string path, IEnumerable<string> diagnostics)
     {
         var document = new System.Xml.Linq.XElement("quest",
             diagnostics.Select(message => new System.Xml.Linq.XElement("diagnostic", message)));
-        for (int i = 0; i < f_Labels.Count; i++)
+        var labels = Enumerable.Range(0, f_Labels.Count).Select(index => f_Labels[index]);
+        if (f_Labels.IndexOf("0") < 0)
+            labels = labels.Prepend("0");
+        foreach (string name in labels)
         {
-            string name = f_Labels[i];
             document.Add(new System.Xml.Linq.XElement("location",
                 new System.Xml.Linq.XAttribute("name", name),
                 ReadLocation(name).Select(line => new System.Xml.Linq.XElement("line", line))));
