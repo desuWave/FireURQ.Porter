@@ -11,12 +11,20 @@ namespace FireURQ.Runtime
     {
         private readonly ushort typeCode;
         private readonly object? value;
+        private readonly byte[]? simpleXmlPayload;
 
-        private Variant(ushort typeCode, object? value)
+        private Variant(ushort typeCode, object? value, byte[]? simpleXmlPayload = null)
         {
             this.typeCode = typeCode;
             this.value = value;
+            this.simpleXmlPayload = simpleXmlPayload;
         }
+
+        internal static Variant FromSimpleXml(ushort typeCode, object? value, byte[] payload) =>
+            new Variant(typeCode, value, payload);
+
+        internal global::System.ReadOnlySpan<byte> SimpleXmlPayload => simpleXmlPayload;
+        internal bool HasSimpleXmlPayload => simpleXmlPayload is not null;
 
         public ushort TypeCode => typeCode;
         public static Variant Unassigned => default;
