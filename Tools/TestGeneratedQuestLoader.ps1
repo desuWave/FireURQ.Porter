@@ -43,6 +43,8 @@ try {
     $project | Set-Content -LiteralPath (Join-Path $work 'QuestLoad.csproj') -Encoding UTF8
     $source = @'
 using System.Text;
+using System.Globalization;
+using System.Text.RegularExpressions;
 using FireURQ.Runtime;
 using static FireURQ.Runtime.DelphiJclStringLists;
 
@@ -151,7 +153,8 @@ sealed class LoaderProbe
         ReadLocation(name, new HashSet<int>()).Select(line => line.Text);
 
     private IEnumerable<(string Text, bool IsButton)> ReadLocation(string name, HashSet<int> active,
-        List<System.Xml.Linq.XElement>? decorations = null)
+        List<System.Xml.Linq.XElement>? decorations = null,
+        Dictionary<string, string>? variables = null)
     {
         int index = f_Labels.IndexOf(name);
         if (index < 0 && name != "0")
@@ -162,26 +165,21 @@ sealed class LoaderProbe
         try
         {
             int start = index < 0 ? 0 : (int)(double)f_Labels.Variants[index] + 1;
+            variables ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var pendingText = new StringBuilder();
-            for (int line = start; line < f_Source.Count; line++)
+            foreach (var command in ReadCommands(start, index < 0, variables))
             {
-                string source = f_Source[line];
+                string source = command.Source;
                 if (source.Equals("end", StringComparison.OrdinalIgnoreCase))
                     break;
-                if (source.StartsWith(":"))
-                {
-                    if (index >= 0)
-                        break;
-                    continue;
-                }
 
                 if (source.StartsWith("p ", StringComparison.OrdinalIgnoreCase))
-                    pendingText.Append(source[2..]);
+                    pendingText.Append(ExpandValues(source[2..], variables));
                 else if (source.Equals("pln", StringComparison.OrdinalIgnoreCase) ||
                     source.StartsWith("pln ", StringComparison.OrdinalIgnoreCase))
                 {
                     if (source.Length > 3)
-                        pendingText.Append(source[4..]);
+                        pendingText.Append(ExpandValues(source[4..], variables));
                     yield return (pendingText.ToString(), false);
                     pendingText.Clear();
                 }
@@ -190,7 +188,7 @@ sealed class LoaderProbe
                     string target = source[5..].Trim();
                     if (!HasLocation(target))
                         continue;
-                    foreach (var output in ReadLocation(target, active, decorations))
+                    foreach (var output in ReadLocation(target, active, decorations, variables))
                     {
                         if (pendingText.Length != 0)
                         {
@@ -253,8 +251,17 @@ sealed class LoaderProbe
                 else if (source.StartsWith("goto ", StringComparison.OrdinalIgnoreCase))
                 {
                     string destination = source[5..].Trim();
-                    if (decorations != null && destination.Length != 0)
+                    if (command.Conditional && destination.Length != 0 && HasLocation(destination))
+                    {
+                        int destinationIndex = f_Labels.IndexOf(destination);
+                        if (active.Count < 64 && !active.Contains(destinationIndex))
+                            foreach (var output in ReadLocation(destination, active, decorations, variables))
+                                yield return output;
+                    }
+                    else if (decorations != null && destination.Length != 0)
+                    {
                         decorations.Add(new System.Xml.Linq.XElement("goto", destination));
+                    }
                     break;
                 }
                 else if (decorations != null && source.StartsWith("inv+", StringComparison.OrdinalIgnoreCase))
@@ -287,8 +294,14 @@ sealed class LoaderProbe
                             yield return (pendingText.ToString(), false);
                             pendingText.Clear();
                         }
-                        yield return ("[[" + caption + "|" + target + "]]", true);
+                        yield return ("[[" + ExpandValues(caption, variables) + "|" + target + "]]", true);
                     }
+                }
+                else
+                {
+                    var assignment = Regex.Match(source, @"^(?<name>[\p{L}_][\p{L}\p{N}_ ]*)\s*=\s*(?<value>.+)$");
+                    if (assignment.Success && TryValue(assignment.Groups["value"].Value, variables, out string value))
+                        variables[assignment.Groups["name"].Value.TrimEnd()] = value;
                 }
             }
             if (pendingText.Length != 0)
@@ -300,6 +313,115 @@ sealed class LoaderProbe
         }
     }
 
+    private IEnumerable<(string Source, bool Conditional)> ReadCommands(
+        int start, bool skipLabels, Dictionary<string, string> variables)
+    {
+        for (int line = start; line < f_Source.Count; line++)
+        {
+            string source = f_Source[line];
+            if (source.StartsWith(":"))
+            {
+                if (!skipLabels)
+                    yield break;
+                continue;
+            }
+
+            var conditional = Regex.Match(source, @"^if\s+(.+?)\s+then\s+(.+)$", RegexOptions.IgnoreCase);
+            if (source.StartsWith("if ", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!conditional.Success || !ConditionMatches(conditional.Groups[1].Value, variables))
+                    continue;
+                source = conditional.Groups[2].Value;
+            }
+            foreach (Match statement in Regex.Matches(source, @"(?:""[^""]*""|[^""&])+"))
+                yield return (statement.Value.Trim(), conditional.Success);
+        }
+    }
+
+    private static string ExpandValues(string source, Dictionary<string, string> variables) =>
+        Regex.Replace(source, @"#(%?)([^#$]+)\$", match =>
+        {
+            string expression = match.Groups[2].Value.Trim();
+            if (variables.TryGetValue(expression, out string? value))
+                return value;
+            if (match.Groups[1].Length == 0 && TryValue(expression, variables, out string result))
+                return result;
+            return match.Value;
+        });
+
+    private static bool TryValue(string expression, Dictionary<string, string> variables, out string value)
+    {
+        expression = expression.Trim();
+        if (expression.Length >= 2 && expression[0] == '"' && expression[^1] == '"')
+        {
+            value = ExpandValues(expression[1..^1], variables);
+            return true;
+        }
+        return TryNumber(expression.Contains('#') ? ExpandValues(expression, variables) : expression, variables, out value);
+    }
+
+    private static bool TryNumber(string expression, Dictionary<string, string> variables, out string value)
+    {
+        var culture = CultureInfo.InvariantCulture;
+        string numeric = Regex.Replace(expression, @"[\p{L}_][\p{L}\p{N}_]*", match =>
+            variables.TryGetValue(match.Value, out string? item) &&
+                decimal.TryParse(item, NumberStyles.Number, culture, out decimal number)
+                ? "(" + number.ToString(culture) + ")"
+                : match.Value);
+        value = string.Empty;
+        if (!Regex.IsMatch(numeric, @"^[\d.()+*/ \t-]+$") || !Regex.IsMatch(numeric, @"\d"))
+            return false;
+        try
+        {
+            using var table = new System.Data.DataTable { Locale = culture };
+            value = Convert.ToString(table.Compute(numeric, ""), culture) ?? string.Empty;
+            return value.Length != 0;
+        }
+        catch (Exception error) when (error is System.Data.DataException or ArithmeticException)
+        {
+            return false;
+        }
+    }
+
+    private static bool ConditionMatches(string expression, Dictionary<string, string> variables)
+    {
+        var match = Regex.Match(expression, @"^([^=<>]+?)(<=|>=|<>|=|<|>)([^=<>]+)$");
+        if (!match.Success)
+            return false;
+        bool ReadOperand(string operand, out string value)
+        {
+            operand = ExpandValues(operand.Trim(), variables);
+            if (variables.TryGetValue(operand, out string? stored))
+            {
+                value = stored;
+                return true;
+            }
+            if (Regex.IsMatch(operand, @"^[\p{L}_][\p{L}\p{N}_ ]*$"))
+            {
+                value = "0";
+                return true;
+            }
+            return TryValue(operand, variables, out value);
+        }
+        if (!ReadOperand(match.Groups[1].Value, out string left) ||
+            !ReadOperand(match.Groups[3].Value, out string right))
+            return false;
+        int comparison = decimal.TryParse(left, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal l) &&
+            decimal.TryParse(right, NumberStyles.Number, CultureInfo.InvariantCulture, out decimal r)
+            ? l.CompareTo(r)
+            : StringComparer.OrdinalIgnoreCase.Compare(left, right);
+        return match.Groups[2].Value switch
+        {
+            "=" => comparison == 0,
+            "<>" => comparison != 0,
+            "<" => comparison < 0,
+            ">" => comparison > 0,
+            "<=" => comparison <= 0,
+            ">=" => comparison >= 0,
+            _ => false
+        };
+    }
+
     public bool HasLocation(string name) => name == "0" || f_Labels.IndexOf(name) >= 0;
 
     public void Export(string path, IEnumerable<string> diagnostics)
@@ -309,10 +431,15 @@ sealed class LoaderProbe
         var labels = Enumerable.Range(0, f_Labels.Count).Select(index => f_Labels[index]);
         if (f_Labels.IndexOf("0") < 0)
             labels = labels.Prepend("0");
+        var startupVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var _ in ReadLocation("0", new HashSet<int>(), variables: startupVariables)) { }
         foreach (string name in labels)
         {
             var decorations = new List<System.Xml.Linq.XElement>();
-            var lines = ReadLocation(name, new HashSet<int>(), decorations)
+            var variables = name == "0"
+                ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, string>(startupVariables, StringComparer.OrdinalIgnoreCase);
+            var lines = ReadLocation(name, new HashSet<int>(), decorations, variables)
                 .Select(line => new System.Xml.Linq.XElement("line",
                     line.IsButton ? new System.Xml.Linq.XAttribute("button", true) : null, line.Text)).ToArray();
             document.Add(new System.Xml.Linq.XElement("location",
