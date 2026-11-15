@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>FireURQ</AssemblyName>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <FireURQSourceRoot Condition="'$(FireURQSourceRoot)' == ''">$(MSBuildProjectDirectory)/translation-output</FireURQSourceRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FireURQSource Include="src/**/*.cs;$(FireURQSourceRoot)/**/*.cs" />
+    <Compile Include="@(FireURQSource)" />
+  </ItemGroup>
+
+  <Target Name="CheckFireURQSources" BeforeTargets="CoreCompile">
+    <Error Condition="'@(FireURQSource)' == ''" Text="FireURQ C# sources are missing. Set FireURQSourceRoot to a translation-output directory or see the standalone build instructions in README.md." />
+  </Target>
+</Project>

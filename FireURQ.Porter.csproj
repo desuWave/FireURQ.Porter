@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Compile Remove="Tools\**" />
+    <Compile Remove="Standalone\**" />
     <Compile Remove="translation-output\**" />
   </ItemGroup>
 

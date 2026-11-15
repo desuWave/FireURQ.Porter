@@ -51,6 +51,18 @@ The verifier prints a `Verification directory:` path under `.fireurq-work`. It k
 
 In the last recorded full verification, the translator built cleanly and translated 58 Delphi files and 1,674 function bodies. The generated project reported 71 unique missing-type diagnostics (`CS0246`). Use the individual stage exit codes and diagnostics to read the result. When missing types are resolved, the compiler may expose additional errors.
 
+## Standalone FireURQ build target
+
+[`Standalone/FireURQ`](Standalone/FireURQ) is the application project. It compiles C# sources directly and has no project reference to FireURQ.Porter. The verification script builds this project against its generated C# and places the build artifacts in the verification directory.
+
+To build the target directly from an existing translation, run the following from the repository root. Replace the example path with the `translation-output` directory inside the verification directory reported by the script.
+
+```powershell
+dotnet build ".\Standalone\FireURQ\FireURQ.csproj" -c Release "-p:FireURQSourceRoot=C:\path\to\translation-output"
+```
+
+This target currently reports the outstanding C# compilation errors. A runnable standalone executable requires the translated application and its entry point to compile. The F2 preview below is available for the Windows GUI checks that already work.
+
 ## Run the F2 preview
 
 Replace the example archive path with the actual path to your installed copy:

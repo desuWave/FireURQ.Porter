@@ -159,21 +159,13 @@ try {
     }
 
     if ($ready) {
-        $project = Join-Path $directory 'GeneratedFireURQ.csproj'
-        $projectText = '<Project Sdk="Microsoft.NET.Sdk">' +
-            '<PropertyGroup>' +
-            '<TargetFramework>net8.0</TargetFramework>' +
-            '<AllowUnsafeBlocks>true</AllowUnsafeBlocks>' +
-            '<ImplicitUsings>enable</ImplicitUsings>' +
-            '<Nullable>enable</Nullable>' +
-            '<EnableDefaultCompileItems>false</EnableDefaultCompileItems>' +
-            '</PropertyGroup><ItemGroup>' +
-            '<Compile Include="translation-output/**/*.cs" />' +
-            '</ItemGroup></Project>'
-        [System.IO.File]::WriteAllText($project, $projectText, $utf8)
+        $project = Join-Path $RootPath 'Standalone\FireURQ\FireURQ.csproj'
+        $sourceRoot = (Resolve-Path -LiteralPath $generatedRoot).Path
+        $artifacts = Join-Path $directory 'standalone-artifacts'
 
         $compiler = Invoke-DotnetLogged -ToolArguments @(
-            'build', $project, '--configuration', 'Release', '--nologo'
+            'build', $project, '--configuration', 'Release', '--nologo',
+            "--artifacts-path", $artifacts, "-p:FireURQSourceRoot=$sourceRoot"
         ) -LogName 'generated-build.log'
 
         $diagnostics = [System.Collections.Generic.List[object]]::new()
