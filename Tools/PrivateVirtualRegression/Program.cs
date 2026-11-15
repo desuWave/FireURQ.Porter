@@ -41,6 +41,8 @@ public
   function Rejects(Value: Integer): Boolean;
   function OtherRejects(Other: TBase; Value: Integer): Boolean;
   function InvertArgument(Value: Integer): Integer;
+  function LocalRejects(Input: Integer): Boolean;
+  function LocalInvert: Integer;
   function Value: Integer; virtual;
   function ReadHidden: Integer;
   function ReadSecret: Integer;
@@ -105,6 +107,26 @@ end;
 function TBase.InvertArgument(Value: Integer): Integer;
 begin
   Result := not MaskOf(Value);
+end;
+function TBase.LocalRejects(Input: Integer): Boolean;
+  function Accepts(Value: Integer): Boolean;
+  begin
+    Result := Value = 7;
+  end;
+  function RejectLocal(Value: Integer): Boolean;
+  begin
+    Result := not Accepts(Value);
+  end;
+begin
+  Result := RejectLocal(Input);
+end;
+function TBase.LocalInvert: Integer;
+  function GetLocalMask: Integer;
+  begin
+    Result := 19;
+  end;
+begin
+  Result := not GetLocalMask;
 end;
 function TChild.IsNotReady: Boolean;
 begin
@@ -185,8 +207,10 @@ Check("Protected override method emitted",
     generated.Contains("protected override int Hidden("));
 Check("Private method visibility preserved",
     generated.Contains("private int Secret("));
-Check("All twenty-one implementations emitted",
-    results[0].FunctionsTranslated == 21);
+Check("All twenty-three implementations emitted",
+    results[0].FunctionsTranslated == 23);
+Check("Nested functions use their declared return types under not",
+    generated.Contains("!Accepts(Value)") && generated.Contains("~GetLocalMask()"));
 Check("Calls with arguments preserve Boolean and integer not",
     generated.Contains("!Accepts(Value)") && generated.Contains("!Other.Accepts(Value)") &&
     generated.Contains("~MaskOf(Value)"));
@@ -231,6 +255,7 @@ public static class Program
             plain.Rejects(19) && !plain.Rejects(42) &&
             plain.OtherRejects(child, 42) && !plain.OtherRejects(child, 19) &&
             plain.InvertArgument(23) == ~23 &&
+            plain.LocalRejects(42) && !plain.LocalRejects(7) && plain.LocalInvert() == ~19 &&
             plain.DirectSetting == 42 &&
             child.Setting == 19 &&
             plain.Value() == 1 &&

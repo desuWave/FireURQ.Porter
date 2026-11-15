@@ -1,5 +1,6 @@
 using System.Text;
 using FireURQ.Porter.Analysis;
+using FireURQ.Porter.AST;
 
 namespace FireURQ.Porter.Translation;
 
@@ -1528,10 +1529,19 @@ public sealed class DelphiToCSharpTranslator
         if (_resolver is null)
             return null;
 
-        if (target.Kind == ExpressionParser.ExpressionKind.Identifier &&
-            ResolveExpressionType(target) is null &&
-            _currentTypeContext?.OwnerClass is { } owner)
-            return _resolver.ResolveFunctionMember(owner, target.Text, _unitName, argumentCount);
+        if (target.Kind == ExpressionParser.ExpressionKind.Identifier)
+        {
+            if (_currentTypeContext is null)
+                return null;
+
+            var (found, local) = _currentTypeContext.ResolveLocalFunction(target.Text, argumentCount);
+            if (found)
+                return local is null ? null : (local.Name, _resolver.Resolve(local.ReturnType, _unitName));
+
+            return ResolveExpressionType(target) is null && _currentTypeContext.OwnerClass is { } owner
+                ? _resolver.ResolveFunctionMember(owner, target.Text, _unitName, argumentCount)
+                : null;
+        }
 
         if (target.Kind != ExpressionParser.ExpressionKind.MemberAccess || target.Children.Count != 2)
             return null;
@@ -2948,6 +2958,7 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
 
         private readonly string _returnType;
         private readonly FunctionTypeContext? _parent;
+        private readonly IReadOnlyList<DelphiFunction> _localFunctions;
         private readonly int _depth;
         public string ResultName { get; }
         public string? OwnerClass { get; }
@@ -2956,6 +2967,7 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
         public FunctionTypeContext(SemanticFunction function, FunctionTypeContext? parent, string? ownerClass)
         {
             _parent = parent;
+            _localFunctions = function.LocalFunctions;
             OwnerClass = ownerClass ?? parent?.OwnerClass;
             _depth = parent is null ? 0 : parent._depth + 1;
             ResultName = _depth == 0 ? "result" : $"__localResult{_depth}";
@@ -2991,6 +3003,22 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
             }
 
             _returnType = function.ReturnType;
+        }
+
+        public (bool Found, DelphiFunction? Function) ResolveLocalFunction(string name, int argumentCount)
+        {
+            if (_identifiers.ContainsKey(name))
+                return (true, null);
+
+            var named = _localFunctions.Where(function =>
+                function.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (named.Length == 0)
+                return _parent?.ResolveLocalFunction(name, argumentCount) ?? (false, null);
+
+            var matching = named.Where(function => !function.IsProcedure &&
+                !string.IsNullOrWhiteSpace(function.ReturnType) &&
+                function.Parameters.Count == argumentCount).ToArray();
+            return (true, matching.Length == 1 ? matching[0] : null);
         }
 
         public string? ResolveIdentifier(
