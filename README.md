@@ -2,7 +2,7 @@
 
 FireURQ.Porter translates Delphi sources from [FireURQ](https://github.com/fireton/fireurq) and [D2D Game Engine](https://github.com/fireton/d2dge) into C# for .NET 8. It also provides focused regression tools and a Windows Direct3D 8 preview.
 
-**The translator builds. The complete generated FireURQ application is still under development and does not compile.** The preview builds selected generated methods with a small Windows host. It can show the splash and main skin, open supported quests from the system menu and follow simple links.
+**The translator builds. The complete generated FireURQ application is still under development and does not compile.** The preview builds selected generated methods with a small Windows host. It can show the splash and main skin, open supported quests from the system menu, follow links, toggle the inventory and display interactive text decorations.
 
 ## Requirements
 
@@ -62,13 +62,22 @@ $pak = 'C:\Games\FireURQ 2.2.4\fireurq.pak'
 
 The script generates fresh C# before launching the preview. A failed full generated build can appear in the report even when the focused preview opens successfully. Look for `Probe exit code: 0` after closing the window. The preview remains open in interactive mode until you close it or select Exit from the system menu.
 
-Try these author fixtures from the upstream `tests` directory:
+### Upstream FireURQ 1.8 fixtures
 
-| File | What to exercise |
+All standalone scenarios in the upstream [tests/ver1.8 directory](https://github.com/fireton/fireurq/tree/master/tests/ver1.8) were exercised manually in the Windows F2 preview. Open them through the system menu. Keep the adjacent include files in place.
+
+| Fixture | Confirmed preview behavior |
 | --- | --- |
-| `ver1.8\202.simple_links.qst` | Open from the system menu, then follow the brick and glass links. Reopen the quest to return to the initial location. |
-| `ver1.8\167.includes.qst` | Follow the links into the first and second includes, then return to the start. Keep the adjacent include files in their original locations. |
-| `ver1.8\167.includes\167.includes.qsz` | Open the archive directly. The second location shows the text from the third include. The original FireURQ reports that the intentionally absent `bla.qst` is missing. That diagnostic has not been observed in the preview window. |
+| `167.includes.qst` | Links reach the included locations, including text from the nested third include, and return to the start. |
+| `167.includes\167.includes.qsz` | The same nested includes work from the archive. The missing `bla.qst` diagnostic appears in red, and the quest remains playable. Opening another quest clears that diagnostic. |
+| `197.inv_disable.qst` | The spoon and fork appear in the inventory. The links disable and re-enable the inventory while retaining the current text and both items. |
+| `201.comment_error.qst` | A quest without `:0` starts at the beginning and prints `hello, world!` after the block comment. |
+| `202.simple_links.qst` | The brick and glass links open their respective locations. |
+| `204.link_error.qst` | The outer brackets stay visible around the link, and clicking it shows `clicked`. |
+| `206.linkdeco.qst` | The text decoration changes color, runs a looping movement script, and opens a three-item menu whose options reset the decoration. |
+| `210.droplinks.qst` | Dropping links leaves the text visible and keeps the restart button available. Restart restores the inline link. |
+
+The included `inc1.qst` and files under `inc/` are exercised through the two `167.includes` scenarios. A separate manual check confirmed that opening a damaged QSZ shows an error and leaves the current quest usable.
 
 To open the simple-links fixture at startup:
 

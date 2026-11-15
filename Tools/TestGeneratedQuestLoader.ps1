@@ -110,8 +110,6 @@ loader.Load(entryPath, (in string path) =>
 });
 if (args.Length == 2)
 {
-    if (!loader.HasLocation("0"))
-        throw new InvalidOperationException("Missing starting location: 0");
     loader.Export(args[1], missingIncludes);
     foreach (string read in reads)
         Console.WriteLine("Quest source requested: " + read);
@@ -150,34 +148,94 @@ sealed class LoaderProbe
     private void CalcSourceHash() { }
 
     public IEnumerable<string> ReadLocation(string name) =>
-        ReadLocation(name, new HashSet<int>());
+        ReadLocation(name, new HashSet<int>()).Select(line => line.Text);
 
-    private IEnumerable<string> ReadLocation(string name, HashSet<int> active)
+    private IEnumerable<(string Text, bool IsButton)> ReadLocation(string name, HashSet<int> active,
+        List<System.Xml.Linq.XElement>? decorations = null)
     {
         int index = f_Labels.IndexOf(name);
-        if (index < 0)
+        if (index < 0 && name != "0")
             throw new InvalidOperationException("Missing label: " + name);
 
         if (active.Count >= 64 || !active.Add(index))
             throw new InvalidOperationException("Recursive or too deeply nested preview proc: " + name);
         try
         {
-            int start = (int)(double)f_Labels.Variants[index] + 1;
+            int start = index < 0 ? 0 : (int)(double)f_Labels.Variants[index] + 1;
             for (int line = start; line < f_Source.Count; line++)
             {
                 string source = f_Source[line];
                 if (source.Equals("end", StringComparison.OrdinalIgnoreCase) || source.StartsWith(":"))
                     yield break;
                 if (source.StartsWith("pln ", StringComparison.OrdinalIgnoreCase))
-                    yield return source[4..];
+                    yield return (source[4..], false);
                 else if (source.StartsWith("proc ", StringComparison.OrdinalIgnoreCase))
                 {
                     string target = source[5..].Trim();
                     if (!HasLocation(target))
                         continue;
-                    foreach (string output in ReadLocation(target, active))
+                    foreach (var output in ReadLocation(target, active, decorations))
                         yield return output;
                 }
+                else if (decorations != null && source.StartsWith("decoradd ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var decor = System.Text.RegularExpressions.Regex.Match(source,
+                        @"^decoradd\s+(?<id>\w+)\s*\(\s*(?<x>[+-]?\d+(?:\.\d+)?)\s*,\s*(?<y>[+-]?\d+(?:\.\d+)?)\s*\)\s*TEXT\s+""(?<text>[^""]*)""(?:\s*,\s*""(?<font>[^""]*)"")?(?:\s*,\s*0x(?<color>[a-f0-9]{6}))?(?:\s*,\s*0x(?<link>[a-f0-9]{6}))?(?:\s*,\s*0x[a-f0-9]{6})?\s*$",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (decor.Success)
+                    {
+                        string id = decor.Groups["id"].Value;
+                        decorations.RemoveAll(item => item.Name == "text-decoration" && String.Equals((string?)item.Attribute("id"), id,
+                            StringComparison.OrdinalIgnoreCase));
+                        decorations.Add(new System.Xml.Linq.XElement("text-decoration",
+                            new System.Xml.Linq.XAttribute("id", id),
+                            new System.Xml.Linq.XAttribute("x", decor.Groups["x"].Value),
+                            new System.Xml.Linq.XAttribute("y", decor.Groups["y"].Value),
+                            new System.Xml.Linq.XAttribute("font", decor.Groups["font"].Value),
+                            new System.Xml.Linq.XAttribute("color", decor.Groups["color"].Value),
+                            new System.Xml.Linq.XAttribute("link-color", decor.Groups["link"].Value),
+                            decor.Groups["text"].Value));
+                    }
+                }
+                else if (decorations != null && source.StartsWith("decorcol ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var color = System.Text.RegularExpressions.Regex.Match(source,
+                        @"^decorcol\s+(?<id>\w+)\s+0x(?<color>[a-f0-9]{6})\s*,\s*0x(?<link>[a-f0-9]{6})\s*,\s*0x(?<hover>[a-f0-9]{6})\s*,\s*(?<duration>\d{1,9})\s*$",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (color.Success)
+                        decorations.Add(new System.Xml.Linq.XElement("decoration-color",
+                            new System.Xml.Linq.XAttribute("id", color.Groups["id"].Value),
+                            new System.Xml.Linq.XAttribute("color", color.Groups["color"].Value),
+                            new System.Xml.Linq.XAttribute("link-color", color.Groups["link"].Value),
+                            new System.Xml.Linq.XAttribute("hover-color", color.Groups["hover"].Value),
+                            new System.Xml.Linq.XAttribute("duration", color.Groups["duration"].Value)));
+                }
+                else if (decorations != null && source.StartsWith("decorscr ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var script = System.Text.RegularExpressions.Regex.Match(source,
+                        @"^decorscr\s+(?<id>\w+)\s+""(?<steps>[^""]+)""\s*$",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (script.Success)
+                        decorations.Add(new System.Xml.Linq.XElement("decoration-script",
+                            new System.Xml.Linq.XAttribute("id", script.Groups["id"].Value),
+                            script.Groups["steps"].Value));
+                }
+                else if (decorations != null && source.StartsWith("inv+", StringComparison.OrdinalIgnoreCase))
+                {
+                    string item = source[4..].Trim();
+                    if (item.Length != 0)
+                        decorations.Add(new System.Xml.Linq.XElement("inventory-add", item));
+                }
+                else if (decorations != null && source.StartsWith("inventory_enabled", StringComparison.OrdinalIgnoreCase))
+                {
+                    var setting = System.Text.RegularExpressions.Regex.Match(source,
+                        @"^inventory_enabled\s*=\s*([01])\s*$",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (setting.Success)
+                        decorations.Add(new System.Xml.Linq.XElement("inventory-enabled", setting.Groups[1].Value));
+                }
+                else if (decorations != null && source.Equals("clsl", StringComparison.OrdinalIgnoreCase))
+                    decorations.Add(new System.Xml.Linq.XElement("clear-links"));
                 else if (source.StartsWith("btn ", StringComparison.OrdinalIgnoreCase))
                 {
                     int comma = source.IndexOf(',', 4);
@@ -186,7 +244,7 @@ sealed class LoaderProbe
                     string target = source[4..comma].Trim();
                     string caption = source[(comma + 1)..].Trim();
                     if (target.Length != 0 && caption.Length != 0)
-                        yield return "[[" + caption + "|" + target + "]]";
+                        yield return ("[[" + caption + "|" + target + "]]", true);
                 }
             }
         }
@@ -196,18 +254,23 @@ sealed class LoaderProbe
         }
     }
 
-    public bool HasLocation(string name) => f_Labels.IndexOf(name) >= 0;
+    public bool HasLocation(string name) => name == "0" || f_Labels.IndexOf(name) >= 0;
 
     public void Export(string path, IEnumerable<string> diagnostics)
     {
         var document = new System.Xml.Linq.XElement("quest",
             diagnostics.Select(message => new System.Xml.Linq.XElement("diagnostic", message)));
-        for (int i = 0; i < f_Labels.Count; i++)
+        var labels = Enumerable.Range(0, f_Labels.Count).Select(index => f_Labels[index]);
+        if (f_Labels.IndexOf("0") < 0)
+            labels = labels.Prepend("0");
+        foreach (string name in labels)
         {
-            string name = f_Labels[i];
+            var decorations = new List<System.Xml.Linq.XElement>();
+            var lines = ReadLocation(name, new HashSet<int>(), decorations)
+                .Select(line => new System.Xml.Linq.XElement("line",
+                    line.IsButton ? new System.Xml.Linq.XAttribute("button", true) : null, line.Text)).ToArray();
             document.Add(new System.Xml.Linq.XElement("location",
-                new System.Xml.Linq.XAttribute("name", name),
-                ReadLocation(name).Select(line => new System.Xml.Linq.XElement("line", line))));
+                new System.Xml.Linq.XAttribute("name", name), lines, decorations));
         }
         document.Save(path);
     }
