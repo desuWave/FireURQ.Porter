@@ -150,7 +150,8 @@ sealed class LoaderProbe
     public IEnumerable<string> ReadLocation(string name) =>
         ReadLocation(name, new HashSet<int>());
 
-    private IEnumerable<string> ReadLocation(string name, HashSet<int> active)
+    private IEnumerable<string> ReadLocation(string name, HashSet<int> active,
+        List<System.Xml.Linq.XElement>? decorations = null)
     {
         int index = f_Labels.IndexOf(name);
         if (index < 0 && name != "0")
@@ -173,8 +174,28 @@ sealed class LoaderProbe
                     string target = source[5..].Trim();
                     if (!HasLocation(target))
                         continue;
-                    foreach (string output in ReadLocation(target, active))
+                    foreach (string output in ReadLocation(target, active, decorations))
                         yield return output;
+                }
+                else if (decorations != null && source.StartsWith("decoradd ", StringComparison.OrdinalIgnoreCase))
+                {
+                    var decor = System.Text.RegularExpressions.Regex.Match(source,
+                        @"^decoradd\s+(?<id>\w+)\s*\(\s*(?<x>[+-]?\d+(?:\.\d+)?)\s*,\s*(?<y>[+-]?\d+(?:\.\d+)?)\s*\)\s*TEXT\s+""(?<text>[^""]*)""(?:\s*,\s*""(?<font>[^""]*)"")?(?:\s*,\s*0x(?<color>[a-f0-9]{6}))?(?:\s*,\s*0x(?<link>[a-f0-9]{6}))?(?:\s*,\s*0x[a-f0-9]{6})?\s*$",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (decor.Success)
+                    {
+                        string id = decor.Groups["id"].Value;
+                        decorations.RemoveAll(item => String.Equals((string?)item.Attribute("id"), id,
+                            StringComparison.OrdinalIgnoreCase));
+                        decorations.Add(new System.Xml.Linq.XElement("text-decoration",
+                            new System.Xml.Linq.XAttribute("id", id),
+                            new System.Xml.Linq.XAttribute("x", decor.Groups["x"].Value),
+                            new System.Xml.Linq.XAttribute("y", decor.Groups["y"].Value),
+                            new System.Xml.Linq.XAttribute("font", decor.Groups["font"].Value),
+                            new System.Xml.Linq.XAttribute("color", decor.Groups["color"].Value),
+                            new System.Xml.Linq.XAttribute("link-color", decor.Groups["link"].Value),
+                            decor.Groups["text"].Value));
+                    }
                 }
                 else if (source.StartsWith("btn ", StringComparison.OrdinalIgnoreCase))
                 {
@@ -205,9 +226,11 @@ sealed class LoaderProbe
             labels = labels.Prepend("0");
         foreach (string name in labels)
         {
+            var decorations = new List<System.Xml.Linq.XElement>();
+            var lines = ReadLocation(name, new HashSet<int>(), decorations)
+                .Select(line => new System.Xml.Linq.XElement("line", line)).ToArray();
             document.Add(new System.Xml.Linq.XElement("location",
-                new System.Xml.Linq.XAttribute("name", name),
-                ReadLocation(name).Select(line => new System.Xml.Linq.XElement("line", line))));
+                new System.Xml.Linq.XAttribute("name", name), lines, decorations));
         }
         document.Save(path);
     }
