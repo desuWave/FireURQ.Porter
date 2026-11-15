@@ -146,6 +146,16 @@ public sealed class DelphiToCSharpTranslator
                 return builder.ToString();
             }
 
+            if (string.Equals(_unitName, "f2ScnMain", StringComparison.OrdinalIgnoreCase) &&
+                function.Name.Equals("PutTextAsUnicode", StringComparison.OrdinalIgnoreCase) &&
+                function.IsProcedure && !function.IsClassMethod &&
+                function.Parameters.Count == 1 && MapType(function.Parameters[0].Type) == "string")
+            {
+                builder.AppendLine($"    SetUnicodeText({function.Parameters[0].Name});");
+                builder.AppendLine("}");
+                return builder.ToString();
+            }
+
             if (manageDestructorLifetime && function.IsDestructor)
             {
                 string scopeName = "__fireurqDestructorScope";
