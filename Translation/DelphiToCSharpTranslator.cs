@@ -1272,7 +1272,12 @@ public sealed class DelphiToCSharpTranslator
         if (TryGetStandardListFactoryTarget(expression, out string factoryTarget))
             return factoryTarget + "()";
 
-        if (IsF2LinkParserBareCall(expression) || IsSimpleXmlBareCall(expression))
+        bool isFontBitmapDimension =
+            string.Equals(_unitName, "f2FontGen", StringComparison.OrdinalIgnoreCase) &&
+            expression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+            expression.Children.Count == 2 &&
+            expression.Children[1].Text.ToUpperInvariant() is "GETWIDTH" or "GETHEIGHT";
+        if (IsF2LinkParserBareCall(expression) || IsSimpleXmlBareCall(expression) || isFontBitmapDimension)
             return TranslateCallTarget(expression) + "()";
 
         return expression.Kind switch
@@ -1849,6 +1854,19 @@ private string TranslateCall(
     if (string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
         TryTranslateSimpleXmlBinaryCall(expression, out string simpleXmlBinaryCall))
         return simpleXmlBinaryCall;
+
+    if (string.Equals(_unitName, "f2FontGen", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count is 2 or 5 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.MemberAccess } bitmapCall &&
+        bitmapCall.Children.Count == 2)
+    {
+        string method = bitmapCall.Children[1].Text;
+        string bitmapTarget = TranslateExpression(bitmapCall.Children[0]);
+        if (expression.Children.Count == 5 && method.Equals("LockBits", StringComparison.OrdinalIgnoreCase))
+            return $"{bitmapTarget}.LockBits({TranslateExpression(expression.Children[1])}, {TranslateExpression(expression.Children[2])}, {TranslateExpression(expression.Children[3])}, out {TranslateExpression(expression.Children[4])})";
+        if (expression.Children.Count == 2 && method.Equals("UnlockBits", StringComparison.OrdinalIgnoreCase))
+            return $"{bitmapTarget}.UnlockBits(ref {TranslateExpression(expression.Children[1])})";
+    }
 
     if (TryTranslateDeclaredTypeCast(expression, out string declaredCast))
         return declaredCast;

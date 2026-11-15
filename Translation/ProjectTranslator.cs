@@ -373,6 +373,12 @@ public sealed class ProjectTranslator
             builder.AppendLine("using System.Runtime.InteropServices;");
             builder.AppendLine("using FireURQ.Runtime;");
             builder.AppendLine("using static global::FireURQ.Runtime.DelphiVariants;");
+            if (input.SemanticModel.Name.Equals("f2FontGen", StringComparison.OrdinalIgnoreCase))
+            {
+                builder.AppendLine("using static global::FireURQ.Runtime.GdiPlusFontBitmaps;");
+                builder.AppendLine("using IStream = global::System.Runtime.InteropServices.ComTypes.IStream;");
+                builder.AppendLine("using TStatus = global::System.Int32;");
+            }
             if (_usesJclStringListRuntime)
                 builder.AppendLine("using static global::FireURQ.Runtime.DelphiJclStringLists;");
             if (_usesJclStringListRuntime || _usesStringListRuntime)
