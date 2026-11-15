@@ -76,7 +76,7 @@ internal static class SimpleXmlVariantBinary
         _ => throw new InvalidDataException($"Unsupported SimpleXML variant type {type}.")
     };
 
-    private static int ReadLongint(ReadBuffer readExactly)
+    internal static int ReadLongint(ReadBuffer readExactly)
     {
         Span<byte> buffer = stackalloc byte[sizeof(int)];
         readExactly(buffer[..1]);
@@ -93,16 +93,16 @@ internal static class SimpleXmlVariantBinary
         return ((first & 0x7F) << 8) | buffer[0];
     }
 
-    private static void WriteLongint(WriteBuffer write, int value)
+    internal static void WriteLongint(WriteBuffer write, int value)
     {
         Span<byte> buffer = stackalloc byte[1 + sizeof(int)];
         int length;
-        if (value < 0x80)
+        if (value is >= 0 and < 0x80)
         {
             buffer[0] = (byte)value;
             length = 1;
         }
-        else if (value < 0x7F00)
+        else if (value is >= 0 and < 0x7F00)
         {
             buffer[0] = (byte)((value >> 8) | 0x80);
             buffer[1] = (byte)(value & 0xFF);

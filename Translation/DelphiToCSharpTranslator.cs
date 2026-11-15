@@ -1253,6 +1253,16 @@ public sealed class DelphiToCSharpTranslator
             (string.Equals(ResolveExpressionType(receiver), "TRegExpr", StringComparison.OrdinalIgnoreCase) &&
                 member.Equals("ExecNext", StringComparison.OrdinalIgnoreCase));
     }
+    private bool IsSimpleXmlBareCall(ExpressionParser.ExpressionNode expression) =>
+        string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
+        expression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+        expression.Children.Count == 2 &&
+        ((expression.Children[0].Text.Equals("aReader", StringComparison.OrdinalIgnoreCase) &&
+          expression.Children[1].Text.ToUpperInvariant() is
+              "READLONGINT" or "READXMLSTRING" or "READANSISTRING" or "READWIDESTRING") ||
+         (expression.Children[0].Text.Equals("aWriter", StringComparison.OrdinalIgnoreCase) &&
+          expression.Children[1].Text.Equals("FlushBuf", StringComparison.OrdinalIgnoreCase)));
+
     private string TranslateExpression(
         ExpressionParser.ExpressionNode? expression)
     {
@@ -1262,7 +1272,7 @@ public sealed class DelphiToCSharpTranslator
         if (TryGetStandardListFactoryTarget(expression, out string factoryTarget))
             return factoryTarget + "()";
 
-        if (IsF2LinkParserBareCall(expression))
+        if (IsF2LinkParserBareCall(expression) || IsSimpleXmlBareCall(expression))
             return TranslateCallTarget(expression) + "()";
 
         return expression.Kind switch
@@ -1516,6 +1526,18 @@ public sealed class DelphiToCSharpTranslator
             TranslateExpression(
                 expression.Children[1]);
 
+        if (string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
+            member.Equals("VType", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Call } cast &&
+            cast.Children.Count == 2 &&
+            cast.Children[0].Text.Equals("TVarData", StringComparison.OrdinalIgnoreCase))
+            return $"({TranslateExpression(cast.Children[1])}).TypeCode";
+
+        if (string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children[0].Text.Equals("aReader", StringComparison.OrdinalIgnoreCase) &&
+            member.Equals("ReadLongint", StringComparison.OrdinalIgnoreCase))
+            member = "ReadLongint";
+
         return $"{target}.{member}";
     }
 
@@ -1744,6 +1766,73 @@ private bool TryTranslateStreamCall(
         translated = $"(({type})({value}))";
         return true;
     }
+    private bool TryTranslateSimpleXmlBinaryCall(
+        ExpressionParser.ExpressionNode expression,
+        out string translated)
+    {
+        translated = string.Empty;
+        if (expression.Children.Count < 2 ||
+            expression.Children[0] is not { Kind: ExpressionParser.ExpressionKind.MemberAccess } target ||
+            target.Children.Count != 2)
+            return false;
+
+        string receiver = target.Children[0].Text.ToUpperInvariant();
+        string method = target.Children[1].Text.ToUpperInvariant();
+        var argument = expression.Children[1];
+        if (expression.Children.Count == 2 &&
+            ((receiver == "AREADER" && method == "READVARIANT") ||
+             (receiver == "AWRITER" && method == "WRITEVARIANT")))
+        {
+            if (argument.Kind == ExpressionParser.ExpressionKind.Call &&
+                argument.Children.Count == 2 &&
+                argument.Children[0].Text.Equals("TVarData", StringComparison.OrdinalIgnoreCase))
+                argument = argument.Children[1];
+
+            if (receiver == "AREADER")
+                translated = $"aReader.ReadVariant(ref {TranslateExpression(argument)})";
+            else
+                translated = $"aWriter.WriteVariant({(argument.Text.Equals("EmptyVar", StringComparison.OrdinalIgnoreCase) ? "Variant.Unassigned" : TranslateExpression(argument))})";
+
+            return true;
+        }
+
+        if (expression.Children.Count == 3 && receiver == "ASTREAM" && method == "READBUFFER" &&
+            argument.Kind == ExpressionParser.ExpressionKind.IndexAccess &&
+            argument.Children.Count == 2 &&
+            argument.Children[0].Text.Equals("aBinarySign", StringComparison.OrdinalIgnoreCase))
+        {
+            translated = "aBinarySign = TStmXmlReader.ReadSignature(aStream)";
+            return true;
+        }
+
+        if (expression.Children.Count != 3 ||
+            !((receiver == "AREADER" && method == "READ") ||
+              (receiver == "AWRITER" && method == "WRITE")))
+            return false;
+
+        if (argument.Text.Equals("aNodeType", StringComparison.OrdinalIgnoreCase))
+        {
+            translated = receiver == "AREADER"
+                ? "aNodeType = aReader.ReadNodeType()"
+                : "aWriter.WriteNodeType(aNodeType)";
+            return true;
+        }
+
+        if (argument.Kind == ExpressionParser.ExpressionKind.IndexAccess &&
+            argument.Children.Count == 2 &&
+            argument.Children[0] is { Kind: ExpressionParser.ExpressionKind.IndexAccess } bucket &&
+            bucket.Children.Count == 2 &&
+            bucket.Children[0].Text.Equals("FHashTable", StringComparison.OrdinalIgnoreCase))
+        {
+            translated = receiver == "AREADER"
+                ? $"aReader.ReadNameIndexes({TranslateExpression(bucket)})"
+                : $"aWriter.WriteNameIndexes({TranslateExpression(bucket)})";
+            return true;
+        }
+
+        return false;
+    }
+
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
@@ -1756,6 +1845,10 @@ private string TranslateCall(
         cast.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
         cast.Children[0].Text.Equals("TVarData", StringComparison.OrdinalIgnoreCase))
         return $"VarToXSTR({TranslateExpression(cast.Children[1])})";
+
+    if (string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
+        TryTranslateSimpleXmlBinaryCall(expression, out string simpleXmlBinaryCall))
+        return simpleXmlBinaryCall;
 
     if (TryTranslateDeclaredTypeCast(expression, out string declaredCast))
         return declaredCast;

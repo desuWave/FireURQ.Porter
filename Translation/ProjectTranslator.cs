@@ -340,6 +340,12 @@ public sealed class ProjectTranslator
         return false;
     }
 
+    private static bool UsesManagedSimpleXmlIo(string unitName, string className) =>
+        unitName.Equals("SimpleXML", StringComparison.OrdinalIgnoreCase) &&
+        className.ToUpperInvariant() is
+            "TBINXMLREADER" or "TSTMXMLREADER" or "TSTRXMLREADER" or
+            "TBINXMLWRITER" or "TSTMXMLWRITER" or "TSTRXMLWRITER";
+
     private TranslationResult TranslateUnit(
         ProjectTranslationInput input,
         string outputDirectory)
@@ -373,7 +379,12 @@ public sealed class ProjectTranslator
                 builder.AppendLine("using static global::FireURQ.Runtime.DelphiStreamConstants;");
             builder.AppendLine();
 
-            string declarations = _declarationTranslator.Translate(input.SemanticModel);
+            var declarationModel = input.SemanticModel with
+            {
+                Classes = input.SemanticModel.Classes.Where(owner =>
+                    !UsesManagedSimpleXmlIo(input.SemanticModel.Name, owner.Name)).ToArray()
+            };
+            string declarations = _declarationTranslator.Translate(declarationModel);
             if (!string.IsNullOrWhiteSpace(declarations))
                 builder.AppendLine(declarations);
 
@@ -567,6 +578,9 @@ private static void ReleaseTargetResources(Td2dRenderTarget target)
 
         foreach (var group in classBodies.GroupBy(body => GetOwnerName(body.Body.Name)))
         {
+            if (UsesManagedSimpleXmlIo(input.SemanticModel.Name, group.Key))
+                continue;
+
             builder.AppendLine($"public partial class {group.Key}");
             builder.AppendLine("{");
 

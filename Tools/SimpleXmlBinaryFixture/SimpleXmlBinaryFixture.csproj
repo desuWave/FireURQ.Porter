@@ -2,6 +2,8 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <OutputType>Exe</OutputType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Standalone/FireURQ/src/Runtime/SimpleXmlVariantBinary.cs" />
@@ -11,6 +13,9 @@
   </PropertyGroup>
   <ItemGroup Condition="'$(VariantRuntimeSource)' != ''">
     <Compile Include="$(VariantRuntimeSource)" />
+    <Compile Include="$([System.IO.Path]::GetDirectoryName('$(VariantRuntimeSource)'))/TObject.cs" />
+    <Compile Include="$([System.IO.Path]::GetDirectoryName('$(VariantRuntimeSource)'))/Streams.cs" />
+    <Compile Include="../../Standalone/FireURQ/src/Runtime/SimpleXmlBinaryIO.cs" />
     <Compile Include="../../Standalone/FireURQ/src/Runtime/SimpleXmlVariantValue.cs" />
   </ItemGroup>
 </Project>

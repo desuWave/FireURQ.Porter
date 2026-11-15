@@ -1001,7 +1001,18 @@ public sealed class CSharpDeclarationTranslator
         string abstractModifier = hasAbstractMethods ? "abstract " : string.Empty;
         builder.AppendLine($"public {abstractModifier}partial class {@class.Name}{baseType}");
         builder.AppendLine("{");
-        AppendMembers(builder, @class.Members, isInterface: false);
+        var members = @class.Members;
+        if (string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
+            (@class.Name.Equals("TXmlElement", StringComparison.OrdinalIgnoreCase) ||
+             @class.Name.Equals("TXmlText", StringComparison.OrdinalIgnoreCase)))
+        {
+            members = members.Select(member =>
+                member.Kind == SemanticMemberKind.Field &&
+                member.Name.Equals("FData", StringComparison.OrdinalIgnoreCase)
+                    ? member with { Visibility = "internal" }
+                    : member).ToArray();
+        }
+        AppendMembers(builder, members, isInterface: false);
         builder.Append('}');
         return builder.ToString();
     }
@@ -1141,6 +1152,7 @@ public sealed class CSharpDeclarationTranslator
         return visibility.Trim().ToLowerInvariant() switch
         {
             "private" => "private ",
+            "internal" => "internal ",
             "protected" => "protected ",
             "public" => "public ",
             "published" => "public ",

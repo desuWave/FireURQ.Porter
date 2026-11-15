@@ -53,6 +53,25 @@ SimpleXmlVariantValue.Write(fresh.Write, (Variant)"\u00E9", ansi);
 if (!fresh.ToArray().AsSpan().SequenceEqual(Convert.FromHexString("810001E9")))
     throw new InvalidDataException("A new ANSI value used the wrong encoding.");
 
+if (OperatingSystem.IsWindows())
+{
+    var xmlWriter = TStrXmlWriter.Create(1, 65536);
+    xmlWriter.WriteXmlString("\u0416");
+    xmlWriter.WriteVariant((Variant)(-123456789));
+    xmlWriter.WriteVariant((Variant)true);
+    var xmlReader = TStrXmlReader.Create(xmlWriter.FData);
+    if (xmlReader.ReadXmlString() != "\u0416")
+        throw new InvalidDataException("SimpleXML did not read the wide string after the header.");
+    Variant field = Variant.Null;
+    xmlReader.ReadVariant(ref field);
+    if (!field.TryGetInteger(out int integer) || integer != -123456789)
+        throw new InvalidDataException("SimpleXML did not update the destination Variant.");
+    xmlReader.ReadVariant(ref field);
+    if (!field.TryGetBoolean(out bool flag) || !flag)
+        throw new InvalidDataException("SimpleXML did not update the adjacent Variant.");
+
+    Console.WriteLine("SimpleXML reader/writer Variant checks passed.");
+}
 Console.WriteLine("SimpleXML managed Variant checks passed.");
 #endif
 
