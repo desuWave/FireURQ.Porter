@@ -162,20 +162,50 @@ sealed class LoaderProbe
         try
         {
             int start = index < 0 ? 0 : (int)(double)f_Labels.Variants[index] + 1;
+            var pendingText = new StringBuilder();
             for (int line = start; line < f_Source.Count; line++)
             {
                 string source = f_Source[line];
-                if (source.Equals("end", StringComparison.OrdinalIgnoreCase) || source.StartsWith(":"))
-                    yield break;
-                if (source.StartsWith("pln ", StringComparison.OrdinalIgnoreCase))
-                    yield return (source[4..], false);
+                if (source.Equals("end", StringComparison.OrdinalIgnoreCase))
+                    break;
+                if (source.StartsWith(":"))
+                {
+                    if (index >= 0)
+                        break;
+                    continue;
+                }
+
+                if (source.StartsWith("p ", StringComparison.OrdinalIgnoreCase))
+                    pendingText.Append(source[2..]);
+                else if (source.Equals("pln", StringComparison.OrdinalIgnoreCase) ||
+                    source.StartsWith("pln ", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (source.Length > 3)
+                        pendingText.Append(source[4..]);
+                    yield return (pendingText.ToString(), false);
+                    pendingText.Clear();
+                }
                 else if (source.StartsWith("proc ", StringComparison.OrdinalIgnoreCase))
                 {
                     string target = source[5..].Trim();
                     if (!HasLocation(target))
                         continue;
                     foreach (var output in ReadLocation(target, active, decorations))
+                    {
+                        if (pendingText.Length != 0)
+                        {
+                            if (!output.IsButton)
+                            {
+                                pendingText.Append(output.Text);
+                                yield return (pendingText.ToString(), false);
+                                pendingText.Clear();
+                                continue;
+                            }
+                            yield return (pendingText.ToString(), false);
+                            pendingText.Clear();
+                        }
                         yield return output;
+                    }
                 }
                 else if (decorations != null && source.StartsWith("decoradd ", StringComparison.OrdinalIgnoreCase))
                 {
@@ -225,7 +255,7 @@ sealed class LoaderProbe
                     string destination = source[5..].Trim();
                     if (decorations != null && destination.Length != 0)
                         decorations.Add(new System.Xml.Linq.XElement("goto", destination));
-                    yield break;
+                    break;
                 }
                 else if (decorations != null && source.StartsWith("inv+", StringComparison.OrdinalIgnoreCase))
                 {
@@ -251,9 +281,18 @@ sealed class LoaderProbe
                     string target = source[4..comma].Trim();
                     string caption = source[(comma + 1)..].Trim();
                     if (target.Length != 0 && caption.Length != 0)
+                    {
+                        if (pendingText.Length != 0)
+                        {
+                            yield return (pendingText.ToString(), false);
+                            pendingText.Clear();
+                        }
                         yield return ("[[" + caption + "|" + target + "]]", true);
+                    }
                 }
             }
+            if (pendingText.Length != 0)
+                yield return (pendingText.ToString(), false);
         }
         finally
         {
