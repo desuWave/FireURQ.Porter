@@ -622,7 +622,7 @@ private static void ReleaseTargetResources(Td2dRenderTarget target)
                 function = NormalizeOverrideVisibility(
                     function, group.Key, input.SemanticModel);
                 string translated = _functionTranslator.TranslateFunction(
-                    function, body.Behavior, manageDestructorLifetime: true);
+                    function, body.Behavior, manageDestructorLifetime: true, ownerClass: group.Key);
                 if (input.SemanticModel.Name.Equals("furqContext", StringComparison.OrdinalIgnoreCase) &&
                     group.Key.Equals("TFURQCode", StringComparison.OrdinalIgnoreCase) &&
                     function.Name.Equals("Load", StringComparison.OrdinalIgnoreCase) &&

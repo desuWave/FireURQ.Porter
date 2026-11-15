@@ -260,6 +260,38 @@ public sealed class TypeResolver
         return false;
     }
 
+    internal TypeResolution? ResolveDataMemberType(string receiver, string memberName, string? unitName)
+    {
+        string? context = unitName;
+        var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (!string.IsNullOrWhiteSpace(receiver))
+        {
+            TypeResolution type = Resolve(receiver, context);
+            if (!type.IsResolved || type.IsPointer || type.DeclaringUnitName is not { } owner ||
+                !visited.Add(owner + "." + type.ResolvedName) ||
+                !_units.TryGetValue(owner, out SemanticUnit? unit))
+                return null;
+
+            var classType = unit.Classes.FirstOrDefault(candidate =>
+                candidate.Name.Equals(type.ResolvedName, StringComparison.OrdinalIgnoreCase));
+            var interfaceType = classType is null ? unit.Interfaces.FirstOrDefault(candidate =>
+                candidate.Name.Equals(type.ResolvedName, StringComparison.OrdinalIgnoreCase)) : null;
+            var members = classType?.Members ?? interfaceType?.Members;
+            var member = members?.FirstOrDefault(candidate =>
+                candidate.Name.Equals(memberName, StringComparison.OrdinalIgnoreCase));
+            if (member is not null)
+                return member.Kind is SemanticMemberKind.Field or SemanticMemberKind.Property &&
+                    member.Parameters.Count == 0
+                    ? Resolve(member.Type, owner)
+                    : null;
+
+            receiver = classType?.BaseType ?? interfaceType?.BaseType ?? string.Empty;
+            context = owner;
+        }
+
+        return null;
+    }
+
     public bool IsInheritedTObjectFree(string typeName, string? unitName)
     {
         string current = typeName;

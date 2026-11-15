@@ -36,18 +36,18 @@ public sealed class DelphiToCSharpTranslator
     public string TranslateFunction(
         SemanticFunction function,
         BehaviorAnalyzer.BehaviorInfo behavior,
-        bool manageDestructorLifetime = false) =>
-        TranslateFunctionCore(function, behavior, manageDestructorLifetime, null);
+        bool manageDestructorLifetime = false, string? ownerClass = null) =>
+        TranslateFunctionCore(function, behavior, manageDestructorLifetime, null, ownerClass);
 
     private string TranslateFunctionCore(
         SemanticFunction function, BehaviorAnalyzer.BehaviorInfo behavior,
-        bool manageDestructorLifetime, FunctionTypeContext? parent)
+        bool manageDestructorLifetime, FunctionTypeContext? parent, string? ownerClass = null)
     {
         FunctionTypeContext? previous =
             _currentTypeContext;
 
         _currentTypeContext =
-            new FunctionTypeContext(function, parent);
+            new FunctionTypeContext(function, parent, ownerClass);
         FunctionTypeContext context = _currentTypeContext;
 
         try
@@ -1490,22 +1490,75 @@ public sealed class DelphiToCSharpTranslator
             TranslateExpression(
                 expression.Children[0]);
 
-        string? operandType =
-            ResolveExpressionType(
-                expression.Children[0]);
-
-        bool isBoolean = IsBooleanType(operandType);
-
         string op =
             expression.Text.ToLowerInvariant() switch
             {
-                "not" => isBoolean ? "!" : "~",
+                "not" => IsBooleanUnaryOperand(expression.Children[0]) ? "!" : "~",
                 "+" => "+",
                 "-" => "-",
                 _ => expression.Text
             };
 
         return $"{op}{operand}";
+    }
+
+    private bool IsBooleanUnaryOperand(ExpressionParser.ExpressionNode operand)
+    {
+        if (operand.Kind == ExpressionParser.ExpressionKind.TypeTest)
+            return true;
+
+        if (operand.Kind == ExpressionParser.ExpressionKind.Unary && operand.Children.Count == 1 &&
+            operand.Text.Equals("not", StringComparison.OrdinalIgnoreCase))
+            return IsBooleanUnaryOperand(operand.Children[0]);
+
+        if (operand.Kind == ExpressionParser.ExpressionKind.Binary && operand.Children.Count == 2)
+        {
+            return operand.Text.ToLowerInvariant() switch
+            {
+                "=" or "<>" or "<" or "<=" or ">" or ">=" or "in" => true,
+                "and" or "or" or "xor" =>
+                    IsBooleanUnaryOperand(operand.Children[0]) && IsBooleanUnaryOperand(operand.Children[1]),
+                _ => false
+            };
+        }
+
+        if (operand.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            (operand.Text.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+             operand.Text.Equals("false", StringComparison.OrdinalIgnoreCase)))
+            return true;
+
+        string? localType = ResolveExpressionType(operand);
+        if (localType is not null)
+            return IsBooleanType(localType);
+
+        TypeResolution? member = ResolveUnaryMemberType(operand);
+        return member is { IsResolved: true, IsPointer: false } &&
+            CSharpTypeMapper.Map(member.ResolvedName) == "bool";
+    }
+
+    private TypeResolution? ResolveUnaryMemberType(ExpressionParser.ExpressionNode expression)
+    {
+        if (_resolver is null)
+            return null;
+
+        if (expression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            _currentTypeContext?.OwnerClass is { } owner)
+            return _resolver.ResolveDataMemberType(owner, expression.Text, _unitName);
+
+        if (expression.Kind != ExpressionParser.ExpressionKind.MemberAccess ||
+            expression.Children.Count != 2)
+            return null;
+
+        var receiver = expression.Children[0];
+        string? local = ResolveExpressionType(receiver);
+        if (!string.IsNullOrWhiteSpace(local))
+            return _resolver.ResolveDataMemberType(local, expression.Children[1].Text, _unitName);
+
+        TypeResolution? receiverType = ResolveUnaryMemberType(receiver);
+        return receiverType is { IsResolved: true, IsPointer: false }
+            ? _resolver.ResolveDataMemberType(receiverType.ResolvedName, expression.Children[1].Text,
+                receiverType.DeclaringUnitName ?? _unitName)
+            : null;
     }
 
     private string? ResolveExpressionType(
@@ -2841,11 +2894,13 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
         private readonly FunctionTypeContext? _parent;
         private readonly int _depth;
         public string ResultName { get; }
+        public string? OwnerClass { get; }
         public Dictionary<string, string> ConstCopies { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-        public FunctionTypeContext(SemanticFunction function, FunctionTypeContext? parent)
+        public FunctionTypeContext(SemanticFunction function, FunctionTypeContext? parent, string? ownerClass)
         {
             _parent = parent;
+            OwnerClass = ownerClass ?? parent?.OwnerClass;
             _depth = parent is null ? 0 : parent._depth + 1;
             ResultName = _depth == 0 ? "result" : $"__localResult{_depth}";
             foreach (

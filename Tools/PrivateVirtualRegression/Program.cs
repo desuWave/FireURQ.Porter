@@ -24,9 +24,14 @@ private
   function Secret: Integer;
   Stored: Integer;
   procedure SetStored(const Value: Integer);
+protected
+  Loaded: Boolean;
 public
   property Setting: Integer read Stored write setstored;
   property DirectSetting: Integer read Stored write Stored;
+  property Enabled: Boolean read Loaded write Loaded;
+  function IsDisabledFor(Other: TBase): Boolean;
+  function InvertStored: Integer;
   function Value: Integer; virtual;
   function ReadHidden: Integer;
   function ReadSecret: Integer;
@@ -36,6 +41,7 @@ private
   function Hidden: Integer; override;
 public
   function Value: Integer; override;
+  function IsNotLoaded: Boolean;
 end;
 implementation
 function TBase.Hidden: Integer;
@@ -45,6 +51,18 @@ end;
 procedure TBase.SetStored(const Value: Integer);
 begin
   Stored := Value;
+end;
+function TBase.IsDisabledFor(Other: TBase): Boolean;
+begin
+  Result := not Other.Enabled;
+end;
+function TBase.InvertStored: Integer;
+begin
+  Result := not Stored;
+end;
+function TChild.IsNotLoaded: Boolean;
+begin
+  Result := not Loaded;
 end;
 function TBase.Secret: Integer;
 begin
@@ -117,8 +135,11 @@ Check("Protected override method emitted",
     generated.Contains("protected override int Hidden("));
 Check("Private method visibility preserved",
     generated.Contains("private int Secret("));
-Check("All eight implementations emitted",
-    results[0].FunctionsTranslated == 8);
+Check("All eleven implementations emitted",
+    results[0].FunctionsTranslated == 11);
+Check("Boolean property and inherited field use logical not",
+    generated.Contains("!Other.Enabled") && generated.Contains("!Loaded"));
+Check("Integer field uses bitwise not", generated.Contains("~Stored"));
 Check("Ordinary setter passes only the incoming value",
     generated.Contains("set => SetStored(value);") &&
     !generated.Contains("SetStored(Value, value)"));
@@ -140,11 +161,14 @@ public static class Program
     public static int Main()
     {
         TBase plain = new TBase();
-        TBase child = new TChild();
+        var child = new TChild();
 
         plain.Setting = 42;
         child.DirectSetting = 19;
+        plain.Enabled = true;
         bool passed =
+            plain.IsDisabledFor(child) && !child.IsDisabledFor(plain) &&
+            child.IsNotLoaded() && plain.InvertStored() == ~42 &&
             plain.DirectSetting == 42 &&
             child.Setting == 19 &&
             plain.Value() == 1 &&
