@@ -53,7 +53,7 @@ In the last recorded full verification, the translator built cleanly and transla
 
 ## Standalone FireURQ build target
 
-[`Standalone/FireURQ`](Standalone/FireURQ) is the application project. It compiles C# sources directly and has no project reference to FireURQ.Porter. The verification script builds this project against its generated C# and places the build artifacts in the verification directory.
+[`Standalone/FireURQ`](Standalone/FireURQ) is the application project. It targets the F2 application shipped by the FireURQ 2.2.4 installer (Delphi entry point `f2/fireURQ2.dpr`). The generated `furqWinMain.cs` and `furqAbout.cs` belong to the separate VCL application and are excluded from this build. Standalone compiles C# sources directly and has no project reference to FireURQ.Porter. The verification script builds this project against its generated C# and places the build artifacts in the verification directory.
 
 To build the target directly from an existing translation, run the following from the repository root. Replace the example path with the `translation-output` directory inside the verification directory reported by the script.
 

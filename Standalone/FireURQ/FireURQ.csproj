@@ -11,7 +11,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <FireURQSource Include="src/**/*.cs;$(FireURQSourceRoot)/**/*.cs" />
+    <FireURQSource Include="src/**/*.cs" />
+    <!-- furqWinMain and furqAbout belong to FireURQ.dpr. The installer ships f2/fireURQ2.dpr. -->
+    <FireURQSource Include="$(FireURQSourceRoot)/**/*.cs"
+                   Exclude="$(FireURQSourceRoot)/**/furqWinMain.cs;$(FireURQSourceRoot)/**/furqAbout.cs" />
     <Compile Include="@(FireURQSource)" />
   </ItemGroup>
 
