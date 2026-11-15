@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace FireURQ.Runtime;
@@ -38,10 +37,25 @@ internal sealed class TRegExpr : TObject
     private bool SetMatch(System.Text.RegularExpressions.Match? match)
     {
         current = match is { Success: true } ? match : null;
-        var groups = current?.Groups;
-        Match = groups?.Select(group => group.Value).ToArray() ?? Array.Empty<string>();
-        MatchPos = groups?.Select(group => group.Success ? group.Index + 1 : 0).ToArray() ?? Array.Empty<int>();
-        MatchLen = groups?.Select(group => group.Length).ToArray() ?? Array.Empty<int>();
-        return current is not null;
+        if (current is null)
+        {
+            Match = Array.Empty<string>();
+            MatchPos = Array.Empty<int>();
+            MatchLen = Array.Empty<int>();
+            return false;
+        }
+
+        GroupCollection groups = current.Groups;
+        Match = new string[groups.Count];
+        MatchPos = new int[groups.Count];
+        MatchLen = new int[groups.Count];
+        for (int index = 0; index < groups.Count; index++)
+        {
+            Group group = groups[index];
+            Match[index] = group.Value;
+            MatchPos[index] = group.Success ? group.Index + 1 : 0;
+            MatchLen[index] = group.Length;
+        }
+        return true;
     }
 }
