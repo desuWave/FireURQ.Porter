@@ -220,6 +220,20 @@ sealed class LoaderProbe
                             new System.Xml.Linq.XAttribute("id", script.Groups["id"].Value),
                             script.Groups["steps"].Value));
                 }
+                else if (decorations != null && source.StartsWith("inv+", StringComparison.OrdinalIgnoreCase))
+                {
+                    string item = source[4..].Trim();
+                    if (item.Length != 0)
+                        decorations.Add(new System.Xml.Linq.XElement("inventory-add", item));
+                }
+                else if (decorations != null && source.StartsWith("inventory_enabled", StringComparison.OrdinalIgnoreCase))
+                {
+                    var setting = System.Text.RegularExpressions.Regex.Match(source,
+                        @"^inventory_enabled\s*=\s*([01])\s*$",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (setting.Success)
+                        decorations.Add(new System.Xml.Linq.XElement("inventory-enabled", setting.Groups[1].Value));
+                }
                 else if (decorations != null && source.Equals("clsl", StringComparison.OrdinalIgnoreCase))
                     decorations.Add(new System.Xml.Linq.XElement("clear-links"));
                 else if (source.StartsWith("btn ", StringComparison.OrdinalIgnoreCase))
