@@ -14,6 +14,20 @@ Check("multiplication and division", (Extended.FromInt64(7) / Extended.FromInt64
 Check("binary64 minimum subnormal round-trip", Extended.FromDouble(double.Epsilon).ToDouble(), double.Epsilon);
 Check("binary64 subnormal halfway rounds to zero", (Extended.FromDouble(double.Epsilon) / Extended.FromInt64(2)).ToDouble(), 0);
 Check("negative zero round-trip", Extended.FromDouble(-0.0).ToDouble(), -0.0);
+var singleMidpoint = one + Extended.FromDouble(Math.ScaleB(1, -24));
+Check("round directly to Single above a midpoint", (float)(singleMidpoint + ulp), MathF.BitIncrement(1f));
+if (!(large + one > large) || large + one == large)
+    throw new InvalidOperationException("Extended comparison rounded to binary64 before comparing.");
+
+#if TEST_VARIANT
+Variant number = 9007199254740992.0;
+Extended numericInput = Extended.EnsureReal(number);
+Variant evaluated = numericInput + one;
+Check("assign expression to varDouble", Extended.EnsureReal(evaluated).ToDouble(), 9007199254740992);
+Check("EnsureReal uses the length of a string", Extended.EnsureReal((Variant)"42").ToDouble(), 2);
+Check("EnsureReal widens a Delphi true value to minus one", Extended.EnsureReal((Variant)true).ToDouble(), -1);
+Console.WriteLine("FireURQ Extended Variant boundary checks passed.");
+#endif
 Console.WriteLine("FireURQ finite Extended arithmetic checks passed.");
 
 static void Check(string label, double actual, double expected)

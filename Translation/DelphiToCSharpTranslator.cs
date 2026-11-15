@@ -164,6 +164,16 @@ public sealed class DelphiToCSharpTranslator
                 return builder.ToString();
             }
 
+            if (string.Equals(_unitName, "furqTypes", StringComparison.OrdinalIgnoreCase) &&
+                function.Name.Equals("EnsureReal", StringComparison.OrdinalIgnoreCase) &&
+                function.Parameters.Count == 1 &&
+                function.Parameters[0].Type.Equals("Variant", StringComparison.OrdinalIgnoreCase))
+            {
+                builder.AppendLine($"    return Extended.EnsureReal({function.Parameters[0].Name});");
+                builder.AppendLine("}");
+                return builder.ToString();
+            }
+
             if (isSimpleXmlVariantFormatter)
             {
                 string value = function.Parameters[0].Name;
@@ -1867,6 +1877,13 @@ private string TranslateCall(
         if (expression.Children.Count == 2 && method.Equals("UnlockBits", StringComparison.OrdinalIgnoreCase))
             return $"{bitmapTarget}.UnlockBits(ref {TranslateExpression(expression.Children[1])})";
     }
+
+    if (expression.Children.Count == 2 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } numericHelper &&
+        numericHelper.Text.Equals("EnsureReal", StringComparison.OrdinalIgnoreCase) &&
+        _unitName?.ToUpperInvariant() is "FURQTYPES" or "FURQBASE" or "FURQCONTEXT" or
+            "FURQEXPREVAL" or "F2CONTEXT" or "F2INTERPRETER" or "F2SCNMAIN")
+        return $"global::furqTypesModule.EnsureReal({TranslateExpression(expression.Children[1])})";
 
     if (TryTranslateDeclaredTypeCast(expression, out string declaredCast))
         return declaredCast;

@@ -1,9 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
     <TargetFramework>net8.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../Standalone/FireURQ/src/Runtime/Extended.cs" />
+  </ItemGroup>
+  <PropertyGroup Condition="'$(VariantRuntimeSource)' != ''">
+    <DefineConstants>$(DefineConstants);TEST_VARIANT</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(VariantRuntimeSource)' != ''">
+    <Compile Include="$(VariantRuntimeSource)" />
+    <Compile Include="../../Standalone/FireURQ/src/Runtime/ExtendedVariant.cs" />
   </ItemGroup>
 </Project>

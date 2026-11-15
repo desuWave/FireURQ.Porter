@@ -4,7 +4,7 @@ using System.Numerics;
 namespace FireURQ.Runtime;
 
 // Finite Win32 Delphi Extended arithmetic. The value is significand * 2^exponent.
-internal readonly struct Extended
+public readonly partial struct Extended : IEquatable<Extended>, IComparable<Extended>
 {
     private readonly ulong significand;
     private readonly int exponent;
@@ -34,36 +34,65 @@ internal readonly struct Extended
         return Quantize(magnitude, BigInteger.One, power, sign);
     }
 
-    internal double ToDouble()
-    {
-        ulong sign = negative ? 1UL << 63 : 0;
-        if (significand == 0)
-            return FromBits(sign);
+    internal double ToDouble() =>
+        BitConverter.Int64BitsToDouble(unchecked((long)ToBinaryBits(52, 1023, 11)));
 
+    private float ToSingle() =>
+        BitConverter.Int32BitsToSingle(unchecked((int)ToBinaryBits(23, 127, 8)));
+
+    private ulong ToBinaryBits(int fractionBits, int bias, int exponentBits)
+    {
+        ulong sign = negative ? 1UL << (fractionBits + exponentBits) : 0;
+        if (significand == 0)
+            return sign;
+
+        ulong infinity = ((1UL << exponentBits) - 1) << fractionBits;
+        ulong normalBit = 1UL << fractionBits;
         int top = Log2(significand, BigInteger.One) + exponent;
-        if (top > 1023)
-            return FromBits(sign | 0x7FF0_0000_0000_0000);
-        int unit = Math.Max(top - 52, -1074);
+        if (top > bias)
+            return sign | infinity;
+
+        int unit = Math.Max(top - fractionBits, 1 - bias - fractionBits);
         ulong rounded = (ulong)RoundRatio(significand, BigInteger.One, exponent - unit);
-        if (rounded == 1UL << 53)
+        if (rounded == normalBit << 1)
         {
             rounded >>= 1;
             unit++;
         }
-        if (rounded >= 1UL << 52)
+        if (rounded >= normalBit)
         {
-            int unbiased = unit + 52;
-            if (unbiased > 1023)
-                return FromBits(sign | 0x7FF0_0000_0000_0000);
-            return FromBits(sign | ((ulong)(unbiased + 1023) << 52) |
-                (rounded & 0x000F_FFFF_FFFF_FFFF));
+            int unbiased = unit + fractionBits;
+            if (unbiased > bias)
+                return sign | infinity;
+            return sign | ((ulong)(unbiased + bias) << fractionBits) |
+                (rounded & (normalBit - 1));
         }
 
-        return FromBits(sign | rounded);
+        return sign | rounded;
     }
 
-    private static double FromBits(ulong bits) =>
-        BitConverter.Int64BitsToDouble(unchecked((long)bits));
+    public static implicit operator Extended(long value) => FromInt64(value);
+    public static implicit operator Extended(double value) => FromDouble(value);
+    public static implicit operator float(Extended value) => value.ToSingle();
+    public static implicit operator double(Extended value) => value.ToDouble();
+
+    public int CompareTo(Extended other)
+    {
+        int unit = Math.Min(exponent, other.exponent);
+        return SignedAt(unit).CompareTo(other.SignedAt(unit));
+    }
+
+    public bool Equals(Extended other) => CompareTo(other) == 0;
+    public override bool Equals(object? obj) => obj is Extended other && Equals(other);
+    public override int GetHashCode() =>
+        significand == 0 ? 0 : HashCode.Combine(significand, exponent, negative);
+
+    public static bool operator ==(Extended left, Extended right) => left.Equals(right);
+    public static bool operator !=(Extended left, Extended right) => !left.Equals(right);
+    public static bool operator <(Extended left, Extended right) => left.CompareTo(right) < 0;
+    public static bool operator <=(Extended left, Extended right) => left.CompareTo(right) <= 0;
+    public static bool operator >(Extended left, Extended right) => left.CompareTo(right) > 0;
+    public static bool operator >=(Extended left, Extended right) => left.CompareTo(right) >= 0;
 
     public static Extended operator -(Extended value) =>
         new(value.significand, value.exponent, !value.negative);
