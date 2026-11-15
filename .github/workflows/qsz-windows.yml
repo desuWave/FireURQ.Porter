@@ -66,3 +66,13 @@ jobs:
               throw 'Expected hello, world! at the implicit entry.'
           }
           Write-Host 'PASS: quest without an explicit starting label.'
+          $decorQuest = Join-Path $fireurq 'tests/ver1.8/206.linkdeco.qst'
+          $decorXml = Join-Path $directory 'text-decoration.xml'
+          & powershell.exe -NoProfile -File ./Tools/TestGeneratedQuestLoader.ps1 -VerificationDirectory $directory -QuestPath $decorQuest -ExportLocations $decorXml
+          if ($LASTEXITCODE -ne 0 -or !(Test-Path -LiteralPath $decorXml)) {
+              throw 'Text decoration export failed.'
+          }
+          $decor = @(Select-Xml -LiteralPath $decorXml -XPath '/quest/location[@name="0"]/text-decoration[@id="test" and @x="100" and @y="100"]')
+          if ($decor.Count -ne 1 -or !$decor[0].Node.InnerText.Contains('|!blendtext]]')) {
+              throw 'Expected the positioned text decoration and its link in the author fixture.'
+          }
