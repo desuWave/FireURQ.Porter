@@ -256,8 +256,10 @@ sealed class LoaderProbe
                         int destinationIndex = f_Labels.IndexOf(destination);
                         if (active.Count < 64 && !active.Contains(destinationIndex))
                         {
-                            decorations?.Add(new System.Xml.Linq.XElement("continuation", destination));
-                            foreach (var output in ReadLocation(destination, active, decorations, variables))
+                            var continuation = ReadLocation(destination, active, decorations, variables).ToArray();
+                            decorations?.Add(new System.Xml.Linq.XElement("continuation",
+                                new System.Xml.Linq.XAttribute("lines", continuation.Length), destination));
+                            foreach (var output in continuation)
                                 yield return output;
                         }
                     }
