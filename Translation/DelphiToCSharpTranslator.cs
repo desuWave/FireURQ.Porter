@@ -488,7 +488,7 @@ public sealed class DelphiToCSharpTranslator
             "}");
     }
 
-    private static string TranslateCaseLabel(string label)
+    private string TranslateCaseLabel(string label)
     {
         // A quoted '..' is a literal. Range separators follow a complete endpoint.
         var range = System.Text.RegularExpressions.Regex.Match(
@@ -499,7 +499,7 @@ public sealed class DelphiToCSharpTranslator
         return TranslateCaseConstant(label);
     }
 
-    private static string TranslateCaseConstant(string label)
+    private string TranslateCaseConstant(string label)
     {
         if (label.Length == 3 && label[0] == '\'' && label[2] == '\'')
             return "'" + EscapeCSharpCharacter(label[1]) + "'";
@@ -509,6 +509,8 @@ public sealed class DelphiToCSharpTranslator
             return literal;
         if (label.StartsWith('$'))
             return "0x" + label[1..];
+        if (label.StartsWith("D3DFMT_", StringComparison.OrdinalIgnoreCase))
+            return TranslateIdentifier(label);
         return label;
     }
 
@@ -889,6 +891,12 @@ public sealed class DelphiToCSharpTranslator
                 "D3DADAPTER_DEFAULT" => "D3DADAPTER_DEFAULT",
                 "D3DENUM_NO_WHQL_LEVEL" => "D3DENUM_NO_WHQL_LEVEL",
                 "D3DFMT_UNKNOWN" => "D3DFMT_UNKNOWN",
+                "D3DFMT_A8R8G8B8" => "D3DFMT_A8R8G8B8",
+                "D3DFMT_X8R8G8B8" => "D3DFMT_X8R8G8B8",
+                "D3DFMT_R5G6B5" => "D3DFMT_R5G6B5",
+                "D3DFMT_X1R5G5B5" => "D3DFMT_X1R5G5B5",
+                "D3DFMT_A1R5G5B5" => "D3DFMT_A1R5G5B5",
+                "D3DFMT_INDEX16" => "D3DFMT_INDEX16",
                 "D3DFMT_D16" => "D3DFMT_D16",
                 "D3DMULTISAMPLE_NONE" => "D3DMULTISAMPLE_NONE",
                 "D3DDEVTYPE_HAL" => "D3DDEVTYPE_HAL",

@@ -379,7 +379,13 @@ public static class D3D8
     public const uint D3DADAPTER_DEFAULT = 0;
     public const uint D3DENUM_NO_WHQL_LEVEL = 2;
     public const int D3DFMT_UNKNOWN = 0;
+    public const int D3DFMT_A8R8G8B8 = 21;
+    public const int D3DFMT_X8R8G8B8 = 22;
+    public const int D3DFMT_R5G6B5 = 23;
+    public const int D3DFMT_X1R5G5B5 = 24;
+    public const int D3DFMT_A1R5G5B5 = 25;
     public const int D3DFMT_D16 = 80;
+    public const int D3DFMT_INDEX16 = 101;
     public const int D3DMULTISAMPLE_NONE = 0;
     public const int D3DDEVTYPE_HAL = 1;
     public const uint D3DCREATE_FPU_PRESERVE = 0x02;

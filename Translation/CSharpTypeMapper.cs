@@ -71,6 +71,10 @@ public static class CSharpTypeMapper
             }
         }
 
+        if (type.Equals("D3DFORMAT", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(unitName, "d2dCore", StringComparison.OrdinalIgnoreCase))
+            return "int";
+
         string? runtimeListType = GetRuntimeListTypeName(type);
         if (runtimeListType is not null)
             return runtimeListType;
