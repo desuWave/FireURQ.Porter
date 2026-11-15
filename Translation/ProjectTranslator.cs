@@ -541,7 +541,11 @@ private static void ReleaseTargetResources(Td2dRenderTarget target)
             }
 
             string translated = _functionTranslator.TranslateFunction(function, body.Behavior);
-            builder.Append(IndentAndModifySignature(translated, "public static ", 1));
+            string modifier = input.Unit.Name.Equals("f2LinkParser", StringComparison.OrdinalIgnoreCase) &&
+                function.Name.Equals("GetLinkRegEx", StringComparison.OrdinalIgnoreCase)
+                ? "private static "
+                : "public static ";
+            builder.Append(IndentAndModifySignature(translated, modifier, 1));
             builder.AppendLine();
             translatedCount++;
         }

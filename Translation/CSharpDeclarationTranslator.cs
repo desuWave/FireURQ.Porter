@@ -114,6 +114,16 @@ public sealed class CSharpDeclarationTranslator
 
         foreach (SemanticConstant constant in unit.Constants)
         {
+            // Delphi 7 allows this typed constant to be assigned at runtime.
+            if (unit.Name.Equals("f2LinkParser", StringComparison.OrdinalIgnoreCase) &&
+                constant.Name.Equals("gLinkRegEx", StringComparison.OrdinalIgnoreCase) &&
+                constant.Type.Equals("TRegExpr", StringComparison.OrdinalIgnoreCase) &&
+                constant.Value.Trim().Equals("nil", StringComparison.OrdinalIgnoreCase))
+            {
+                builder.AppendLine("private static TRegExpr? gLinkRegEx;");
+                continue;
+            }
+
             if (TryTranslateBassStreamSentinel(constant, unit, out string sentinel))
             {
                 builder.AppendLine(sentinel);

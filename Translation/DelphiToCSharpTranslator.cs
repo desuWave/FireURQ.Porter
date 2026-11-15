@@ -1180,10 +1180,41 @@ public sealed class DelphiToCSharpTranslator
     }
 
     private string TranslateCallTarget(
-        ExpressionParser.ExpressionNode expression) =>
-        TryGetStandardListFactoryTarget(expression, out string target)
-            ? target
-            : TranslateExpression(expression);
+        ExpressionParser.ExpressionNode expression)
+    {
+        if (TryGetStandardListFactoryTarget(expression, out string target))
+            return target;
+
+        return expression.Kind switch
+        {
+            ExpressionParser.ExpressionKind.MemberAccess => TranslateMemberAccess(expression),
+            ExpressionParser.ExpressionKind.Identifier => TranslateIdentifier(expression.Text),
+            _ => TranslateExpression(expression)
+        };
+    }
+
+    private bool IsF2LinkParserBareCall(ExpressionParser.ExpressionNode expression)
+    {
+        if (!string.Equals(_unitName, "f2LinkParser", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        if (expression.Kind == ExpressionParser.ExpressionKind.Identifier)
+        {
+            return expression.Text.Equals("GetLinkRegEx", StringComparison.OrdinalIgnoreCase) &&
+                _currentTypeContext?.ResolveIdentifier(expression.Text) is null;
+        }
+
+        if (expression.Kind != ExpressionParser.ExpressionKind.MemberAccess ||
+            expression.Children.Count != 2)
+            return false;
+
+        var receiver = expression.Children[0];
+        string member = expression.Children[1].Text;
+        return (receiver.Text.Equals("TRegExpr", StringComparison.OrdinalIgnoreCase) &&
+                member.Equals("Create", StringComparison.OrdinalIgnoreCase)) ||
+            (string.Equals(ResolveExpressionType(receiver), "TRegExpr", StringComparison.OrdinalIgnoreCase) &&
+                member.Equals("ExecNext", StringComparison.OrdinalIgnoreCase));
+    }
     private string TranslateExpression(
         ExpressionParser.ExpressionNode? expression)
     {
@@ -1192,6 +1223,9 @@ public sealed class DelphiToCSharpTranslator
 
         if (TryGetStandardListFactoryTarget(expression, out string factoryTarget))
             return factoryTarget + "()";
+
+        if (IsF2LinkParserBareCall(expression))
+            return TranslateCallTarget(expression) + "()";
 
         return expression.Kind switch
         {
