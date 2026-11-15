@@ -28,6 +28,34 @@ if (SimpleXmlVariantBinary.Read(adjacent.ReadExactly).TypeCode != 11 ||
     adjacent.Position != adjacent.Length)
     throw new InvalidDataException("Reading a value consumed bytes of its neighbor.");
 
+#if TEST_MANAGED_VARIANT
+var ansi = System.Text.Encoding.Latin1;
+foreach (var (type, text) in new (ushort, string)[] { (256, "810001E9"), (8, "08011604"), (11, "0B0100") })
+{
+    byte[] wire = Convert.FromHexString(text);
+    using var input = new MemoryStream(wire);
+    Variant value = SimpleXmlVariantValue.Read(input.ReadExactly, ansi);
+    if (value.TypeCode != type || input.Position != input.Length)
+        throw new InvalidDataException($"Unexpected managed type for {text}.");
+    if ((type == 256 && (!value.TryGetString(out string decoded) || decoded != "\u00E9")) ||
+        (type == 8 && (string)value != "\u0416") ||
+        (type == 11 && (!value.TryGetBoolean(out bool boolean) || !boolean)))
+        throw new InvalidDataException($"Unexpected managed value for {text}.");
+
+    using var output = new MemoryStream();
+    SimpleXmlVariantValue.Write(output.Write, value, ansi);
+    if (!output.ToArray().AsSpan().SequenceEqual(wire))
+        throw new InvalidDataException($"Rewriting the managed value changed {text}.");
+}
+
+using var fresh = new MemoryStream();
+SimpleXmlVariantValue.Write(fresh.Write, (Variant)"\u00E9", ansi);
+if (!fresh.ToArray().AsSpan().SequenceEqual(Convert.FromHexString("810001E9")))
+    throw new InvalidDataException("A new ANSI value used the wrong encoding.");
+
+Console.WriteLine("SimpleXML managed Variant checks passed.");
+#endif
+
 Console.WriteLine("SimpleXML variant wire checks passed.");
 
 static void Check(ushort type, byte[] payload, byte[] wire)

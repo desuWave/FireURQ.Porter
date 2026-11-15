@@ -6,4 +6,11 @@
   <ItemGroup>
     <Compile Include="../../Standalone/FireURQ/src/Runtime/SimpleXmlVariantBinary.cs" />
   </ItemGroup>
+  <PropertyGroup Condition="'$(VariantRuntimeSource)' != ''">
+    <DefineConstants>$(DefineConstants);TEST_MANAGED_VARIANT</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(VariantRuntimeSource)' != ''">
+    <Compile Include="$(VariantRuntimeSource)" />
+    <Compile Include="../../Standalone/FireURQ/src/Runtime/SimpleXmlVariantValue.cs" />
+  </ItemGroup>
 </Project>
