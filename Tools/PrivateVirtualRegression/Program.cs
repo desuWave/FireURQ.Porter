@@ -22,7 +22,11 @@ private
   function Hidden: Integer; virtual;
 private
   function Secret: Integer;
+  Stored: Integer;
+  procedure SetStored(const Value: Integer);
 public
+  property Setting: Integer read Stored write setstored;
+  property DirectSetting: Integer read Stored write Stored;
   function Value: Integer; virtual;
   function ReadHidden: Integer;
   function ReadSecret: Integer;
@@ -37,6 +41,10 @@ implementation
 function TBase.Hidden: Integer;
 begin
   Result := 10;
+end;
+procedure TBase.SetStored(const Value: Integer);
+begin
+  Stored := Value;
 end;
 function TBase.Secret: Integer;
 begin
@@ -109,8 +117,13 @@ Check("Protected override method emitted",
     generated.Contains("protected override int Hidden("));
 Check("Private method visibility preserved",
     generated.Contains("private int Secret("));
-Check("All seven implementations emitted",
-    results[0].FunctionsTranslated == 7);
+Check("All eight implementations emitted",
+    results[0].FunctionsTranslated == 8);
+Check("Ordinary setter passes only the incoming value",
+    generated.Contains("set => SetStored(value);") &&
+    !generated.Contains("SetStored(Value, value)"));
+Check("Field-backed property still assigns the field",
+    generated.Contains("set => Stored = value;"));
 
 File.WriteAllText(Path.Combine(directory, "Dispatch.csproj"), """
 <Project Sdk="Microsoft.NET.Sdk">
@@ -129,7 +142,11 @@ public static class Program
         TBase plain = new TBase();
         TBase child = new TChild();
 
+        plain.Setting = 42;
+        child.DirectSetting = 19;
         bool passed =
+            plain.DirectSetting == 42 &&
+            child.Setting == 19 &&
             plain.Value() == 1 &&
             child.Value() == 2 &&
             plain.ReadHidden() == 10 &&

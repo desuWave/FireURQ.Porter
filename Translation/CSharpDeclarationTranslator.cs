@@ -1103,8 +1103,9 @@ public sealed class CSharpDeclarationTranslator
         string visibility = isInterface ? string.Empty : MapVisibility(member.Visibility);
         string propertyType = MapType(member.Type);
 
-        string getter = BuildPropertyAccessor(member.ReadAccessor, members, isInterface, true);
-        string setter = BuildPropertyAccessor(member.WriteAccessor, members, isInterface, false);
+        bool isIndexed = member.Parameters.Count > 0;
+        string getter = BuildPropertyAccessor(member.ReadAccessor, members, isInterface, isIndexed, isGetter: true);
+        string setter = BuildPropertyAccessor(member.WriteAccessor, members, isInterface, isIndexed, isGetter: false);
         string accessors = string.Join(" ", new[] { getter, setter }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
         if (string.IsNullOrWhiteSpace(accessors))
@@ -1116,7 +1117,12 @@ public sealed class CSharpDeclarationTranslator
         builder.AppendLine($"    {visibility}{propertyType} {member.Name} {{ {accessors} }}");
     }
 
-    private string BuildPropertyAccessor(string? accessor, IReadOnlyList<SemanticMember> members, bool isInterface, bool isGetter)
+    private string BuildPropertyAccessor(
+        string? accessor,
+        IReadOnlyList<SemanticMember> members,
+        bool isInterface,
+        bool isIndexed,
+        bool isGetter)
     {
         if (string.IsNullOrWhiteSpace(accessor))
             return string.Empty;
@@ -1136,6 +1142,9 @@ public sealed class CSharpDeclarationTranslator
 
         if (target.Kind == SemanticMemberKind.Field)
             return isGetter ? $"get => {name};" : $"set => {name} = value;";
+
+        if (!isGetter && !isIndexed && target.Parameters.Count == 1)
+            return $"set => {target.Name}(value);";
 
         string parameters = isGetter
             ? string.Join(", ", target.Parameters.Select(parameter => parameter.Name))
