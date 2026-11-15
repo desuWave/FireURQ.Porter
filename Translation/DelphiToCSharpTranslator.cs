@@ -1560,9 +1560,15 @@ public sealed class DelphiToCSharpTranslator
             : _resolver.ResolveFunctionMember(receiverName, target.Children[1].Text, unitName, argumentCount);
     }
 
+    private static bool IsAssignedCall(ExpressionParser.ExpressionNode expression) =>
+        expression.Kind == ExpressionParser.ExpressionKind.Call &&
+        expression.Children.Count == 2 &&
+        expression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+        expression.Children[0].Text.Equals("Assigned", StringComparison.OrdinalIgnoreCase);
+
     private bool IsBooleanUnaryOperand(ExpressionParser.ExpressionNode operand)
     {
-        if (operand.Kind == ExpressionParser.ExpressionKind.TypeTest)
+        if (operand.Kind == ExpressionParser.ExpressionKind.TypeTest || IsAssignedCall(operand))
             return true;
 
         if (operand.Kind == ExpressionParser.ExpressionKind.Unary && operand.Children.Count == 1 &&
@@ -2541,11 +2547,7 @@ private string TranslateCall(
 
     // Delphi Assigned(P) is a null/non-null test, including the common
     // Assigned(@ProcedureVariable) spelling used after GetProcAddress.
-    if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
-        targetExpression.Text.Equals(
-            "Assigned",
-            StringComparison.OrdinalIgnoreCase) &&
-        expression.Children.Count == 2)
+    if (IsAssignedCall(expression))
     {
         ExpressionParser.ExpressionNode argument =
             UnwrapAddressOfIdentifier(expression.Children[1]);

@@ -43,6 +43,8 @@ public
   function InvertArgument(Value: Integer): Integer;
   function LocalRejects(Input: Integer): Boolean;
   function LocalInvert: Integer;
+  function MissingObject(Other: TBase): Boolean;
+  function MissingPointer(Address: Pointer): Boolean;
   function Value: Integer; virtual;
   function ReadHidden: Integer;
   function ReadSecret: Integer;
@@ -128,6 +130,14 @@ function TBase.LocalInvert: Integer;
 begin
   Result := not GetLocalMask;
 end;
+function TBase.MissingObject(Other: TBase): Boolean;
+begin
+  Result := not Assigned(Other);
+end;
+function TBase.MissingPointer(Address: Pointer): Boolean;
+begin
+  Result := not Assigned(Address);
+end;
 function TChild.IsNotReady: Boolean;
 begin
   Result := not Ready;
@@ -207,8 +217,10 @@ Check("Protected override method emitted",
     generated.Contains("protected override int Hidden("));
 Check("Private method visibility preserved",
     generated.Contains("private int Secret("));
-Check("All twenty-three implementations emitted",
-    results[0].FunctionsTranslated == 23);
+Check("All twenty-five implementations emitted",
+    results[0].FunctionsTranslated == 25);
+Check("Assigned predicates use logical not for references and pointers",
+    generated.Contains("!(Other != null)") && generated.Contains("!(Address != IntPtr.Zero)"));
 Check("Nested functions use their declared return types under not",
     generated.Contains("!Accepts(Value)") && generated.Contains("~GetLocalMask()"));
 Check("Calls with arguments preserve Boolean and integer not",
@@ -256,6 +268,8 @@ public static class Program
             plain.OtherRejects(child, 42) && !plain.OtherRejects(child, 19) &&
             plain.InvertArgument(23) == ~23 &&
             plain.LocalRejects(42) && !plain.LocalRejects(7) && plain.LocalInvert() == ~19 &&
+            plain.MissingObject(null) && !plain.MissingObject(child) &&
+            plain.MissingPointer(System.IntPtr.Zero) && !plain.MissingPointer(new System.IntPtr(1)) &&
             plain.DirectSetting == 42 &&
             child.Setting == 19 &&
             plain.Value() == 1 &&
