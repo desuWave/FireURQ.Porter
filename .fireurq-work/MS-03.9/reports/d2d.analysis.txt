@@ -1,0 +1,1806 @@
+================================
+ D2D Analysis Report
+================================
+
+================================
+ Project Summary
+================================
+
+Files:             27
+Tokens:            83355
+Classes:           82
+Interfaces:        20
+Types:             113
+Constants:         562
+Functions:         995
+
+Files
+--------------------------------
+bassmidi.pas
+d2dApplication.pas
+d2dClasses.pas
+d2dCore.pas
+d2dDocRoot.pas
+d2dFont.pas
+d2dFormattedText.pas
+d2dFrames.pas
+d2dGIF.pas
+d2dGUI.pas
+d2dGUIButtons.pas
+d2dGUIMenus.pas
+d2dGUITextPane.pas
+d2dGUITypes.pas
+d2dGUIUtils.pas
+d2dInterfaces.pas
+d2dPath.pas
+d2dSimplePicture.pas
+d2dSprite.pas
+d2dStaticText.pas
+d2dStorage.pas
+d2dTexture.pas
+d2dTypes.pas
+d2dUtils.pas
+d2dZipPack.pas
+Dynamic_Bass.pas
+SimpleXML.pas
+
+
+Semantic Classes
+--------------------------------
+Class: Td2dApplication [Unit=d2dApplication]
+  Field              f_CurrentScene                      Type=string
+  Field              f_CurrentSceneObj                   Type=Td2dScene
+  Field              f_Finished                          Type=Boolean
+  Field              f_Scenes                            Type=TStringList
+  Method             pm_SetCurrentScene                  Type=
+  Method             FrameFunc                           Type=
+  Method             Init                                Type=Boolean
+  Method             LoadGlobalResources                 Type=
+  Method             RenderFunc                          Type=
+  Method             UnloadGlobalResources               Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             AddScene                            Type=
+  Method             Run                                 Type=
+  Property           CurrentScene                        Type=string
+  Property           Finished                            Type=Boolean
+Class: Td2dScene [Unit=d2dApplication]
+  Field              f_Application                       Type=Td2dApplication
+  Field              f_Loaded                            Type=Boolean
+  Field              f_Child                             Type=Td2dScene
+  Field              f_Parent                            Type=Td2dScene
+  Field              f_RunningAsChild                    Type=Boolean
+  Method             pm_GetHasRunningChild               Type=Boolean
+  Method             DoLoad                              Type=
+  Method             DoUnload                            Type=
+  Method             Frame                               Type=
+  Method             DoFrame                             Type=
+  Method             ProcessEvent                        Type=
+  Method             DoProcessEvent                      Type=
+  Method             Render                              Type=
+  Method             DoRender                            Type=
+  Method             StartChild                          Type=
+  Method             StopChild                           Type=
+  Method             StopAsChild                         Type=
+  Method             BeforeStoppingChild                 Type=
+  Property           HasRunningChild                     Type=Boolean
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Load                                Type=
+  Method             Unload                              Type=
+  Property           Application                         Type=Td2dApplication
+Class: Td2dProtoObjectPrim [Unit=d2dClasses]
+  Field              f_RefCount                          Type=Integer
+  Method             QueryInterface                      Type=HResult
+  Method             _AddRef                             Type=Integer
+  Method             _Release                            Type=Integer
+  Method             Cleanup                             Type=
+  Method             FreeInstance                        Type=
+  Method             Destroy                             Type=
+  Method             NewInstance                         Type=TObject
+  Method             Use                                 Type=Pointer
+  Property           RefCount                            Type=Integer
+Class: Td2dProtoObject [Unit=d2dClasses]
+  Method             Destroy                             Type=
+Class: Td2dCore [Unit=d2dCore]
+  Field              f_Active                            Type=Boolean
+  Field              f_CurBlendMode                      Type=Integer
+  Field              f_CurPrim                           Type=Integer
+  Field              f_CurTarget                         Type=Pd2dRenderTarget
+  Field              f_CurTexture                        Type=IDirect3DTexture8
+  Field              f_Instance                          Type=Cardinal
+  Field              f_Time0                             Type=Cardinal
+  Field              f_Time0FPS                          Type=Cardinal
+  Field              f_FPSCount                          Type=Cardinal
+  Field              f_Time                              Type=Double
+  Field              f_DeltaTime                         Type=Single
+  Field              f_DeltaTicks                        Type=Cardinal
+  Field              f_FixedDelta                        Type=Cardinal
+  Field              f_LastTexGC                         Type=Cardinal
+  Field              f_AttachedPacks                     Type=IJclStringList
+  Field              f_LogFileName                       Type=string
+  Field              f_RectFS                            Type=TRect
+  Field              f_RectW                             Type=TRect
+  Field              f_WHandle                           Type=HWND
+  Field              f_WStyleFS                          Type=Longint
+  Field              f_WStyleW                           Type=Longint
+  Field              f_D3DPP                             Type=D3DPRESENT_PARAMETERS
+  Field              f_D3DPP_W                           Type=D3DPRESENT_PARAMETERS
+  Field              f_D3DPP_FS                          Type=D3DPRESENT_PARAMETERS
+  Field              f_D3D                               Type=IDirect3D8
+  Field              f_D3DDevice                         Type=IDirect3DDevice8
+  Field              f_DontSuspend                       Type=Boolean
+  Field              f_VB                                Type=IDirect3DVertexBuffer8
+  Field              f_IB                                Type=IDirect3DIndexBuffer8
+  Field              f_ScreenSurf                        Type=IDirect3DSurface8
+  Field              f_ScreenDepth                       Type=IDirect3DSurface8
+  Field              f_matView                           Type=TD3DMatrix
+  Field              f_matViewFS                         Type=TD3DMatrix
+  Field              f_matProj                           Type=TD3DMatrix
+  Field              f_Targets                           Type=TList
+  Field              f_Textures                          Type=IJclStringList
+  Field              f_SndSamples                        Type=TStringList
+  Field              f_VertArray                         Type=Pd2dVertexArray
+  Field              f_ScreenWidth                       Type=LongWord
+  Field              f_ScreenHeight                      Type=LongWord
+  Field              f_Windowed                          Type=Boolean
+  Field              f_WindowTitle                       Type=string
+  Field              f_FixedFPS                          Type=Integer
+  Field              f_FPS                               Type=LongWord
+  Field              f_FSDX                              Type=Integer
+  Field              f_FSDY                              Type=Integer
+  Field              f_FSHeight                          Type=Integer
+  Field              f_FSScale                           Type=Single
+  Field              f_FSWidth                           Type=Integer
+  Field              f_HideMouse                         Type=Boolean
+  Field              f_InputEvents                       Type=TList
+  Field              f_KeyChar                           Type=Integer
+  Field              f_KeyCode                           Type=Integer
+  Field              f_MidiDevice                        Type=Integer
+  Field              f_MouseCaptured                     Type=Boolean
+  Field              f_MouseOver                         Type=Boolean
+  Field              f_MouseX                            Type=Single
+  Field              f_MouseY                            Type=Single
+  Field              f_MouseZ                            Type=Integer
+  Field              f_Music                             Type=Byte
+  Field              f_MusicData                         Type=Pointer
+  Field              f_MusicFadeList                     Type=TObjectList
+  Field              f_MusicHandle                       Type=DWORD
+  Field              f_MusicLooped                       Type=Boolean
+  Field              f_MusicMidiTempFile                 Type=string
+  Field              f_MusicVolume                       Type=Byte
+  Field              f_NextMusic                         Type=Td2dMusicRec
+  Field              f_OnExit                            Type=Td2dExitEvent
+  Field              f_OnFocusGain                       Type=Td2dSimpleEvent
+  Field              f_OnFocusLost                       Type=Td2dSimpleEvent
+  Field              f_OnFrame                           Type=Td2dFrameEvent
+  Field              f_OnRender                          Type=Td2dSimpleEvent
+  Field              f_PrimCount                         Type=LongWord
+  Field              f_ScreenBPP                         Type=Byte
+  Field              f_SoundMute                         Type=Boolean
+  Field              f_SoundOn                           Type=Boolean
+  Field              f_SoundSampleRate                   Type=Integer
+  Field              f_TextureFilter                     Type=Boolean
+  Field              f_UseZBuffer                        Type=Boolean
+  Method             AdjustWindow                        Type=
+  Method             BassMusicStop                       Type=
+  Method             ClearQueue                          Type=
+  Method             MakeEvent                           Type=
+  Method             GfxDone                             Type=
+  Method             GfxInit                             Type=Boolean
+  Method             ClearTargets                        Type=
+  Method             FocusChange                         Type=
+  Method             ForceAllMusicStop                   Type=
+  Method             GfxRestore                          Type=
+  Method             InitLost                            Type=Boolean
+  Method             pm_GetMusicFadeList                 Type=TObjectList
+  Method             pm_SetFixedFPS                      Type=
+  Method             pm_SetMusicVolume                   Type=
+  Method             pm_SetScreenBPP                     Type=
+  Method             pm_SetScreenHeight                  Type=
+  Method             pm_SetScreenWidth                   Type=
+  Method             pm_SetSoundMute                     Type=
+  Method             pm_SetTextureFilter                 Type=
+  Method             pm_SetUseZBuffer                    Type=
+  Method             pm_SetWindowed                      Type=
+  Method             pm_SetWindowTitle                   Type=
+  Method             RenderBatch                         Type=
+  Method             SetBlendMode                        Type=
+  Method             SetProjectionMatrix                 Type=
+  Method             Snd_FreeSamplePrim                  Type=
+  Method             SoundSystemStart                    Type=
+  Method             SoundSystemStop                     Type=
+  Method             DoTextureCacheGarbageCollection     Type=
+  Method             GfxSetViewMatrix                    Type=
+  Method             Input_SetMousePos                   Type=
+  Method             pm_SetHideMouse                     Type=
+  Property           MusicFadeList                       Type=TObjectList
+  Method             ReplayMIDI                          Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             FlushPrimitives                     Type=
+  Method             Gfx_BeginScene                      Type=Boolean
+  Method             Gfx_Clear                           Type=
+  Method             Gfx_EndScene                        Type=
+  Method             Gfx_RenderLine                      Type=
+  Method             Gfx_RenderTriple                    Type=
+  Method             Gfx_RenderQuad                      Type=
+  Method             Gfx_SetClipping                     Type=
+  Method             Gfx_SetTransform                    Type=
+  Method             Input_GetEvent                      Type=Boolean
+  Method             Input_GetKeyState                   Type=Boolean
+  Method             Input_TouchMousePos                 Type=
+  Method             System_Start                        Type=Boolean
+  Method             System_Log                          Type=
+  Method             System_Log                          Type=
+  Method             System_Run                          Type=
+  Method             System_Shutdown                     Type=
+  Method             Resource_AttachPack                 Type=Boolean
+  Method             Resource_Free                       Type=
+  Method             Resource_Load                       Type=Pointer
+  Method             Resource_RemoveAllPacks             Type=
+  Method             Resource_RemovePack                 Type=
+  Method             Resource_CreateStream               Type=TStream
+  Method             Resource_Exists                     Type=Boolean
+  Method             Resource_FindInPacks                Type=string
+  Method             Target_Create                       Type=Pd2dRenderTarget
+  Method             Target_Free                         Type=
+  Method             Texture_ClearCache                  Type=
+  Method             Texture_Create                      Type=Id2dTexture
+  Method             Texture_GetWidth                    Type=Integer
+  Method             Texture_GetHeight                   Type=Integer
+  Method             Texture_GetWidth                    Type=Integer
+  Method             Texture_GetHeight                   Type=Integer
+  Method             Texture_FromMemory                  Type=Id2dTexture
+  Method             Texture_Load                        Type=Id2dTexture
+  Method             Texture_RemoveFromCache             Type=
+  Method             Texture_RemoveFromCache             Type=
+  Method             Snd_PreLoadSample                   Type=Integer
+  Method             Snd_PlaySample                      Type=
+  Method             Snd_FreeSample                      Type=
+  Method             Snd_FreeAll                         Type=
+  Method             Music_StreamPlay                    Type=
+  Method             Music_MIDIPlay                      Type=
+  Method             Music_MODPlay                       Type=
+  Method             Music_Pause                         Type=
+  Method             Music_Play                          Type=
+  Method             Music_Resume                        Type=
+  Method             Music_SetVolume                     Type=
+  Method             Music_Stop                          Type=
+  Method             Music_IsPlaying                     Type=Boolean
+  Method             Snd_StopAll                         Type=
+  Method             Snd_StopSample                      Type=
+  Method             System_SoundPause                   Type=
+  Method             System_SoundResume                  Type=
+  Method             Texture_CreatePrim                  Type=Id2dTexture
+  Property           Active                              Type=Boolean
+  Property           FixedFPS                            Type=Integer
+  Property           OnFocusGain                         Type=Td2dSimpleEvent
+  Property           OnFocusLost                         Type=Td2dSimpleEvent
+  Property           DontSuspend                         Type=Boolean
+  Property           FPS                                 Type=LongWord
+  Property           OnFrame                             Type=Td2dFrameEvent
+  Property           OnRender                            Type=Td2dSimpleEvent
+  Property           HideMouse                           Type=Boolean
+  Property           KeyChar                             Type=Integer
+  Property           KeyCode                             Type=Integer
+  Property           MouseOver                           Type=Boolean
+  Property           MouseX                              Type=Single
+  Property           MouseY                              Type=Single
+  Property           MouseZ                              Type=Integer
+  Property           OnExit                              Type=Td2dExitEvent
+  Property           D3DDevice                           Type=IDirect3DDevice8
+  Property           LogFileName                         Type=string
+  Property           Music                               Type=Byte
+  Property           MusicVolume                         Type=Byte
+  Property           ScreenBPP                           Type=Byte
+  Property           ScreenHeight                        Type=LongWord
+  Property           ScreenWidth                         Type=LongWord
+  Property           SoundMute                           Type=Boolean
+  Property           SoundOn                             Type=Boolean
+  Property           SoundSampleRate                     Type=Integer
+  Property           TextureFilter                       Type=Boolean
+  Property           UseZBuffer                          Type=Boolean
+  Property           WHandle                             Type=HWND
+  Property           Windowed                            Type=Boolean
+  Property           WindowTitle                         Type=string
+Class: Td2dMusicHolder [Unit=d2dCore]
+  Field              Chanel                              Type=Longword
+  Field              Data                                Type=Pointer
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+Class: Td2dLinkSliceCacheItem [Unit=d2dDocRoot]
+  Field              f_Rect                              Type=Td2dRect
+  Field              f_Slice                             Type=Td2dLinkSlice
+  Method             Create                              Type=
+  Property           Rect                                Type=Td2dRect
+  Property           Slice                               Type=Td2dLinkSlice
+Class: Td2dDocRoot [Unit=d2dDocRoot]
+  Field              f_CurLinkAction                     Type=Td2dLinkActionProc
+  Field              f_HighlightedLink                   Type=Td2dLinkSliceCacheItem
+  Field              f_LinkCacheIsValid                  Type=Boolean
+  Field              f_LinksAllowed                      Type=Boolean
+  Field              f_LinksCache                        Type=TObjectList
+  Method             BuildLinkSliceCache                 Type=
+  Method             pm_SetLinksAllowed                  Type=
+  Method             _AllowLinks                         Type=
+  Method             _DisallowLinks                      Type=
+  Method             _DropHighlight                      Type=
+  Method             _LinkIteratorProc                   Type=
+  Method             GetTopChild                         Type=Integer
+  Method             GetBottomChild                      Type=Integer
+  Method             GetVerticalShift                    Type=Single
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Clear                               Type=
+  Method             DropLinkCache                       Type=
+  Method             DropLinkHighlight                   Type=
+  Method             FindLinkHighlight                   Type=
+  Method             ForceLinkAllowance                  Type=
+  Method             IterateLinks                        Type=
+  Property           HighlightedLink                     Type=Td2dLinkSliceCacheItem
+  Property           LinksAllowed                        Type=Boolean
+Class: Td2dHGELetter [Unit=d2dFont]
+  Field              f_KernPost                          Type=Single
+  Field              f_KernPre                           Type=Single
+  Method             Create                              Type=
+  Property           KernPost                            Type=Single
+  Property           KernPre                             Type=Single
+Class: Td2dCustomFont [Unit=d2dFont]
+  Field              f_BlendMode                         Type=Integer
+  Field              f_Color                             Type=Longword
+  Field              f_ID                                Type=string
+  Method             pm_GetBlendMode                     Type=Integer
+  Method             pm_GetColor                         Type=Longword
+  Method             pm_GetID                            Type=string
+  Method             pm_SetBlendMode                     Type=
+  Method             pm_SetColor                         Type=
+  Method             pm_SetID                            Type=
+  Method             DoSetBlendMode                      Type=
+  Method             DoSetColor                          Type=
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetSize                          Type=Single
+  Method             CalcStringBySize                    Type=string
+  Method             CalcSize                            Type=
+  Method             CanRenderChar                       Type=Boolean
+  Method             Render                              Type=
+  Property           BlendMode                           Type=Integer
+  Property           Color                               Type=Longword
+  Property           Height                              Type=Single
+  Property           ID                                  Type=string
+  Property           Size                                Type=Single
+Class: Td2dHGEFont [Unit=d2dFont]
+  Field              f_Height                            Type=Single
+  Field              f_Letters                           Type=array [ #0 .. #255 ] of Td2dHGELetter
+  Field              f_Scale                             Type=Single
+  Field              f_Spacing                           Type=Single
+  Field              f_Tracking                          Type=Single
+  Method             DoSetBlendMode                      Type=
+  Method             DoSetColor                          Type=
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetSize                          Type=Single
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             CalcSize                            Type=
+  Method             CanRenderChar                       Type=Boolean
+  Method             Render                              Type=
+  Property           Scale                               Type=Single
+  Property           Spacing                             Type=Single
+  Property           Tracking                            Type=Single
+Class: Td2dDXFont [Unit=d2dFont]
+  Field              f_Bold                              Type=Boolean
+  Field              f_Color                             Type=Longword
+  Field              f_Typeface                          Type=string
+  Field              f_Intf                              Type=ID3DXFont
+  Field              f_Italic                            Type=Boolean
+  Field              f_Size                              Type=Integer
+  Method             pm_SetBold                          Type=
+  Method             pm_SetTypeface                      Type=
+  Method             pm_SetItalic                        Type=
+  Method             pm_SetSize                          Type=
+  Method             RecreateDXFont                      Type=
+  Property           Italic                              Type=Boolean
+  Method             Create                              Type=
+  Method             Render                              Type=
+  Property           Bold                                Type=Boolean
+  Property           Color                               Type=Longword
+  Property           Typeface                            Type=string
+  Property           Size                                Type=Integer
+Class: Td2dBMLetter [Unit=d2dFont]
+  Field              f_XAdvance                          Type=Integer
+  Field              f_XOffset                           Type=Integer
+  Field              f_YOffset                           Type=Integer
+  Property           XAdvance                            Type=Integer
+  Property           XOffset                             Type=Integer
+  Property           YOffset                             Type=Integer
+Class: Td2dBMFont [Unit=d2dFont]
+  Field              f_FontHeight                        Type=Integer
+  Field              f_FontSize                          Type=Integer
+  Field              f_Letters                           Type=array [ #33 .. #255 ] of Td2dBMLetter
+  Field              f_SpaceAdv                          Type=Integer
+  Method             LoadFromXML                         Type=
+  Method             Load                                Type=
+  Method             DoSetBlendMode                      Type=
+  Method             DoSetColor                          Type=
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetSize                          Type=Single
+  Method             Create                              Type=
+  Method             CreateFromXML                       Type=
+  Method             Destroy                             Type=
+  Method             CalcSize                            Type=
+  Method             CanRenderChar                       Type=Boolean
+  Method             Render                              Type=
+Class: Td2dCustomTextChunk [Unit=d2dFormattedText]
+  Method             pm_GetChunkType                     Type=Td2dTextChunkType
+  Method             Save                                Type=
+  Method             Load                                Type=
+  Property           ChunkType                           Type=Td2dTextChunkType
+Class: Td2dTextPara [Unit=d2dFormattedText]
+  Field              f_IsClosed                          Type=Boolean
+  Field              f_List                              Type=TObjectList
+  Field              f_ParaType                          Type=Td2dTextAlignType
+  Method             pm_GetChunks                        Type=Td2dCustomTextChunk
+  Method             pm_GetCount                         Type=Integer
+  Method             _DropLink                           Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             AddPicture                          Type=
+  Method             AddRawChunk                         Type=
+  Method             AddText                             Type=
+  Method             AddLink                             Type=
+  Method             ClosePara                           Type=
+  Method             DropLinks                           Type=
+  Method             IterateChunks                       Type=
+  Method             Save                                Type=
+  Method             Load                                Type=
+  Property           Chunks                              Type=Td2dCustomTextChunk
+  Property           Count                               Type=Integer
+  Property           IsClosed                            Type=Boolean
+  Property           ParaType                            Type=Td2dTextAlignType
+Class: Td2dStringChunk [Unit=d2dFormattedText]
+  Field              f_Font                              Type=Id2dFont
+  Field              f_Color                             Type=Td2dColor
+  Field              f_Text                              Type=string
+  Method             pm_GetChunkType                     Type=Td2dTextChunkType
+  Method             Create                              Type=
+  Method             ConcatText                          Type=
+  Method             Save                                Type=
+  Method             Load                                Type=
+  Property           Color                               Type=Td2dColor
+  Property           Font                                Type=Id2dFont
+  Property           Text                                Type=string
+Class: Td2dLinkChunk [Unit=d2dFormattedText]
+  Field              f_Active                            Type=Boolean
+  Field              f_HighlightColor                    Type=Td2dColor
+  Field              f_LinkColor                         Type=Td2dColor
+  Field              f_Target                            Type=string
+  Method             pm_GetChunkType                     Type=Td2dTextChunkType
+  Method             Create                              Type=
+  Method             Save                                Type=
+  Method             Load                                Type=
+  Property           Active                              Type=Boolean
+  Property           HighlightColor                      Type=Td2dColor
+  Property           LinkColor                           Type=Td2dColor
+  Property           Target                              Type=string
+Class: Td2dPictureChunk [Unit=d2dFormattedText]
+  Field              f_Picture                           Type=Id2dPicture
+  Method             pm_GetChunkType                     Type=Td2dTextChunkType
+  Method             Save                                Type=
+  Method             Load                                Type=
+  Method             Create                              Type=
+  Property           Picture                             Type=Id2dPicture
+Class: Td2dTextSource [Unit=d2dFormattedText]
+  Field              f_ParaList                          Type=TObjectList
+  Method             AddTextOrLink                       Type=
+  Method             pm_GetParagraphs                    Type=Td2dTextPara
+  Method             pm_GetCount                         Type=Integer
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Clear                               Type=
+  Method             Save                                Type=
+  Method             Load                                Type=
+  Method             AddRawPara                          Type=Td2dTextPara
+  Method             AddText                             Type=
+  Method             AddLink                             Type=
+  Method             AddPicture                          Type=
+  Method             DropLinks                           Type=
+  Method             IterateChunks                       Type=
+  Property           Paragraphs                          Type=Td2dTextPara
+  Property           Count                               Type=Integer
+Class: Td2dCustomSlice [Unit=d2dFormattedText]
+  Field              f_Left                              Type=Single
+  Field              f_Parent                            Type=Td2dCustomSlice
+  Field              f_Top                               Type=Single
+  Method             pm_GetAbsLeft                       Type=Single
+  Method             pm_GetAbsTop                        Type=Single
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Method             DoDraw                              Type=
+  Method             pm_GetSliceType                     Type=Td2dTextSliceType
+  Method             pm_SetWidth                         Type=
+  Method             Draw                                Type=
+  Property           AbsLeft                             Type=Single
+  Property           AbsTop                              Type=Single
+  Property           Height                              Type=Single
+  Property           Left                                Type=Single
+  Property           Parent                              Type=Td2dCustomSlice
+  Property           SliceType                           Type=Td2dTextSliceType
+  Property           Top                                 Type=Single
+  Property           Width                               Type=Single
+Class: Td2dUnionSlice [Unit=d2dFormattedText]
+  Field              f_ChList                            Type=TObjectList
+  Field              f_Height                            Type=Single
+  Field              f_Parent                            Type=Td2dUnionSlice
+  Field              f_Width                             Type=Single
+  Method             pm_GetChildren                      Type=Td2dCustomSlice
+  Method             pm_GetChildrenCount                 Type=Integer
+  Method             pm_GetChList                        Type=TObjectList
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetSliceType                     Type=Td2dTextSliceType
+  Method             pm_GetWidth                         Type=Single
+  Method             pm_SetWidth                         Type=
+  Property           ChList                              Type=TObjectList
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             AddChild                            Type=
+  Method             Clear                               Type=
+  Method             DeleteFrom                          Type=
+  Method             DoDraw                              Type=
+  Method             IterateLeafSlices                   Type=
+  Method             RecalcHeight                        Type=
+  Property           Children                            Type=Td2dCustomSlice
+  Property           ChildrenCount                       Type=Integer
+  Property           Parent                              Type=Td2dUnionSlice
+Class: Td2dTextSlice [Unit=d2dFormattedText]
+  Field              f_Color                             Type=Td2dColor
+  Field              f_Size                              Type=Td2dPoint
+  Method             CalcSize                            Type=
+  Field              f_Font                              Type=Id2dFont
+  Field              f_Text                              Type=string
+  Method             DoDraw                              Type=
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetSliceType                     Type=Td2dTextSliceType
+  Method             pm_GetWidth                         Type=Single
+  Method             Create                              Type=
+  Property           Color                               Type=Td2dColor
+Class: Td2dPictureSlice [Unit=d2dFormattedText]
+  Field              f_Picture                           Type=Id2dPicture
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetSliceType                     Type=Td2dTextSliceType
+  Method             pm_GetWidth                         Type=Single
+  Method             Create                              Type=
+  Method             DoDraw                              Type=
+Class: Td2dFormatter [Unit=d2dFormattedText]
+  Field              f_Document                          Type=Td2dUnionSlice
+  Field              f_FormatParams                      Type=Td2dFormatParamsRec
+  Field              f_LastFormatted                     Type=Integer
+  Field              f_TextSource                        Type=Td2dTextSource
+  Method             FormatFrom                          Type=
+  Method             FormatParagraph                     Type=Td2dUnionSlice
+  Method             pm_SetLastFormatted                 Type=
+  Method             Create                              Type=
+  Method             Format                              Type=
+  Method             ReformatAll                         Type=
+  Method             UpdateFormat                        Type=
+  Property           FormatParams                        Type=Td2dFormatParamsRec
+  Property           LastFormatted                       Type=Integer
+Class: Td2dLinkSlice [Unit=d2dFormattedText]
+  Field              f_Allowed                           Type=Boolean
+  Field              f_HighlightColor                    Type=Td2dColor
+  Field              f_IsActive                          Type=Boolean
+  Field              f_IsHighlighted                     Type=Boolean
+  Field              f_LinkColor                         Type=Td2dColor
+  Field              f_Next                              Type=Td2dLinkSlice
+  Field              f_Prev                              Type=Td2dLinkSlice
+  Field              f_Target                            Type=string
+  Method             DoDraw                              Type=
+  Method             pm_GetSliceType                     Type=Td2dTextSliceType
+  Method             Create                              Type=
+  Method             GetLinkText                         Type=string
+  Method             SpreadHighlight                     Type=
+  Property           Allowed                             Type=Boolean
+  Property           HighlightColor                      Type=Td2dColor
+  Property           IsActive                            Type=Boolean
+  Property           IsHighlighted                       Type=Boolean
+  Property           LinkColor                           Type=Td2dColor
+  Property           Next                                Type=Td2dLinkSlice
+  Property           Prev                                Type=Td2dLinkSlice
+  Property           Target                              Type=string
+Class: Td2dHorizFrame [Unit=d2dFrames]
+  Field              f_Height                            Type=Integer
+  Field              f_Quad                              Type=array [ Td2dHorizontalFrameParts ] of Td2dQuad
+  Field              f_Width                             Type=array [ Td2dHorizontalFrameParts ] of Integer
+  Field              f_MinWidth                          Type=Integer
+  Method             pm_GetLeftWidth                     Type=Integer
+  Method             pm_GetRightWidth                    Type=Integer
+  Method             Create                              Type=
+  Method             CorrectWidth                        Type=
+  Method             Render                              Type=
+  Method             GetMidWidth                         Type=Integer
+  Property           Height                              Type=Integer
+  Property           LeftWidth                           Type=Integer
+  Property           MinWidth                            Type=Integer
+  Property           RightWidth                          Type=Integer
+Class: Td2dFrame [Unit=d2dFrames]
+  Field              f_Quad                              Type=array [ Td2dHorizontalFrameParts , Td2dVerticalFrameParts ] of Td2dQuad
+  Field              f_Width                             Type=array [ Td2dHorizontalFrameParts ] of Integer
+  Field              f_Height                            Type=array [ Td2dVerticalFrameParts ] of Integer
+  Field              f_MinWidth                          Type=Integer
+  Field              f_MinHeight                         Type=Integer
+  Method             Create                              Type=
+Class: Td2dGIFSprite [Unit=d2dGIF]
+  Field              f_GIF                               Type=TGIFImage
+  Field              f_Painter                           Type=TGIFPainter
+  Field              f_Bitmap                            Type=TBitmap
+  Field              f_BmpIsSaved                        Type=Boolean
+  Field              f_NeedToUpdateFrame                 Type=Boolean
+  Field              f_SavedBmp                          Type=TMemoryStream
+  Method             DoOnPaint                           Type=
+  Method             pm_GetAniSpeed                      Type=Integer
+  Method             pm_GetFrame                         Type=Integer
+  Method             pm_SetAniSpeed                      Type=
+  Method             pm_SetFrame                         Type=
+  Method             RenderFrame                         Type=
+  Method             SetupFrame                          Type=Boolean
+  Method             Cleanup                             Type=
+  Method             Create                              Type=
+  Method             Start                               Type=
+  Method             Stop                                Type=
+  Method             Update                              Type=
+  Property           AniSpeed                            Type=Integer
+  Property           Frame                               Type=Integer
+Class: Td2dGUI [Unit=d2dGUI]
+  Field              f_BringFocusedToFront               Type=Boolean
+  Field              f_ROList                            Type=TObjectList
+  Field              f_Controls                          Type=TObjectList
+  Field              f_FocusedControl                    Type=Td2dControl
+  Method             FindNextFocused                     Type=
+  Method             FindPrevFocused                     Type=
+  Method             pm_GetControls                      Type=Td2dControl
+  Method             pm_GetCount                         Type=Integer
+  Method             pm_GetROControls                    Type=Td2dControl
+  Method             pm_GetTopmostVisible                Type=Td2dControl
+  Method             pm_SetFocusedControl                Type=
+  Method             DeleteControl                       Type=
+  Property           ROControls                          Type=Td2dControl
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             AddControl                          Type=
+  Method             BringToFront                        Type=
+  Method             SendToBack                          Type=
+  Method             CheckFocused                        Type=
+  Method             ControlAtMouse                      Type=Td2dControl
+  Method             FocusNext                           Type=
+  Method             FocusPrev                           Type=
+  Method             FrameFunc                           Type=
+  Method             ProcessEvent                        Type=
+  Method             Render                              Type=
+  Property           BringFocusedToFront                 Type=Boolean
+  Property           Controls                            Type=Td2dControl
+  Property           Count                               Type=Integer
+  Property           FocusedControl                      Type=Td2dControl
+  Property           TopmostVisible                      Type=Td2dControl
+Class: Td2dControl [Unit=d2dGUI]
+  Field              f_CanBeFocused                      Type=Boolean
+  Field              f_GUI                               Type=Td2dGUI
+  Field              f_Tag                               Type=Integer
+  Method             pm_GetCanBeFocused                  Type=Boolean
+  Method             pm_GetFocused                       Type=Boolean
+  Method             pm_SetFocused                       Type=
+  Method             pm_SetX                             Type=
+  Method             pm_SetY                             Type=
+  Field              f_Enabled                           Type=Boolean
+  Field              f_Visible                           Type=Boolean
+  Field              f_X                                 Type=Single
+  Field              f_Y                                 Type=Single
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Method             pm_SetEnabled                       Type=
+  Method             pm_SetHeight                        Type=
+  Method             pm_SetVisible                       Type=
+  Method             pm_SetWidth                         Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             FrameFunc                           Type=
+  Method             IsMouseInControl                    Type=Boolean
+  Method             IsPointInControl                    Type=Boolean
+  Method             ProcessEvent                        Type=
+  Method             Render                              Type=
+  Method             Update                              Type=
+  Property           CanBeFocused                        Type=Boolean
+  Property           Enabled                             Type=Boolean
+  Property           Focused                             Type=Boolean
+  Property           Height                              Type=Single
+  Property           GUI                                 Type=Td2dGUI
+  Property           Tag                                 Type=Integer
+  Property           Visible                             Type=Boolean
+  Property           Width                               Type=Single
+  Property           X                                   Type=Single
+  Property           Y                                   Type=Single
+Class: Td2dCustomButton [Unit=d2dGUIButtons]
+  Field              f_AutoFocus                         Type=Boolean
+  Field              f_Fixed                             Type=Boolean
+  Field              f_HasStates                         Type=Td2dButtonStates
+  Field              f_OnTrigger                         Type=Td2dTriggerEvent
+  Field              f_Pressed                           Type=Boolean
+  Field              f_Trigger                           Type=Boolean
+  Method             DetectState                         Type=
+  Method             pm_SetFixed                         Type=
+  Field              f_OnClick                           Type=Td2dNotifyEvent
+  Field              f_State                             Type=Td2dButtonState
+  Method             DoClick                             Type=
+  Method             pm_SetEnabled                       Type=
+  Method             pm_SetState                         Type=
+  Method             Create                              Type=
+  Method             Click                               Type=
+  Method             ProcessEvent                        Type=
+  Method             Update                              Type=
+  Property           OnClick                             Type=Td2dNotifyEvent
+  Property           Fixed                               Type=Boolean
+  Property           OnTrigger                           Type=Td2dTriggerEvent
+  Property           AutoFocus                           Type=Boolean
+  Property           HasStates                           Type=Td2dButtonStates
+  Property           State                               Type=Td2dButtonState
+  Property           Trigger                             Type=Boolean
+Class: Td2dBitButton [Unit=d2dGUIButtons]
+  Field              f_Sprite                            Type=Td2dMultiFrameSprite
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Method             pm_SetState                         Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Render                              Type=
+Class: Td2dFramedButtonView [Unit=d2dGUIButtons]
+  Field              f_StateColor                        Type=array [ Td2dButtonState ] of Td2dColor
+  Field              f_Font                              Type=Id2dFont
+  Field              f_StateFrames                       Type=array [ Td2dButtonState ] of Td2dHorizFrame
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetMinWidth                      Type=Integer
+  Method             pm_GetStateColor                    Type=Td2dColor
+  Method             pm_SetStateColor                    Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             CalcWidth                           Type=Integer
+  Method             CorrectCaption                      Type=string
+  Method             CorrectCaptionEx                    Type=string
+  Method             Render                              Type=
+  Method             CorrectWidth                        Type=
+  Property           Height                              Type=Single
+  Property           MinWidth                            Type=Integer
+  Property           StateColor                          Type=Td2dColor
+Class: Td2dFramedTextButton [Unit=d2dGUIButtons]
+  Field              f_AutoSize                          Type=Boolean
+  Field              f_Caption                           Type=string
+  Field              f_TextAlign                         Type=Td2dTextAlignType
+  Field              f_View                              Type=Id2dFramedButtonView
+  Field              f_Width                             Type=Integer
+  Method             pm_SetAutoSize                      Type=
+  Method             pm_SetCaption                       Type=
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Method             pm_SetWidth                         Type=
+  Method             RecalcWidth                         Type=
+  Method             Create                              Type=
+  Method             Render                              Type=
+  Property           AutoSize                            Type=Boolean
+  Property           Caption                             Type=string
+  Property           TextAlign                           Type=Td2dTextAlignType
+Class: Td2dMenuItem [Unit=d2dGUIMenus]
+  Field              f_Caption                           Type=string
+  Field              f_Checkable                         Type=Boolean
+  Field              f_Checked                           Type=Boolean
+  Field              f_Enabled                           Type=Boolean
+  Field              f_OnClick                           Type=Td2dNotifyEvent
+  Field              f_Items                             Type=TObjectList
+  Field              f_Menu                              Type=Td2dMenu
+  Field              f_Parent                            Type=Td2dMenuItem
+  Field              f_Tag                               Type=Variant
+  Method             pm_GetChildren                      Type=Td2dMenuItem
+  Method             pm_GetChildrenCount                 Type=Integer
+  Method             pm_GetEnabled                       Type=Boolean
+  Method             pm_GetHasChildren                   Type=Boolean
+  Method             pm_SetCaption                       Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             AddChild                            Type=Integer
+  Method             Click                               Type=
+  Method             ClearChildren                       Type=
+  Property           Caption                             Type=string
+  Property           Checkable                           Type=Boolean
+  Property           Checked                             Type=Boolean
+  Property           Children                            Type=Td2dMenuItem
+  Property           ChildrenCount                       Type=Integer
+  Property           Enabled                             Type=Boolean
+  Property           HasChildren                         Type=Boolean
+  Property           Menu                                Type=Td2dMenu
+  Property           Parent                              Type=Td2dMenuItem
+  Property           Tag                                 Type=Variant
+  Property           OnClick                             Type=Td2dNotifyEvent
+Class: Td2dMenu [Unit=d2dGUIMenus]
+  Field              f_Height                            Type=Single
+  Field              f_MouseDown                         Type=Boolean
+  Field              f_OwnItems                          Type=Boolean
+  Field              f_PaneQuad                          Type=Td2dQuad
+  Field              f_ParentMenu                        Type=Td2dMenu
+  Field              f_Root                              Type=Td2dMenuItem
+  Field              f_SelectedItem                      Type=Integer
+  Field              f_SelectedQuad                      Type=Td2dQuad
+  Field              f_Submenu                           Type=Td2dMenu
+  Field              f_VisulalStyle                      Type=Td2dMenuVisualStyle
+  Field              f_Width                             Type=Single
+  Method             CalcSelectionQuad                   Type=
+  Method             IsSubmenuOpen                       Type=Boolean
+  Method             pm_GetItemHeight                    Type=Single
+  Method             pm_SetFont                          Type=
+  Method             pm_SetRoot                          Type=
+  Method             pm_SetSelectedItem                  Type=
+  Method             pm_SetSubmenu                       Type=
+  Method             pm_SetVisulalStyle                  Type=
+  Field              f_Font                              Type=Id2dFont
+  Method             DoClick                             Type=
+  Method             OpenSubmenu                         Type=
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Property           ItemHeight                          Type=Single
+  Property           Submenu                             Type=Td2dMenu
+  Method             Create                              Type=
+  Method             Create                              Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Close                               Type=
+  Method             IsPointInControl                    Type=Boolean
+  Method             ItemAtPoint                         Type=Integer
+  Method             Popup                               Type=
+  Method             Popup                               Type=
+  Method             ProcessEvent                        Type=
+  Method             RecalcSize                          Type=
+  Method             Render                              Type=
+  Method             Update                              Type=
+  Property           Font                                Type=Id2dFont
+  Property           ParentMenu                          Type=Td2dMenu
+  Property           Root                                Type=Td2dMenuItem
+  Property           SelectedItem                        Type=Integer
+  Property           VisulalStyle                        Type=Td2dMenuVisualStyle
+Class: Td2dTextPaneDocRoot [Unit=d2dGUITextPane]
+  Field              f_TopVisible                        Type=Integer
+  Field              f_VerticalShift                     Type=Single
+  Field              f_VisibleHeight                     Type=Single
+  Field              f_BottomVisible                     Type=Integer
+  Method             pm_SetVerticalShift                 Type=
+  Method             pm_SetVisibleHeight                 Type=
+  Method             GetBottomChild                      Type=Integer
+  Method             GetTopChild                         Type=Integer
+  Method             GetVerticalShift                    Type=Single
+  Method             Create                              Type=
+  Method             AddChild                            Type=
+  Method             Clear                               Type=
+  Method             DeleteFrom                          Type=
+  Method             DoDraw                              Type=
+  Method             RecalcBounds                        Type=
+  Property           BottomVisible                       Type=Integer
+  Property           TopVisible                          Type=Integer
+  Property           VerticalShift                       Type=Single
+  Property           VisibleHeight                       Type=Single
+Class: Td2dTextPane [Unit=d2dGUITextPane]
+  Field              f_CurScrollSpeed                    Type=Single
+  Field              f_CurScrollDir                      Type=Single
+  Field              f_CursorOn                          Type=Boolean
+  Field              f_CursorTime                        Type=Single
+  Field              f_DocRoot                           Type=Td2dTextPaneDocRoot
+  Field              f_FixedMorePosition                 Type=Single
+  Field              f_Width                             Type=Single
+  Field              f_Height                            Type=Single
+  Field              f_TS                                Type=Td2dTextSource
+  Field              f_Formatter                         Type=Td2dFormatter
+  Field              f_InputResult                       Type=string
+  Field              f_PanningSpeed                      Type=Integer
+  Field              f_State                             Type=Td2dTextPaneState
+  Field              f_TargetShift                       Type=Single
+  Field              f_MoreTargetShift                   Type=Single
+  Field              f_OnAddText                         Type=Td2dOnAddTextEvent
+  Field              f_OnEndInput                        Type=Td2dNotifyEvent
+  Field              f_OnLinkClick                       Type=Td2dOnLinkClickEvent
+  Field              f_OnStateChange                     Type=Td2dNotifyEvent
+  Field              f_ScrollSpeed                       Type=Integer
+  Field              f_StateBeforeScroll                 Type=Td2dTextPaneState
+  Field              f_ParaPossiblyWithLinks             Type=Integer
+  Method             CalcMoreTargetShift                 Type=
+  Method             Format                              Type=
+  Method             FormatAll                           Type=
+  Method             pm_GetLastChunk                     Type=Td2dCustomTextChunk
+  Method             pm_GetLineSpacing                   Type=Single
+  Method             pm_GetLinksAllowed                  Type=Boolean
+  Method             pm_GetParaSpacing                   Type=Single
+  Method             pm_GetParaCount                     Type=Integer
+  Method             pm_GetScrollShift                   Type=Single
+  Method             pm_SetLineSpacing                   Type=
+  Method             pm_SetLinksAllowed                  Type=
+  Method             pm_SetParaSpacing                   Type=
+  Method             pm_SetScrollShift                   Type=
+  Method             _UnHighlightLink                    Type=
+  Method             UnHighlightLinks                    Type=
+  Method             _DeactivateLink                     Type=
+  Method             IsSliceVisible                      Type=Boolean
+  Method             PageDown                            Type=
+  Method             PageUp                              Type=
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Method             pm_SetHeight                        Type=
+  Method             pm_SetState                         Type=
+  Method             pm_SetWidth                         Type=
+  Method             Scroll                              Type=
+  Property           DocRoot                             Type=Td2dTextPaneDocRoot
+  Property           LastChunk                           Type=Td2dCustomTextChunk
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             AddPara                             Type=
+  Method             AddText                             Type=
+  Method             AddPicture                          Type=
+  Method             AddLink                             Type=
+  Method             ClearAll                            Type=
+  Method             ClearFromPara                       Type=
+  Method             DropLinks                           Type=
+  Method             EndInput                            Type=
+  Method             FixMorePosition                     Type=
+  Method             FrameFunc                           Type=
+  Method             GetHighlightedLinkText              Type=string
+  Method             GetPara                             Type=Td2dCustomSlice
+  Method             LoadText                            Type=
+  Method             Render                              Type=
+  Method             ScrollTo                            Type=
+  Method             ScrollToBottom                      Type=
+  Method             ProcessEvent                        Type=
+  Method             SaveText                            Type=
+  Method             StartInput                          Type=
+  Property           InputResult                         Type=string
+  Property           OnEndInput                          Type=Td2dNotifyEvent
+  Property           OnAddText                           Type=Td2dOnAddTextEvent
+  Property           OnStateChange                       Type=Td2dNotifyEvent
+  Property           LineSpacing                         Type=Single
+  Property           OnLinkClick                         Type=Td2dOnLinkClickEvent
+  Property           LinksAllowed                        Type=Boolean
+  Property           ParaSpacing                         Type=Single
+  Property           ParaCount                           Type=Integer
+  Property           ScrollShift                         Type=Single
+  Property           PanningSpeed                        Type=Integer
+  Property           ScrollSpeed                         Type=Integer
+  Property           State                               Type=Td2dTextPaneState
+Class: Td2dCommonPath [Unit=d2dPath]
+  Field              f_SegmentsBuilt                     Type=Boolean
+  Field              f_TotalLength                       Type=Single
+  Method             CalcTotalLength                     Type=
+  Field              f_Points                            Type=TList
+  Field              f_Segments                          Type=Tlist
+  Method             AddSegment                          Type=
+  Method             ClearPoints                         Type=
+  Method             ClearSegments                       Type=
+  Method             DoRecalcSegments                    Type=
+  Method             CheckSegments                       Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             AddPoint                            Type=Integer
+  Method             Clear                               Type=
+  Method             Recalc                              Type=
+  Property           TotalLength                         Type=Single
+Class: Td2dPathCursor [Unit=d2dPath]
+  Field              f_Path                              Type=Td2dCommonPath
+  Field              f_Speed                             Type=Single
+  Method             Create                              Type=
+Class: Td2dSimplePicture [Unit=d2dSimplePicture]
+  Field              f_ID                                Type=string
+  Field              f_Sprite                            Type=Td2dSprite
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetID                            Type=string
+  Method             pm_GetWidth                         Type=Single
+  Method             Render                              Type=
+  Method             Cleanup                             Type=
+  Method             Make                                Type=Id2dPicture
+Class: Td2dSprite [Unit=d2dSprite]
+  Method             DoFlipX                             Type=
+  Method             DoFlipY                             Type=
+  Method             pm_GetBlendMode                     Type=Integer
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Method             pm_SetBlendMode                     Type=
+  Method             pm_SetFlipX                         Type=
+  Method             pm_SetFlipY                         Type=
+  Method             pm_SetHeight                        Type=
+  Method             pm_SetTexture                       Type=
+  Method             pm_SetWidth                         Type=
+  Field              f_FlipX                             Type=Boolean
+  Field              f_FlipY                             Type=Boolean
+  Field              f_Height                            Type=Single
+  Field              f_HotX                              Type=Integer
+  Field              f_HotY                              Type=Integer
+  Field              f_Quad                              Type=Td2dQuad
+  Field              f_Texture                           Type=Id2dTexture
+  Field              f_TexY                              Type=Single
+  Field              f_TexHeight                         Type=Single
+  Field              f_Width                             Type=Single
+  Method             pm_GetValid                         Type=Boolean
+  Method             RecalcQuad                          Type=
+  Method             Create                              Type=
+  Method             Render                              Type=
+  Method             RenderEx                            Type=
+  Method             SetColor                            Type=
+  Method             SetZ                                Type=
+  Property           BlendMode                           Type=Integer
+  Property           FlipX                               Type=Boolean
+  Property           FlipY                               Type=Boolean
+  Property           Height                              Type=Single
+  Property           HotX                                Type=Integer
+  Property           HotY                                Type=Integer
+  Property           Texture                             Type=Id2dTexture
+  Property           Valid                               Type=Boolean
+  Property           Width                               Type=Single
+Class: Td2dMultiFrameSprite [Unit=d2dSprite]
+  Method             pm_SetCurFrame                      Type=
+  Field              f_CurFrame                          Type=Integer
+  Field              f_FramesCount                       Type=Integer
+  Method             Create                              Type=
+  Property           CurFrame                            Type=Integer
+  Property           FramesCount                         Type=Integer
+Class: Td2dBaseAnimation [Unit=d2dSprite]
+  Field              f_Playing                           Type=Boolean
+  Method             DoUpdate                            Type=
+  Method             Create                              Type=
+  Method             Play                                Type=
+  Method             Resume                              Type=
+  Method             Stop                                Type=
+  Method             Update                              Type=
+  Property           Playing                             Type=Boolean
+Class: Td2dTimedAnimation [Unit=d2dSprite]
+  Field              f_DFrame                            Type=Integer
+  Field              f_Looped                            Type=Boolean
+  Field              f_LoopType                          Type=Td2dLoopType
+  Field              f_Speed                             Type=Single
+  Field              f_TimeSinceLastFrame                Type=Double
+  Method             pm_GetReverse                       Type=Boolean
+  Method             pm_SetReverse                       Type=
+  Method             DoUpdate                            Type=
+  Method             Create                              Type=
+  Method             Play                                Type=
+  Property           Looped                              Type=Boolean
+  Property           LoopType                            Type=Td2dLoopType
+  Property           Reverse                             Type=Boolean
+  Property           Speed                               Type=Single
+  Property           TimeSinceLastFrame                  Type=Double
+Class: Td2dRectangle [Unit=d2dSprite]
+  Method             pm_GetValid                         Type=Boolean
+  Method             Create                              Type=
+Class: Td2dStaticText [Unit=d2dStaticText]
+  Field              f_Align                             Type=Td2dTextAlignType
+  Field              f_AutoWidth                         Type=Boolean
+  Field              f_TextColor                         Type=Td2dColor
+  Field              f_Font                              Type=Id2dFont
+  Field              f_Formatter                         Type=Td2dFormatter
+  Field              f_Root                              Type=Td2dDocRoot
+  Field              f_Text                              Type=string
+  Field              f_LinkColor                         Type=Td2dColor
+  Field              f_LinkHColor                        Type=Td2dColor
+  Field              f_OnLinkClick                       Type=Td2dOnLinkClickEvent
+  Field              f_TextSource                        Type=Td2dTextSource
+  Field              f_X                                 Type=Single
+  Field              f_Y                                 Type=Single
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetLineSpacing                   Type=Single
+  Method             pm_GetParaSpacing                   Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Method             pm_SetAlign                         Type=
+  Method             pm_SetTextColor                     Type=
+  Method             pm_SetFont                          Type=
+  Method             pm_SetLineSpacing                   Type=
+  Method             pm_SetParaSpacing                   Type=
+  Method             pm_SetText                          Type=
+  Method             pm_SetWidth                         Type=
+  Method             ApplyColors                         Type=
+  Method             ApplyFont                           Type=
+  Method             ReFormat                            Type=
+  Method             _ApplyChunkColors                   Type=
+  Method             _ApplyFontToChunk                   Type=
+  Method             _ApplySliceColors                   Type=
+  Method             AddText                             Type=
+  Method             AddLink                             Type=
+  Method             CheckAutowidth                      Type=
+  Method             pm_GetLinksEnabled                  Type=Boolean
+  Method             pm_SetAutoWidth                     Type=
+  Method             pm_SetLinkColor                     Type=
+  Method             pm_SetLinkHColor                    Type=
+  Method             pm_SetLinksEnabled                  Type=
+  Method             pm_SetX                             Type=
+  Method             pm_SetY                             Type=
+  Method             RenewLinkState                      Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             EndText                             Type=
+  Method             Render                              Type=
+  Method             ProcessEvent                        Type=
+  Method             StartText                           Type=
+  Property           Align                               Type=Td2dTextAlignType
+  Property           AutoWidth                           Type=Boolean
+  Property           TextColor                           Type=Td2dColor
+  Property           Font                                Type=Id2dFont
+  Property           Height                              Type=Single
+  Property           LineSpacing                         Type=Single
+  Property           ParaSpacing                         Type=Single
+  Property           Text                                Type=string
+  Property           LinkColor                           Type=Td2dColor
+  Property           LinkHColor                          Type=Td2dColor
+  Property           LinksEnabled                        Type=Boolean
+  Property           Width                               Type=Single
+  Property           X                                   Type=Single
+  Property           Y                                   Type=Single
+  Property           OnLinkClick                         Type=Td2dOnLinkClickEvent
+Class: Td2dSetupStorage [Unit=d2dStorage]
+  Field              f_CurSection                        Type=string
+  Field              f_Ini                               Type=TCustomIniFile
+  Method             GetBoolean                          Type=Boolean
+  Method             GetDateTime                         Type=TDateTime
+  Method             GetFloat                            Type=Double
+  Method             GetInteger                          Type=Integer
+  Method             GetString                           Type=string
+  Method             SetBoolean                          Type=
+  Method             SetCurSection                       Type=
+  Method             SetDateTime                         Type=
+  Method             SetFloat                            Type=
+  Method             SetInteger                          Type=
+  Method             SetString                           Type=
+  Method             GetStorage                          Type=Id2dStorage
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Make                                Type=Id2dStorage
+  Method             Make                                Type=Id2dStorage
+  Property           CurSection                          Type=string
+Class: Td2dTexture [Unit=d2dTexture]
+  Field              f_DXTexture                         Type=IDirect3DTexture8
+  Field              f_SrcPicHeight                      Type=Integer
+  Field              f_SrcPicWidth                       Type=Integer
+  Method             pm_GetDirectXTexture                Type=IDirect3DTexture8
+  Method             pm_GetSrcPicHeight                  Type=Integer
+  Method             pm_GetSrcPicWidth                   Type=Integer
+  Method             pm_SetSrcPicHeight                  Type=
+  Method             pm_SetSrcPicWidth                   Type=
+  Method             IsOrphan                            Type=Boolean
+  Method             Make                                Type=Id2dTexture
+Class: Td2dFiler [Unit=d2dUtils]
+  Field              f_Stream                            Type=TStream
+  Method             Create                              Type=
+  Method             ReadInteger                         Type=Integer
+  Method             ReadDouble                          Type=Double
+  Method             ReadString                          Type=string
+  Method             ReadBoolean                         Type=Boolean
+  Method             ReadSingle                          Type=Single
+  Method             ReadPoint                           Type=Td2dPoint
+  Method             ReadColor                           Type=Td2dColor
+  Method             ReadByte                            Type=Byte
+  Method             WriteInteger                        Type=
+  Method             WriteDouble                         Type=
+  Method             WriteString                         Type=
+  Method             WriteBoolean                        Type=
+  Method             WriteSingle                         Type=
+  Method             WritePoint                          Type=
+  Method             WriteColor                          Type=
+  Method             WriteByte                           Type=
+  Property           Stream                              Type=TStream
+Class: Td2dBasicBlender [Unit=d2dUtils]
+  Field              f_IsRunning                         Type=Boolean
+  Method             DoUpdate                            Type=
+  Method             Run                                 Type=
+  Method             Stop                                Type=
+  Method             Update                              Type=
+  Method             Save                                Type=
+  Method             Load                                Type=
+  Property           IsRunning                           Type=Boolean
+Class: Td2dColorBlender [Unit=d2dUtils]
+  Field              f_Current                           Type=Td2dColor
+  Field              f_Target                            Type=Td2dColor
+  Field              f_CB                                Type=Single
+  Field              f_TB                                Type=Single
+  Field              f_SpeedB                            Type=Single
+  Method             DoUpdate                            Type=
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+  Property           Current                             Type=Td2dColor
+  Property           Target                              Type=Td2dColor
+Class: Td2dPositionBlender [Unit=d2dUtils]
+  Field              f_Current                           Type=Td2dPoint
+  Field              f_Target                            Type=Td2dPoint
+  Field              f_Speed                             Type=Td2dPoint
+  Method             DoUpdate                            Type=
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+  Property           Current                             Type=Td2dPoint
+Class: Td2dSimpleBlender [Unit=d2dUtils]
+  Field              f_Current                           Type=Single
+  Field              f_Speed                             Type=Single
+  Field              f_Target                            Type=Single
+  Method             DoUpdate                            Type=
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+  Property           Current                             Type=Single
+Class: Td2dMemoryStream [Unit=d2dUtils]
+  Method             ExtractMemory                       Type=Pointer
+Class: Td2dZipPack [Unit=d2dZipPack]
+  Field              Files                               Type=array of TLocalFile
+  Field              f_PackFileName                      Type=string
+  Method             pm_GetCount                         Type=Integer
+  Method             pm_GetName                          Type=AnsiString
+  Method             LoadFromFile                        Type=
+  Method             LoadFromStream                      Type=
+  Method             pm_GetSize                          Type=LongWord
+  Method             Create                              Type=
+  Method             IndexOf                             Type=Integer
+  Method             Find                                Type=Integer
+  Method             Extract                             Type=Boolean
+  Method             Make                                Type=Id2dResourcePack
+  Property           Count                               Type=integer
+  Property           Name                                Type=string
+  Property           Size                                Type=LongWord
+Class: EZipFileError [Unit=d2dZipPack]
+Class: EZipFileCRCError [Unit=d2dZipPack]
+Class: TBinXmlReader [Unit=SimpleXML]
+  Field              FOptions                            Type=LongWord
+  Method             Read                                Type=
+  Method             ReadLongint                         Type=Longint
+  Method             ReadAnsiString                      Type=String
+  Method             ReadWideString                      Type=WideString
+  Method             ReadXmlString                       Type=TXmlString
+  Method             ReadVariant                         Type=
+Class: TStmXmlReader [Unit=SimpleXML]
+  Field              FStream                             Type=TStream
+  Field              FOptions                            Type=LongWord
+  Field              FBufPtr                             Type=PChar
+  Field              FRestSize                           Type=Integer
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Read                                Type=
+Class: TStrXmlReader [Unit=SimpleXML]
+  Field              FString                             Type=String
+  Field              FOptions                            Type=LongWord
+  Field              FPtr                                Type=PChar
+  Field              FRestSize                           Type=Integer
+  Method             Create                              Type=
+  Method             Read                                Type=
+Class: TBinXmlWriter [Unit=SimpleXML]
+  Field              FOptions                            Type=LongWord
+  Method             Write                               Type=
+  Method             WriteLongint                        Type=
+  Method             WriteAnsiString                     Type=
+  Method             WriteWideString                     Type=
+  Method             WriteXmlString                      Type=
+  Method             WriteVariant                        Type=
+Class: TStmXmlWriter [Unit=SimpleXML]
+  Field              FStream                             Type=TStream
+  Field              FBufPtr                             Type=PChar
+  Field              FBufSize                            Type=Integer
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Write                               Type=
+Class: TStrXmlWriter [Unit=SimpleXML]
+  Field              FData                               Type=String
+  Field              FBufPtr                             Type=PChar
+  Field              FBufSize                            Type=Integer
+  Method             FlushBuf                            Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Write                               Type=
+Class: TXmlBase [Unit=SimpleXML]
+  Method             GetObject                           Type=TObject
+Class: TXmlNameTable [Unit=SimpleXML]
+  Field              FNames                              Type=array of TXmlString
+  Field              FHashTable                          Type=array of TNameIndexArray
+  Field              FXmlTextNameID                      Type=Integer
+  Field              FXmlCDATASectionNameID              Type=Integer
+  Field              FXmlCommentNameID                   Type=Integer
+  Field              FXmlDocumentNameID                  Type=Integer
+  Field              FXmlID                              Type=Integer
+  Method             GetID                               Type=Integer
+  Method             GetName                             Type=TXmlString
+  Method             Create                              Type=
+  Method             LoadBinXml                          Type=
+  Method             SaveBinXml                          Type=
+Class: TXmlToken [Unit=SimpleXML]
+  Field              FValueBuf                           Type=TXmlString
+  Field              FValueEnd                           Type=PXmlChar
+  Method             Create                              Type=
+  Method             Clear                               Type=
+  Method             AppendChar                          Type=
+  Method             AppendText                          Type=
+  Method             Length                              Type=Integer
+  Property           ValueStart                          Type=PXmlChar
+Class: TXmlSource [Unit=SimpleXML]
+  Field              FTokenStack                         Type=array of TXmlToken
+  Field              FTokenStackTop                      Type=Integer
+  Field              FToken                              Type=TXmlToken
+  Method             ExpectQuotedText                    Type=TXmlString
+  Field              CurChar                             Type=TXmlChar
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             EOF                                 Type=Boolean
+  Method             Next                                Type=Boolean
+  Method             SkipBlanks                          Type=
+  Method             ExpectXmlName                       Type=TXmlString
+  Method             ExpectXmlEntity                     Type=TXmlChar
+  Method             ExpectChar                          Type=
+  Method             ExpectText                          Type=
+  Method             ExpectDecimalInteger                Type=Integer
+  Method             ExpectHexInteger                    Type=Integer
+  Method             ParseTo                             Type=TXmlString
+  Method             ParseAttrs                          Type=
+  Method             NewToken                            Type=
+  Method             AppendTokenChar                     Type=
+  Method             AppendTokenText                     Type=
+  Method             AcceptToken                         Type=TXmlString
+  Method             DropToken                           Type=
+Class: TXmlStrSource [Unit=SimpleXML]
+  Field              FSource                             Type=TXmlString
+  Field              FSourceEnd                          Type=PXmlChar
+  Method             Create                              Type=
+  Method             EOF                                 Type=Boolean
+  Method             Next                                Type=Boolean
+Class: TXmlStmSource [Unit=SimpleXML]
+  Field              FStream                             Type=TStream
+  Field              FBufEnd                             Type=PChar
+  Field              FBufSize                            Type=Integer
+  Field              FSize                               Type=Integer
+  Method             Create                              Type=
+  Method             EOF                                 Type=Boolean
+  Method             Next                                Type=Boolean
+  Method             Destroy                             Type=
+Class: TXmlNodeList [Unit=SimpleXML]
+  Field              FOwnerNode                          Type=TXmlNode
+  Field              FItems                              Type=array of TXmlNode
+  Field              FCount                              Type=Integer
+  Method             Grow                                Type=
+  Method             Get_Count                           Type=Integer
+  Method             Get_Item                            Type=IXmlNode
+  Method             Get_XML                             Type=TXmlString
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             IndexOf                             Type=Integer
+  Method             ParseXML                            Type=
+  Method             LoadBinXml                          Type=
+  Method             SaveBinXml                          Type=
+  Method             Insert                              Type=
+  Method             Remove                              Type=Integer
+  Method             Delete                              Type=
+  Method             Replace                             Type=
+  Method             Clear                               Type=
+Class: TXmlNode [Unit=SimpleXML]
+  Field              FParentNode                         Type=TXmlNode
+  Field              FNames                              Type=TXmlNameTable
+  Field              FAttrCount                          Type=Integer
+  Field              FAttrs                              Type=array of TXmlAttrData
+  Field              FChilds                             Type=TXmlNodeList
+  Method             GetChilds                           Type=TXmlNodeList
+  Method             FindFirstChild                      Type=TXmlNode
+  Method             GetAttrsXML                         Type=TXmlString
+  Method             FindAttrData                        Type=PXmlAttrData
+  Method             GetOwnerDocument                    Type=TXmlDocument
+  Method             SetNameTable                        Type=
+  Method             SetNodeNameID                       Type=
+  Method             DoCloneNode                         Type=IXmlNode
+  Method             Get_NameTable                       Type=IXmlNameTable
+  Method             Get_NodeName                        Type=TXmlString
+  Method             Get_NodeNameID                      Type=Integer
+  Method             Get_NodeType                        Type=Integer
+  Method             Get_Text                            Type=TXmlString
+  Method             Set_Text                            Type=
+  Method             CloneNode                           Type=IXmlNode
+  Method             LoadBinXml                          Type=
+  Method             SaveBinXml                          Type=
+  Method             Get_DataType                        Type=Integer
+  Method             Get_TypedValue                      Type=Variant
+  Method             Set_TypedValue                      Type=
+  Method             Get_XML                             Type=TXmlString
+  Method             Get_OwnerDocument                   Type=IXmlDocument
+  Method             Get_ParentNode                      Type=IXmlNode
+  Method             Get_ChildNodes                      Type=IXmlNodeList
+  Method             AppendChild                         Type=
+  Method             AppendElement                       Type=IXmlElement
+  Method             AppendElement                       Type=IXmlElement
+  Method             AppendText                          Type=IXmlText
+  Method             AppendCDATA                         Type=IXmlCDATASection
+  Method             AppendComment                       Type=IXmlComment
+  Method             AppendProcessingInstruction         Type=IXmlProcessingInstruction
+  Method             AppendProcessingInstruction         Type=IXmlProcessingInstruction
+  Method             InsertBefore                        Type=
+  Method             ReplaceChild                        Type=
+  Method             RemoveChild                         Type=
+  Method             GetChildText                        Type=TXmlString
+  Method             GetChildText                        Type=TXmlString
+  Method             SetChildText                        Type=
+  Method             SetChildText                        Type=
+  Method             NeedChild                           Type=IXmlNode
+  Method             NeedChild                           Type=IXmlNode
+  Method             EnsureChild                         Type=IXmlNode
+  Method             EnsureChild                         Type=IXmlNode
+  Method             RemoveAllChilds                     Type=
+  Method             SelectNodes                         Type=IXmlNodeList
+  Method             SelectSingleNode                    Type=IXmlNode
+  Method             FindElement                         Type=IXmlElement
+  Method             Get_AttrCount                       Type=Integer
+  Method             Get_AttrNameID                      Type=Integer
+  Method             Get_AttrName                        Type=TXmlString
+  Method             RemoveAttr                          Type=
+  Method             RemoveAttr                          Type=
+  Method             RemoveAllAttrs                      Type=
+  Method             AttrExists                          Type=Boolean
+  Method             AttrExists                          Type=Boolean
+  Method             GetAttrType                         Type=Integer
+  Method             GetAttrType                         Type=Integer
+  Method             GetVarAttr                          Type=Variant
+  Method             GetVarAttr                          Type=Variant
+  Method             SetVarAttr                          Type=
+  Method             SetVarAttr                          Type=
+  Method             NeedAttr                            Type=TXmlString
+  Method             NeedAttr                            Type=TXmlString
+  Method             GetAttr                             Type=TXmlString
+  Method             GetAttr                             Type=TXmlString
+  Method             SetAttr                             Type=
+  Method             SetAttr                             Type=
+  Method             GetBoolAttr                         Type=Boolean
+  Method             GetBoolAttr                         Type=Boolean
+  Method             SetBoolAttr                         Type=
+  Method             SetBoolAttr                         Type=
+  Method             GetIntAttr                          Type=Integer
+  Method             GetIntAttr                          Type=Integer
+  Method             SetIntAttr                          Type=
+  Method             SetIntAttr                          Type=
+  Method             GetDateTimeAttr                     Type=TDateTime
+  Method             GetDateTimeAttr                     Type=TDateTime
+  Method             SetDateTimeAttr                     Type=
+  Method             SetDateTimeAttr                     Type=
+  Method             GetFloatAttr                        Type=Double
+  Method             GetFloatAttr                        Type=Double
+  Method             SetFloatAttr                        Type=
+  Method             SetFloatAttr                        Type=
+  Method             GetHexAttr                          Type=Integer
+  Method             GetHexAttr                          Type=Integer
+  Method             SetHexAttr                          Type=
+  Method             SetHexAttr                          Type=
+  Method             GetEnumAttr                         Type=Integer
+  Method             GetEnumAttr                         Type=Integer
+  Method             NeedEnumAttr                        Type=Integer
+  Method             NeedEnumAttr                        Type=Integer
+  Method             Get_Values                          Type=Variant
+  Method             Set_Values                          Type=
+  Method             AsElement                           Type=IXmlElement
+  Method             AsText                              Type=IXmlText
+  Method             AsCDATASection                      Type=IXmlCDATASection
+  Method             AsComment                           Type=IXmlComment
+  Method             AsProcessingInstruction             Type=IXmlProcessingInstruction
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+Class: TXmlElement [Unit=SimpleXML]
+  Field              FNameID                             Type=Integer
+  Field              FData                               Type=Variant
+  Method             RemoveTextNodes                     Type=
+  Method             SetNodeNameID                       Type=
+  Method             DoCloneNode                         Type=IXmlNode
+  Method             GetChilds                           Type=TXmlNodeList
+  Method             Get_NodeNameID                      Type=Integer
+  Method             Get_NodeType                        Type=Integer
+  Method             Get_Text                            Type=TXmlString
+  Method             Set_Text                            Type=
+  Method             Get_DataType                        Type=Integer
+  Method             Get_TypedValue                      Type=Variant
+  Method             Set_TypedValue                      Type=
+  Method             Get_XML                             Type=TXmlString
+  Method             AsElement                           Type=IXmlElement
+  Method             Get_ChildNodes                      Type=IXmlNodeList
+  Method             ReplaceTextByCDATASection           Type=
+  Method             ReplaceTextByBynaryData             Type=
+  Method             GetTextAsBynaryData                 Type=TXmlString
+  Method             Create                              Type=
+Class: TXmlCharacterData [Unit=SimpleXML]
+  Field              FData                               Type=TXmlString
+  Method             Get_Text                            Type=TXmlString
+  Method             Set_Text                            Type=
+  Method             Create                              Type=
+Class: TXmlText [Unit=SimpleXML]
+  Field              FData                               Type=Variant
+  Method             DoCloneNode                         Type=IXmlNode
+  Method             Get_NodeNameID                      Type=Integer
+  Method             Get_NodeType                        Type=Integer
+  Method             Get_Text                            Type=TXmlString
+  Method             Set_Text                            Type=
+  Method             Get_DataType                        Type=Integer
+  Method             Get_TypedValue                      Type=Variant
+  Method             Set_TypedValue                      Type=
+  Method             Get_XML                             Type=TXmlString
+  Method             AsText                              Type=IXmlText
+  Method             Create                              Type=
+Class: TXmlCDATASection [Unit=SimpleXML]
+  Method             Get_NodeNameID                      Type=Integer
+  Method             Get_NodeType                        Type=Integer
+  Method             Get_XML                             Type=TXmlString
+  Method             AsCDATASection                      Type=IXmlCDATASection
+  Method             DoCloneNode                         Type=IXmlNode
+Class: TXmlComment [Unit=SimpleXML]
+  Method             Get_NodeNameID                      Type=Integer
+  Method             Get_NodeType                        Type=Integer
+  Method             Get_XML                             Type=TXmlString
+  Method             AsComment                           Type=IXmlComment
+  Method             DoCloneNode                         Type=IXmlNode
+Class: TXmlProcessingInstruction [Unit=SimpleXML]
+  Field              FTargetID                           Type=Integer
+  Field              FData                               Type=String
+  Method             SetNodeNameID                       Type=
+  Method             DoCloneNode                         Type=IXmlNode
+  Method             Get_NodeNameID                      Type=Integer
+  Method             Get_NodeType                        Type=Integer
+  Method             Get_Text                            Type=TXmlString
+  Method             Set_Text                            Type=
+  Method             Get_XML                             Type=TXmlString
+  Method             AsProcessingInstruction             Type=IXmlProcessingInstruction
+  Method             Create                              Type=
+Class: TXmlDocument [Unit=SimpleXML]
+  Field              FPreserveWhiteSpace                 Type=Boolean
+  Method             DoCloneNode                         Type=IXmlNode
+  Method             Get_NodeNameID                      Type=Integer
+  Method             Get_NodeType                        Type=Integer
+  Method             Get_Text                            Type=TXmlString
+  Method             Set_Text                            Type=
+  Method             Get_XML                             Type=TXmlString
+  Method             Get_PreserveWhiteSpace              Type=Boolean
+  Method             Set_PreserveWhiteSpace              Type=
+  Method             NewDocument                         Type=IXmlElement
+  Method             NewDocument                         Type=IXmlElement
+  Method             CreateElement                       Type=IXmlElement
+  Method             CreateElement                       Type=IXmlElement
+  Method             CreateText                          Type=IXmlText
+  Method             CreateCDATASection                  Type=IXmlCDATASection
+  Method             CreateComment                       Type=IXmlComment
+  Method             Get_DocumentElement                 Type=IXmlElement
+  Method             CreateProcessingInstruction         Type=IXmlProcessingInstruction
+  Method             CreateProcessingInstruction         Type=IXmlProcessingInstruction
+  Method             LoadXML                             Type=
+  Method             Load                                Type=
+  Method             Load                                Type=
+  Method             LoadResource                        Type=
+  Method             Save                                Type=
+  Method             Save                                Type=
+  Method             SaveBinary                          Type=
+  Method             SaveBinary                          Type=
+  Method             Get_BinaryXML                       Type=String
+  Method             LoadBinaryXML                       Type=
+  Method             Create                              Type=
+Class: TPredicate [Unit=SimpleXML]
+  Method             Check                               Type=Boolean
+Class: TLocationStep [Unit=SimpleXML]
+  Field              Next                                Type=TLocationStep
+  Field              Axis                                Type=TAxis
+  Field              NodeTest                            Type=Integer
+  Field              Predicates                          Type=TList
+
+
+================================
+ Symbol Index
+================================
+
+Symbols: 5826
+
+Tf2Context Members
+--------------------------------
+  <class not found>
+
+Lookup: gD2DE
+  Variable     d2dCore.gD2DE                            Unit=d2dCore Type=Td2dCore
+
+Lookup: Tf2Context
+  Class        f2Context.Tf2Context                     Unit=f2Context
+
+Lookup: System_Log
+  Method       Td2dCore.System_Log                      Unit=d2dCore Owner=Td2dCore
+
+Lookup: WHandle
+  Property     Td2dCore.WHandle                         Unit=d2dCore Owner=Td2dCore Type=HWND
+
+Lookup: OutError
+  Procedure    f2Application.OutError                   Unit=f2Application
+  Method       Tf2MainScene.OutError                    Unit=f2ScnMain Owner=Tf2MainScene
+
+Lookup: VariantToAlign
+  Procedure    f2Context.VariantToAlign                 Unit=f2Context
+
+Lookup: f_CurrentSceneObj
+  Field        Td2dApplication.f_CurrentSceneObj        Unit=d2dApplication Owner=Td2dApplication Type=Td2dScene
+
+Index lookup: HMUSIC
+  Name: HMUSIC
+  QualifiedName: d2dTypes.HMUSIC
+  Kind: Type
+  Unit: d2dTypes
+  Name: HMUSIC
+  QualifiedName: Dynamic_Bass.HMUSIC
+  Kind: Type
+  Unit: Dynamic_Bass
+
+Resolve: gD2DE.System_Log
+  Result: Method
+  QualifiedName: Td2dCore.System_Log
+  Unit: d2dCore
+  Type: 
+
+Resolve: gD2DE.WHandle
+  Result: Property
+  QualifiedName: Td2dCore.WHandle
+  Unit: d2dCore
+  Type: HWND
+
+Resolve: gD2DE.Input_GetEvent
+  Result: Method
+  QualifiedName: Td2dCore.Input_GetEvent
+  Unit: d2dCore
+  Type: Boolean
+
+Resolve: f_CurrentSceneObj.ProcessEvent
+  Result: Method
+  QualifiedName: Td2dScene.ProcessEvent
+  Unit: d2dApplication
+  Type: 
+
+Resolve: Dynamic_Bass.HMUSIC
+  Result: Type
+  QualifiedName: Dynamic_Bass.HMUSIC
+  Unit: Dynamic_Bass
+  Type: <none>
+
+Failure Categories
+--------------------------------
+Failure details are reported by BatchAnalyzer.
+
+
+Behavior Names
+--------------------------------
+Td2dApplication.Create                             /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dApplication.Destroy                            /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dApplication.AddScene                           /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dApplication.FrameFunc                          /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dApplication.Init                               /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dApplication.LoadGlobalResources                /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dApplication.pm_SetCurrentScene                 /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dApplication.RenderFunc                         /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dApplication.Run                                /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dApplication.UnloadGlobalResources              /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.Create                                   /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.Destroy                                  /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.BeforeStoppingChild                      /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.DoLoad                                   /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.DoUnload                                 /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.DoFrame                                  /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.Load                                     /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.DoProcessEvent                           /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.Frame                                    /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.pm_GetHasRunningChild                    /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.ProcessEvent                             /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.Render                                   /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.StartChild                               /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.StopAsChild                              /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.StopChild                                /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dScene.Unload                                   /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas
+Td2dProtoObjectPrim.Destroy                        /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dClasses.pas
+Td2dProtoObjectPrim.Cleanup                        /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dClasses.pas
+Td2dProtoObjectPrim.FreeInstance                   /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dClasses.pas
+Td2dProtoObjectPrim.NewInstance                    /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dClasses.pas
+
+================================
+ Expression Census
+================================
+
+Expression nodes:           23619
+Statements with expression: 4798
+
+By kind
+--------------------------------
+Empty                77
+Identifier        14200
+Literal            1738
+MemberAccess       2157
+IndexAccess         525
+Call               2328
+Unary                76
+Binary             2119
+AddressOf           221
+Dereference          79
+TypeTest              3
+TypeCast             15
+Set                  71
+Range                 0
+Inherited             3
+Raw                   7
+
+Structured:                  23612
+Raw:                         7
+Structured coverage:         100.0%
+Raw share:                   0.0%
+
+Raw expressions
+--------------------------------
+  1.   3x  ^ M ^ J
+  2.   2x  ^ J
+  3.   2x  ^ M
+
+Unique Raw expressions: 3
+
+
+================================
+ Semantic Census
+================================
+
+Read               9741
+Write              2302
+Call               2328
+MemberAccess       2157
+IndexAccess         525
+
+Semantic References
+--------------------------------
+Write            f_Scenes                                 /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:89 [Td2dApplication.Create]
+MemberAccess     TStringList.Create                       /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:89 [Td2dApplication.Create]
+Read             TStringList                              /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:89 [Td2dApplication.Create]
+MemberAccess     f_Scenes.Sorted                          /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:90 [Td2dApplication.Create]
+Write            f_Scenes                                 /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:90 [Td2dApplication.Create]
+Read             True                                     /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:90 [Td2dApplication.Create]
+MemberAccess     f_Scenes.CaseSensitive                   /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:91 [Td2dApplication.Create]
+Write            f_Scenes                                 /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:91 [Td2dApplication.Create]
+Read             False                                    /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:91 [Td2dApplication.Create]
+MemberAccess     f_Scenes.Duplicates                      /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:92 [Td2dApplication.Create]
+Write            f_Scenes                                 /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:92 [Td2dApplication.Create]
+Read             dupError                                 /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:92 [Td2dApplication.Create]
+Call             D2DInit                                  /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93 [Td2dApplication.Create]
+Read             D2DInit                                  /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93 [Td2dApplication.Create]
+Read             aResWidth                                /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93 [Td2dApplication.Create]
+Read             aResHeight                               /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93 [Td2dApplication.Create]
+Read             aWindowed                                /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93 [Td2dApplication.Create]
+Read             aTitle                                   /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93 [Td2dApplication.Create]
+Write            f_Finished                               /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:94 [Td2dApplication.Create]
+Read             False                                    /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:94 [Td2dApplication.Create]
+
+Total semantic references: 17053
+
+
+================================
+ Semantic Dependency Graph
+================================
+
+Td2dApplication.Create                   --Writes--> f_Scenes                                           /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:89
+Td2dApplication.Create                   --AccessesMember--> TStringList.Create                                 /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:89
+Td2dApplication.Create                   --Reads--> TStringList                                        /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:89
+Td2dApplication.Create                   --AccessesMember--> f_Scenes.Sorted                                    /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:90
+Td2dApplication.Create                   --Writes--> f_Scenes                                           /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:90
+Td2dApplication.Create                   --Reads--> True                                               /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:90
+Td2dApplication.Create                   --AccessesMember--> f_Scenes.CaseSensitive                             /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:91
+Td2dApplication.Create                   --Writes--> f_Scenes                                           /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:91
+Td2dApplication.Create                   --Reads--> False                                              /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:91
+Td2dApplication.Create                   --AccessesMember--> f_Scenes.Duplicates                                /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:92
+Td2dApplication.Create                   --Writes--> f_Scenes                                           /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:92
+Td2dApplication.Create                   --Reads--> dupError                                           /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:92
+Td2dApplication.Create                   --Calls--> D2DInit                                            /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93
+Td2dApplication.Create                   --Reads--> D2DInit                                            /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93
+Td2dApplication.Create                   --Reads--> aResWidth                                          /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93
+Td2dApplication.Create                   --Reads--> aResHeight                                         /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93
+Td2dApplication.Create                   --Reads--> aWindowed                                          /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93
+Td2dApplication.Create                   --Reads--> aTitle                                             /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:93
+Td2dApplication.Create                   --Writes--> f_Finished                                         /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:94
+Td2dApplication.Create                   --Reads--> False                                              /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:94
+Td2dApplication.Create                   --AccessesMember--> gD2DE.OnFrame                                      /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:95
+Td2dApplication.Create                   --Writes--> gD2DE                                              /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:95
+Td2dApplication.Create                   --Reads--> FrameFunc                                          /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:95
+Td2dApplication.Create                   --AccessesMember--> gD2DE.OnRender                                     /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:96
+Td2dApplication.Create                   --Writes--> gD2DE                                              /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:96
+Td2dApplication.Create                   --Reads--> RenderFunc                                         /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:96
+Td2dApplication.Destroy                  --AccessesMember--> f_Scenes.Free                                      /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:101
+Td2dApplication.Destroy                  --Reads--> f_Scenes                                           /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:101
+Td2dApplication.Destroy                  --Reads--> D2DDone                                            /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:102
+Td2dApplication.AddScene                 --Calls--> f_Scenes.AddObject                                 /data/data/com.termux/files/home/d2dge-furq_2_2_4/d2dApplication.pas:108
+
+Semantic dependency edges: 17053
+
+================================
+ Report Complete
+================================

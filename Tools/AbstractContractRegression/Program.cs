@@ -135,6 +135,145 @@ using (var process = Process.Start(start))
     }
 }
 
+
+// Compile and execute a class implementing a Delphi interface.
+{
+    const string interfaceSource = """
+unit InterfaceCompileTest;
+interface
+type
+  INode = interface
+    function GetValue: Integer;
+  end;
+
+  TBase = class(TInterfacedObject)
+  end;
+
+  TChild = class(TBase, INode)
+  public
+    function GetValue: Integer;
+  end;
+
+implementation
+
+function TChild.GetValue: Integer;
+begin
+  Result := 42;
+end;
+
+end.
+""";
+
+    string testRoot = Path.Combine(directory, "InterfaceCompile");
+    string testInput = Path.Combine(testRoot, "Input");
+    string testOutput = Path.Combine(testRoot, "Generated");
+
+    Directory.CreateDirectory(testInput);
+
+    string testPath = Path.Combine(
+        testInput, "InterfaceCompileTest.pas");
+
+    File.WriteAllText(testPath, interfaceSource);
+
+    var testAst = new DelphiParser(
+        new DelphiLexer(interfaceSource).Tokenize()).ParseUnit();
+
+    var testModel = SemanticModelBuilder.Build(testAst);
+
+    var testBodies = BodyTokenAnalyzer.Analyze(testAst, testPath)
+        .Where(body => body.BodyTokens.Count > 0)
+        .Select(body => (
+            Body: body,
+            Behavior: BehaviorAnalyzer.Analyze(
+                testPath, body.Name, body.BodyTokens)))
+        .ToList();
+
+    var testTranslation = new ProjectTranslator().Translate(
+        new[]
+        {
+            new ProjectTranslationInput(
+                testInput, testPath, testAst, testModel, testBodies)
+        },
+        testOutput);
+
+    bool translationOk =
+        testTranslation.Count == 1 && testTranslation[0].Success;
+
+    Check("Interface inheritance project translates", translationOk);
+
+    if (translationOk)
+    {
+        string generatedInterface =
+            File.ReadAllText(testTranslation[0].OutputFile);
+
+        Check("Generated class declares interface",
+            generatedInterface.Contains(
+                "partial class TChild : TBase, INode"));
+
+        File.WriteAllText(
+            Path.Combine(testRoot, "InterfaceCompile.csproj"),
+            """
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+</Project>
+""");
+
+        File.WriteAllText(
+            Path.Combine(testRoot, "Program.cs"),
+            """
+public static class Program
+{
+    public static int Main()
+    {
+        INode node = new TChild();
+        bool passed = node.GetValue() == 42;
+        System.Console.WriteLine(passed
+            ? "[PASS] Generated interface dispatch"
+            : "[FAIL] Generated interface dispatch");
+        return passed ? 0 : 1;
+    }
+}
+""");
+
+        var compileStart = new ProcessStartInfo("dotnet")
+        {
+            UseShellExecute = false,
+            WorkingDirectory = testRoot
+        };
+
+        foreach (string argument in new[]
+        {
+            "run", "--project",
+            Path.Combine(testRoot, "InterfaceCompile.csproj"),
+            "--configuration", "Release",
+            "--verbosity", "quiet"
+        })
+            compileStart.ArgumentList.Add(argument);
+
+        using var compileProcess = Process.Start(compileStart);
+
+        if (compileProcess is null)
+        {
+            Check("Generated interface project compiles and executes", false);
+        }
+        else
+        {
+            compileProcess.WaitForExit();
+            Check("Generated interface project compiles and executes",
+                compileProcess.ExitCode == 0);
+        }
+    }
+    else
+    {
+        foreach (var result in testTranslation)
+            Console.WriteLine(result.Error);
+    }
+}
+
 Console.WriteLine($"Abstract-contract checks: {total - failed}/{total} passed.");
 Console.WriteLine("Generated compilation directory: " + directory);
 return failed == 0 ? 0 : 1;

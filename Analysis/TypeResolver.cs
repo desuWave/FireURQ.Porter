@@ -201,6 +201,119 @@ public sealed class TypeResolver
         };
     }
 
+    // Classify a resolved Delphi declaration without guessing from its name.
+    // Unknown includes missing, ambiguous, cyclic and pointer types.
+    // Resolve only directly declared indexed properties.
+    // Inherited and implicit default properties are handled separately.
+    public bool TryResolveIndexedProperty(
+        string receiverType,
+        string propertyName,
+        string? unitName,
+        out SemanticMember property)
+    {
+        property = null!;
+
+        if (string.IsNullOrWhiteSpace(receiverType) ||
+            string.IsNullOrWhiteSpace(propertyName))
+            return false;
+
+        TypeResolution resolution = Resolve(receiverType, unitName);
+
+        if (!resolution.IsResolved ||
+            resolution.IsPointer ||
+            resolution.DeclaringUnitName is null)
+            return false;
+
+        Declaration? declaration = Find(
+            resolution.ResolvedName,
+            resolution.DeclaringUnitName,
+            out bool ambiguous);
+
+        if (ambiguous || declaration is null)
+            return false;
+
+        SemanticUnit unit = declaration.Unit;
+
+        IReadOnlyList<SemanticMember> members;
+
+        if (declaration.Type.Kind.Equals(
+            "Class", StringComparison.OrdinalIgnoreCase))
+        {
+            SemanticClass[] matches = unit.Classes
+                .Where(candidate => candidate.Name.Equals(
+                    declaration.Type.Name,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (matches.Length != 1)
+                return false;
+
+            members = matches[0].Members;
+        }
+        else if (declaration.Type.Kind.Equals(
+            "Interface", StringComparison.OrdinalIgnoreCase))
+        {
+            SemanticInterface[] matches = unit.Interfaces
+                .Where(candidate => candidate.Name.Equals(
+                    declaration.Type.Name,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (matches.Length != 1)
+                return false;
+
+            members = matches[0].Members;
+        }
+        else
+        {
+            return false;
+        }
+
+        SemanticMember[] properties = members
+            .Where(candidate =>
+                candidate.Kind == SemanticMemberKind.Property &&
+                candidate.Parameters.Count > 0 &&
+                candidate.Name.Equals(
+                    propertyName,
+                    StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        if (properties.Length != 1)
+            return false;
+
+        property = properties[0];
+        return true;
+    }
+
+    public string ResolveDeclarationKind(
+        string typeName,
+        string? unitName = null)
+    {
+        TypeResolution resolution = Resolve(typeName, unitName);
+
+        if (!resolution.IsResolved ||
+            resolution.IsPointer ||
+            resolution.DeclaringUnitName is null)
+        {
+            return "Unknown";
+        }
+
+        Declaration? declaration = Find(
+            resolution.ResolvedName,
+            resolution.DeclaringUnitName,
+            out bool ambiguous);
+
+        if (ambiguous || declaration is null)
+            return "Unknown";
+
+        return declaration.Type.Kind switch
+        {
+            "Class" => "Class",
+            "Interface" => "Interface",
+            _ => "Unknown"
+        };
+    }
+
     public bool TryResolvePointer(
         string typeName,
         out TypeResolution resolution)

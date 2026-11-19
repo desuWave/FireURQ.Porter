@@ -146,7 +146,10 @@ public static class SemanticModelBuilder
         return new SemanticClass(
             value.Name,
             value.BaseType,
-            members);
+            members)
+        {
+            AncestorTypes = value.AncestorTypes
+        };
     }
 
     private static SemanticInterface BuildInterface(DelphiInterface value)

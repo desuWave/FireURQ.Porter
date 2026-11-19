@@ -840,15 +840,17 @@ if (MatchKeyword("interface"))
                 MatchKeyword("object"))
             {
                 string? baseType = null;
+                var ancestorTypes = new List<string>();
 
                 if (MatchSymbol("("))
                 {
                     baseType =
                         ReadQualifiedIdentifier();
+                    ancestorTypes.Add(baseType);
 
                     while (MatchSymbol(","))
                     {
-                        ReadQualifiedIdentifier();
+                        ancestorTypes.Add(ReadQualifiedIdentifier());
                     }
 
                     ExpectSymbol(")");
@@ -864,7 +866,10 @@ if (MatchKeyword("interface"))
                         new DelphiClass(
                             name,
                             baseType,
-                            new List<DelphiClassMember>()));
+                            new List<DelphiClassMember>())
+                        {
+                            AncestorTypes = ancestorTypes
+                        });
 
                     continue;
                 }
@@ -1118,7 +1123,10 @@ if (MatchKeyword("interface"))
                     new DelphiClass(
                         name,
                         baseType,
-                        members));
+                        members)
+                    {
+                        AncestorTypes = ancestorTypes
+                    });
 
                 continue;
             }
@@ -1804,6 +1812,14 @@ private static string InferConstantType(
         }
 
         MatchSymbol(";");
+
+        // Delphi permits a default-property directive
+        // after the property declaration terminator.
+        if (MatchKeyword("default"))
+        {
+            isDefault = true;
+            MatchSymbol(";");
+        }
 
         return new DelphiProperty(
             name,

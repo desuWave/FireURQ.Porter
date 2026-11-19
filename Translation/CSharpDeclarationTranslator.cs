@@ -990,9 +990,49 @@ public sealed class CSharpDeclarationTranslator
     private string TranslateClass(SemanticClass @class)
     {
         var builder = new StringBuilder();
-        string baseType = string.IsNullOrWhiteSpace(@class.BaseType)
-            ? " : global::FireURQ.Runtime.TObject"
-            : $" : {MapType(@class.BaseType)}";
+        var ancestors = @class.AncestorTypes.Count > 0
+            ? @class.AncestorTypes
+            : string.IsNullOrWhiteSpace(@class.BaseType)
+                ? Array.Empty<string>()
+                : new[] { @class.BaseType };
+
+        var emittedAncestors = new List<string>();
+
+        if (ancestors.Count == 0)
+        {
+            emittedAncestors.Add("global::FireURQ.Runtime.TObject");
+        }
+        else
+        {
+            string first = ancestors[0];
+            string firstKind = _resolver?.ResolveDeclarationKind(
+                first, _unitName) ?? "Unknown";
+
+            if (firstKind == "Interface")
+                emittedAncestors.Add("global::FireURQ.Runtime.TObject");
+
+            emittedAncestors.Add(MapType(first));
+
+            for (int index = 1; index < ancestors.Count; index++)
+            {
+                string ancestor = ancestors[index];
+                string kind = _resolver?.ResolveDeclarationKind(
+                    ancestor, _unitName) ?? "Unknown";
+
+                // Do not guess whether unresolved types are interfaces.
+                // Multiple class inheritance is not legal C#.
+                if (kind != "Interface" &&
+                    !ancestor.Equals("IInterface", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string mapped = MapType(ancestor);
+                if (!emittedAncestors.Contains(
+                    mapped, StringComparer.OrdinalIgnoreCase))
+                    emittedAncestors.Add(mapped);
+            }
+        }
+
+        string baseType = " : " + string.Join(", ", emittedAncestors);
 
         bool hasAbstractMethods = GetPendingAbstractMethods(
             @class,
@@ -1013,6 +1053,8 @@ public sealed class CSharpDeclarationTranslator
                     : member).ToArray();
         }
         AppendMembers(builder, members, isInterface: false);
+        AppendDirectInterfaceAdapters(builder, @class);
+        AppendRuntimeIInterfaceAdapter(builder, @class);
         builder.Append('}');
         return builder.ToString();
     }
@@ -1031,6 +1073,429 @@ public sealed class CSharpDeclarationTranslator
         AppendMembers(builder, @interface.Members, isInterface: true);
         builder.Append('}');
         return builder.ToString();
+    }
+
+    private void AppendRuntimeIInterfaceAdapter(
+        StringBuilder builder, SemanticClass owner)
+    {
+        if (!owner.AncestorTypes.Any(ancestor =>
+            ancestor.Equals("IInterface", StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        bool HasMethod(string name) => owner.Members.Any(member =>
+            member.Kind == SemanticMemberKind.Method &&
+            member.Name.Equals(name, StringComparison.OrdinalIgnoreCase) &&
+            member.Parameters.Count == 0 &&
+            string.Equals(MapType(member.Type), "int", StringComparison.Ordinal));
+
+        if (!HasMethod("_AddRef") || !HasMethod("_Release"))
+            return;
+
+        builder.AppendLine("    int IInterface._AddRef() => _AddRef();");
+        builder.AppendLine("    int IInterface._Release() => _Release();");
+    }
+
+    private void AppendDirectInterfaceAdapters(
+        StringBuilder builder,
+        SemanticClass owner)
+    {
+        if (_currentUnit is null || _resolver is null)
+            return;
+
+        var ancestors = owner.AncestorTypes.Count > 0
+            ? owner.AncestorTypes
+            : string.IsNullOrWhiteSpace(owner.BaseType)
+                ? Array.Empty<string>()
+                : new[] { owner.BaseType };
+
+        foreach (string ancestor in ancestors)
+        {
+            if (_resolver.ResolveDeclarationKind(
+                    ancestor, _currentUnit.Name) != "Interface")
+                continue;
+
+            TypeResolution resolution = _resolver.Resolve(
+                ancestor, _currentUnit.Name);
+
+            if (!resolution.IsResolved ||
+                string.IsNullOrWhiteSpace(resolution.DeclaringUnitName))
+                continue;
+
+            SemanticUnit? declaringUnit = _units.FirstOrDefault(unit =>
+                unit.Name.Equals(
+                    resolution.DeclaringUnitName,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (declaringUnit is null &&
+                _currentUnit.Name.Equals(
+                    resolution.DeclaringUnitName,
+                    StringComparison.OrdinalIgnoreCase))
+                declaringUnit = _currentUnit;
+
+            if (declaringUnit is null)
+                continue;
+
+            string interfaceName = resolution.ResolvedName;
+            int separator = interfaceName.LastIndexOf('.');
+            if (separator >= 0)
+                interfaceName = interfaceName[(separator + 1)..];
+
+            SemanticInterface? contract = declaringUnit.Interfaces
+                .FirstOrDefault(candidate =>
+                    candidate.Name.Equals(
+                        interfaceName,
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (contract is null)
+                continue;
+
+            foreach (SemanticMember required in contract.Members)
+            {
+                if (required.Kind == SemanticMemberKind.Method &&
+                    AppendResolvedInterfaceMethodAdapter(
+                        builder, owner, contract, required))
+                    continue;
+
+                if (required.Kind == SemanticMemberKind.Property)
+                {
+                    AppendReadOnlyInterfacePropertyAdapter(
+                        builder, owner, contract, required);
+                    continue;
+                }
+
+                if (required.Kind != SemanticMemberKind.Method)
+                    continue;
+
+                var matches = owner.Members.Where(candidate =>
+                {
+                    if (candidate.Kind != SemanticMemberKind.Method ||
+                        candidate.IsClassMethod ||
+                        candidate.IsConstructor ||
+                        candidate.IsDestructor ||
+                        candidate.Parameters.Count != required.Parameters.Count ||
+                        !candidate.Name.Equals(
+                            required.Name,
+                            StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(
+                            MapType(candidate.Type),
+                            MapType(required.Type),
+                            StringComparison.Ordinal))
+                        return false;
+
+                    for (int index = 0; index < required.Parameters.Count; index++)
+                    {
+                        SemanticParameter expected = required.Parameters[index];
+                        SemanticParameter actual = candidate.Parameters[index];
+
+                        bool expectedConst = expected.Kind.Equals(
+                            "Const", StringComparison.OrdinalIgnoreCase);
+                        bool actualConst = actual.Kind.Equals(
+                            "Const", StringComparison.OrdinalIgnoreCase);
+                        bool expectedValue = expected.Kind.Equals(
+                            "Value", StringComparison.OrdinalIgnoreCase);
+                        bool actualValue = actual.Kind.Equals(
+                            "Value", StringComparison.OrdinalIgnoreCase);
+
+                        bool expectedVar = expected.Kind.Equals(
+                            "Var", StringComparison.OrdinalIgnoreCase);
+                        bool actualVar = actual.Kind.Equals(
+                            "Var", StringComparison.OrdinalIgnoreCase);
+                        bool expectedOut = expected.Kind.Equals(
+                            "Out", StringComparison.OrdinalIgnoreCase);
+                        bool actualOut = actual.Kind.Equals(
+                            "Out", StringComparison.OrdinalIgnoreCase);
+
+                        if (!((expectedConst && actualConst) ||
+                              (expectedValue && actualValue) ||
+                              (expectedVar && actualVar) ||
+                              (expectedOut && actualOut)) ||
+                            !string.Equals(
+                                MapType(expected.Type),
+                                MapType(actual.Type),
+                                StringComparison.Ordinal))
+                            return false;
+                    }
+
+                    return true;
+                }).ToArray();
+
+                if (matches.Length != 1)
+                    continue;
+
+                SemanticMember implementation = matches[0];
+
+                bool isPublicImplementation =
+                    string.Equals(
+                        implementation.Visibility,
+                        "Public",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        implementation.Visibility,
+                        "Published",
+                        StringComparison.OrdinalIgnoreCase);
+
+                bool requiresConstAdapter =
+                    implementation.Parameters.Any(parameter =>
+                        parameter.Kind.Equals(
+                            "Const",
+                            StringComparison.OrdinalIgnoreCase));
+
+                if (isPublicImplementation && !requiresConstAdapter)
+                    continue;
+
+                if (owner.Members.Any(candidate =>
+                    candidate.Kind == SemanticMemberKind.MethodResolution &&
+                    candidate.Name.Contains(
+                        required.Name,
+                        StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                string resultType = string.IsNullOrWhiteSpace(required.Type)
+                    ? "void"
+                    : MapType(required.Type);
+
+                var signatureParts = new List<string>();
+                var argumentParts = new List<string>();
+
+                foreach (SemanticParameter parameter in required.Parameters)
+                {
+                    string parameterModifier =
+                        MapParameterKind(parameter.Kind);
+
+                    string argumentModifier =
+                        parameter.Kind.Equals(
+                            "Const", StringComparison.OrdinalIgnoreCase)
+                            ? "in "
+                            : parameterModifier;
+
+                    signatureParts.Add(
+                        $"{parameterModifier}{MapType(parameter.Type)} {parameter.Name}");
+
+                    argumentParts.Add(
+                        $"{argumentModifier}{parameter.Name}");
+                }
+                string signature = string.Join(", ", signatureParts);
+                string arguments = string.Join(", ", argumentParts);
+
+                builder.AppendLine(
+                    $"    {resultType} {contract.Name}.{required.Name}({signature}) => " +
+                    $"{implementation.Name}({arguments});");
+            }
+        }
+    }
+
+    private bool AppendResolvedInterfaceMethodAdapter(
+        StringBuilder builder,
+        SemanticClass owner,
+        SemanticInterface contract,
+        SemanticMember required)
+    {
+        string interfaceMethod = contract.Name + "." + required.Name;
+
+        var resolutions = owner.Members.Where(member =>
+            member.Kind == SemanticMemberKind.MethodResolution &&
+            member.Name.Equals(
+                interfaceMethod,
+                StringComparison.OrdinalIgnoreCase)).ToArray();
+
+        if (resolutions.Length != 1)
+            return false;
+
+        string targetName = resolutions[0].Type.Trim();
+
+        var implementations = owner.Members.Where(member =>
+        {
+            if (member.Kind != SemanticMemberKind.Method ||
+                member.IsClassMethod ||
+                member.IsConstructor ||
+                member.IsDestructor ||
+                !member.Name.Equals(
+                    targetName,
+                    StringComparison.OrdinalIgnoreCase) ||
+                member.Parameters.Count != required.Parameters.Count)
+                return false;
+
+            string expectedReturn = string.IsNullOrWhiteSpace(required.Type)
+                ? "void"
+                : MapType(required.Type);
+
+            string actualReturn = string.IsNullOrWhiteSpace(member.Type)
+                ? "void"
+                : MapType(member.Type);
+
+            if (!string.Equals(
+                    expectedReturn,
+                    actualReturn,
+                    StringComparison.Ordinal))
+                return false;
+
+            for (int i = 0; i < required.Parameters.Count; i++)
+            {
+                SemanticParameter expected = required.Parameters[i];
+                SemanticParameter actual = member.Parameters[i];
+
+                if (!string.Equals(
+                        MapType(expected.Type),
+                        MapType(actual.Type),
+                        StringComparison.Ordinal))
+                    return false;
+
+                string expectedKind = expected.Kind.Trim().ToLowerInvariant();
+                string actualKind = actual.Kind.Trim().ToLowerInvariant();
+
+                bool compatible =
+                    (expectedKind is "const" or "value" &&
+                     actualKind is "const" or "value") ||
+                    (expectedKind == "var" && actualKind == "var") ||
+                    (expectedKind == "out" && actualKind == "out");
+
+                if (!compatible)
+                    return false;
+            }
+
+            return true;
+        }).ToArray();
+
+        if (implementations.Length != 1)
+            return false;
+
+        SemanticMember implementation = implementations[0];
+
+        string resultType = string.IsNullOrWhiteSpace(required.Type)
+            ? "void"
+            : MapType(required.Type);
+
+        var signatureParts = new List<string>();
+        var argumentParts = new List<string>();
+
+        for (int i = 0; i < required.Parameters.Count; i++)
+        {
+            SemanticParameter expected = required.Parameters[i];
+            SemanticParameter actual = implementation.Parameters[i];
+
+            signatureParts.Add(
+                $"{MapParameterKind(expected.Kind)}" +
+                $"{MapType(expected.Type)} {expected.Name}");
+
+            string argumentModifier =
+                actual.Kind.Equals(
+                    "Const",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? "in "
+                    : MapParameterKind(actual.Kind);
+
+            argumentParts.Add(argumentModifier + expected.Name);
+        }
+
+        builder.AppendLine(
+            $"    {resultType} {contract.Name}.{required.Name}" +
+            $"({string.Join(", ", signatureParts)}) => " +
+            $"{implementation.Name}({string.Join(", ", argumentParts)});");
+
+        return true;
+    }
+    private void AppendReadOnlyInterfacePropertyAdapter(
+        StringBuilder builder,
+        SemanticClass owner,
+        SemanticInterface contract,
+        SemanticMember property)
+    {
+        if (property.Kind != SemanticMemberKind.Property ||
+            property.Parameters.Count != 0 ||
+            string.IsNullOrWhiteSpace(property.ReadAccessor))
+            return;
+
+        if (owner.Members.Any(candidate =>
+            candidate.Kind == SemanticMemberKind.Property &&
+            candidate.Name.Equals(
+                property.Name,
+                StringComparison.OrdinalIgnoreCase)))
+            return;
+
+        string propertyType = MapType(property.Type);
+        string ResolveAccessor(string accessor)
+        {
+            string interfaceMethod = contract.Name + "." + accessor;
+
+            var mappings = owner.Members.Where(candidate =>
+                candidate.Kind == SemanticMemberKind.MethodResolution &&
+                candidate.Name.Equals(
+                    interfaceMethod,
+                    StringComparison.OrdinalIgnoreCase)).ToArray();
+
+            return mappings.Length == 1
+                ? mappings[0].Type.Trim()
+                : accessor;
+        }
+
+        string getterName =
+            ResolveAccessor(property.ReadAccessor.Trim());
+
+        var getters = owner.Members.Where(candidate =>
+            candidate.Kind == SemanticMemberKind.Method &&
+            !candidate.IsClassMethod &&
+            !candidate.IsConstructor &&
+            !candidate.IsDestructor &&
+            candidate.Parameters.Count == 0 &&
+            candidate.Name.Equals(
+                getterName,
+                StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(
+                MapType(candidate.Type),
+                propertyType,
+                StringComparison.Ordinal)).ToArray();
+
+        if (getters.Length != 1)
+            return;
+
+        string getter = getters[0].Name;
+
+        if (string.IsNullOrWhiteSpace(property.WriteAccessor))
+        {
+            builder.AppendLine(
+                $"    {propertyType} {contract.Name}.{property.Name} => " +
+                $"{getter}();");
+            return;
+        }
+
+        string setterName =
+            ResolveAccessor(property.WriteAccessor.Trim());
+
+        var setters = owner.Members.Where(candidate =>
+            candidate.Kind == SemanticMemberKind.Method &&
+            !candidate.IsClassMethod &&
+            !candidate.IsConstructor &&
+            !candidate.IsDestructor &&
+            candidate.Parameters.Count == 1 &&
+            candidate.Name.Equals(
+                setterName,
+                StringComparison.OrdinalIgnoreCase) &&
+            string.IsNullOrWhiteSpace(candidate.Type) &&
+            string.Equals(
+                MapType(candidate.Parameters[0].Type),
+                propertyType,
+                StringComparison.Ordinal) &&
+            (candidate.Parameters[0].Kind.Equals(
+                 "Const", StringComparison.OrdinalIgnoreCase) ||
+             candidate.Parameters[0].Kind.Equals(
+                 "Value", StringComparison.OrdinalIgnoreCase)))
+            .ToArray();
+
+        if (setters.Length != 1)
+            return;
+
+        string argument = setters[0].Parameters[0].Kind.Equals(
+            "Const", StringComparison.OrdinalIgnoreCase)
+            ? "in value"
+            : "value";
+
+        builder.AppendLine(
+            $"    {propertyType} {contract.Name}.{property.Name}");
+        builder.AppendLine("    {");
+        builder.AppendLine($"        get => {getter}();");
+        builder.AppendLine(
+            $"        set => {setters[0].Name}({argument});");
+        builder.AppendLine("    }");
     }
 
     private void AppendMembers(StringBuilder builder, IReadOnlyList<SemanticMember> members, bool isInterface)
@@ -1092,7 +1557,9 @@ public sealed class CSharpDeclarationTranslator
     private void AppendMethod(StringBuilder builder, SemanticMember member, bool isInterface)
     {
         string visibility = isInterface ? string.Empty : MapVisibility(member.Visibility);
-        string returnType = MapType(member.Type);
+        string returnType = string.IsNullOrWhiteSpace(member.Type)
+            ? "void"
+            : MapType(member.Type);
         string parameters = string.Join(", ", member.Parameters.Select(parameter =>
             $"{MapParameterKind(parameter.Kind)}{MapType(parameter.Type)} {parameter.Name}"));
         builder.AppendLine($"    {visibility}{returnType} {member.Name}({parameters});");
@@ -1100,6 +1567,11 @@ public sealed class CSharpDeclarationTranslator
 
     private void AppendProperty(StringBuilder builder, SemanticMember member, IReadOnlyList<SemanticMember> members, bool isInterface)
     {
+        // Indexed Delphi properties retain their accessor methods.
+        // Expression-level property rewriting is handled separately.
+        if (member.Parameters.Count > 0)
+            return;
+
         string visibility = isInterface ? string.Empty : MapVisibility(member.Visibility);
         string propertyType = MapType(member.Type);
 

@@ -117,6 +117,16 @@ public sealed class DelphiToCSharpTranslator
                     }
                 }
 
+                // Preserve the optional Resource_Load flags.
+                if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+                    function.Name.Equals("Resource_Load", StringComparison.OrdinalIgnoreCase) &&
+                    function.Parameters.Count == 4 &&
+                    i >= 2 &&
+                    MapType(parameter.Type) == "bool")
+                {
+                    builder.Append(" = false");
+                }
+
                 // Preserve the defaults of Td2dCore.Texture_Load.
                 if (i > 0 &&
                     string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
@@ -958,6 +968,10 @@ public sealed class DelphiToCSharpTranslator
                 return "global::FireURQ.Runtime.D3D8." + constant;
         }
 
+        if (text.Equals("Self", StringComparison.OrdinalIgnoreCase) &&
+            _currentTypeContext?.OwnerClass is not null)
+            return "this";
+
         if (text.Equals("true", StringComparison.OrdinalIgnoreCase))
             return "true";
 
@@ -994,6 +1008,15 @@ public sealed class DelphiToCSharpTranslator
                 indent,
                 $"// TODO: Delphi assignment: {statement.Text}");
 
+            return;
+        }
+
+        if (TryTranslateIndexedPropertyWrite(
+            statement.Assignment.Target,
+            statement.Assignment.Value,
+            out string indexedWrite))
+        {
+            AppendLine(builder, indent, indexedWrite);
             return;
         }
 
@@ -1055,8 +1078,17 @@ public sealed class DelphiToCSharpTranslator
             }
         }
 
-        string target =
-            TranslateExpression(targetExpression);
+        string target;
+        bool previousAssignmentTarget = _translatingAssignmentTarget;
+        _translatingAssignmentTarget = true;
+        try
+        {
+            target = TranslateExpression(targetExpression);
+        }
+        finally
+        {
+            _translatingAssignmentTarget = previousAssignmentTarget;
+        }
 
         string value =
             IsNilLiteral(statement.Assignment.Value) &&
@@ -1084,6 +1116,19 @@ public sealed class DelphiToCSharpTranslator
                 AppendLine(builder, indent, "l_Index = global::System.IntPtr.Add(l_Index, 2);");
                 return;
             }
+        }
+
+        // Resource_Load writes a Longword through its PLongword argument.
+        if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+            function.Name.Equals("Resource_Load", StringComparison.OrdinalIgnoreCase) &&
+            targetExpression.Kind == ExpressionParser.ExpressionKind.Dereference &&
+            targetExpression.Children.Count == 1 &&
+            targetExpression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            targetExpression.Children[0].Text.Equals("aSize", StringComparison.OrdinalIgnoreCase))
+        {
+            AppendLine(builder, indent,
+                $"global::System.Runtime.InteropServices.Marshal.WriteInt32(aSize, unchecked((int)({value})));" );
+            return;
         }
 
         // D3DX reports unsigned dimensions; Delphi TPoint stores signed coordinates.
@@ -1692,21 +1737,112 @@ public sealed class DelphiToCSharpTranslator
         return $"{target}.{member}";
     }
 
+    private bool _translatingAssignmentTarget;
+
+    private bool TryTranslateIndexedPropertyWrite(
+        ExpressionParser.ExpressionNode target,
+        ExpressionParser.ExpressionNode value,
+        out string translated)
+    {
+        translated = string.Empty;
+
+        if (_resolver is null ||
+            target.Kind != ExpressionParser.ExpressionKind.IndexAccess ||
+            target.Children.Count < 2)
+            return false;
+
+        var access = target.Children[0];
+
+        if (access.Kind != ExpressionParser.ExpressionKind.MemberAccess ||
+            access.Children.Count != 2 ||
+            access.Children[1].Kind != ExpressionParser.ExpressionKind.Identifier)
+            return false;
+
+        string? receiverType =
+            ResolveExpressionType(access.Children[0]);
+
+        if (receiverType is null ||
+            !_resolver.TryResolveIndexedProperty(
+                receiverType,
+                access.Children[1].Text,
+                _unitName,
+                out SemanticMember property) ||
+            property.Parameters.Count != target.Children.Count - 1 ||
+            string.IsNullOrWhiteSpace(property.WriteAccessor))
+            return false;
+
+        string receiver = TranslateExpression(access.Children[0]);
+
+        var arguments = target.Children
+            .Skip(1)
+            .Select(TranslateExpression)
+            .ToList();
+
+        arguments.Add(TranslateExpression(value));
+
+        translated =
+            $"{receiver}.{property.WriteAccessor}(" +
+            string.Join(", ", arguments) + ");";
+
+        return true;
+    }
+
+    private bool TryTranslateIndexedPropertyRead(
+        ExpressionParser.ExpressionNode expression,
+        out string translated)
+    {
+        translated = string.Empty;
+
+        if (_translatingAssignmentTarget ||
+            _resolver is null ||
+            expression.Children.Count < 2)
+            return false;
+
+        var access = expression.Children[0];
+
+        if (access.Kind != ExpressionParser.ExpressionKind.MemberAccess ||
+            access.Children.Count != 2 ||
+            access.Children[1].Kind != ExpressionParser.ExpressionKind.Identifier)
+            return false;
+
+        string? receiverType =
+            ResolveExpressionType(access.Children[0]);
+
+        if (receiverType is null ||
+            !_resolver.TryResolveIndexedProperty(
+                receiverType,
+                access.Children[1].Text,
+                _unitName,
+                out SemanticMember property) ||
+            property.Parameters.Count != expression.Children.Count - 1 ||
+            string.IsNullOrWhiteSpace(property.ReadAccessor))
+            return false;
+
+        string receiver = TranslateExpression(access.Children[0]);
+
+        string arguments = string.Join(", ",
+            expression.Children.Skip(1).Select(TranslateExpression));
+
+        translated =
+            $"{receiver}.{property.ReadAccessor}({arguments})";
+
+        return true;
+    }
+
     private string TranslateIndexAccess(
         ExpressionParser.ExpressionNode expression)
     {
         if (expression.Children.Count < 2)
             return expression.Text;
 
-        string target =
-            TranslateExpression(
-                expression.Children[0]);
+        if (TryTranslateIndexedPropertyRead(expression, out string translated))
+            return translated;
 
-        string index =
-            TranslateExpression(
-                expression.Children[1]);
+        string target = TranslateExpression(expression.Children[0]);
+        string indices = string.Join(", ",
+            expression.Children.Skip(1).Select(TranslateExpression));
 
-        return $"{target}[{index}]";
+        return $"{target}[{indices}]";
     }
 
 private bool TryTranslateStreamCall(
@@ -2032,6 +2168,30 @@ private string TranslateCall(
 
     ExpressionParser.ExpressionNode targetExpression =
         expression.Children[0];
+
+    // Preserve the address of a UInt32 size argument in Resource_Load.
+    if (expression.Children.Count >= 3 &&
+        expression.Children.Count <= 5 &&
+        ((targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+          targetExpression.Text.Equals("Resource_Load", StringComparison.OrdinalIgnoreCase) &&
+          string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase)) ||
+         (targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+          targetExpression.Children.Count == 2 &&
+          targetExpression.Children[1].Text.Equals("Resource_Load", StringComparison.OrdinalIgnoreCase))) &&
+        expression.Children[2] is { Kind: ExpressionParser.ExpressionKind.AddressOf } sizeAddress &&
+        sizeAddress.Children.Count == 1 &&
+        sizeAddress.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } sizeVariable &&
+        MapType(ResolveExpressionType(sizeVariable)) == "uint")
+    {
+        string call = TranslateCallTarget(targetExpression);
+        string resourceArguments = string.Join(", ", expression.Children.Skip(1)
+            .Select((argument, index) => index == 1
+                ? "__fireurqSizeAddress"
+                : TranslateExpression(argument)));
+        return "global::FireURQ.Runtime.DelphiGeometry.WithUInt32Address(" +
+            $"ref {TranslateExpression(sizeVariable)}, __fireurqSizeAddress => " +
+            $"{call}({resourceArguments}))";
+    }
 
     if (string.Equals(_unitName, "f2PicturePool", StringComparison.OrdinalIgnoreCase) &&
         expression.Children.Count == 6 &&

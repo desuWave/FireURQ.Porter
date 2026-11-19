@@ -67,6 +67,16 @@ namespace FireURQ.Runtime
             }
         }
 
+        public static unsafe TResult WithUInt32Address<TResult>(
+            ref uint value,
+            global::System.Func<global::System.IntPtr, TResult> action)
+        {
+            fixed (uint* address = &value)
+            {
+                return action((global::System.IntPtr)address);
+            }
+        }
+
         public static TPoint Point(int x, int y) =>
             new TPoint(x, y);
 

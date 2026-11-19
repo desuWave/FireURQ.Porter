@@ -21,15 +21,21 @@ public sealed class ProjectTranslator
     private ProjectTranslator(
         TypeResolver? resolver,
         string? unitName,
-        IReadOnlyList<SemanticUnit>? units = null)
+        IReadOnlyList<SemanticUnit>? units = null,
+        bool? usesStreamRuntime = null,
+        bool? usesJclStringListRuntime = null,
+        bool? usesStringListRuntime = null)
     {
         _resolver = resolver;
         _units = units ?? Array.Empty<SemanticUnit>();
-        _usesStreamRuntime = RequiresStreamRuntime(_units, resolver);
-        _usesJclStringListRuntime = RequiresJclStringListRuntime(_units, resolver);
-        _usesStringListRuntime = resolver is not null &&
-            RequiresListRuntime(_units, resolver,
-                "TStrings", "TStringList", "TStringListSortCompare");
+        _usesStreamRuntime = usesStreamRuntime ??
+            RequiresStreamRuntime(_units, resolver);
+        _usesJclStringListRuntime = usesJclStringListRuntime ??
+            RequiresJclStringListRuntime(_units, resolver);
+        _usesStringListRuntime = usesStringListRuntime ??
+            (resolver is not null &&
+                RequiresListRuntime(_units, resolver,
+                    "TStrings", "TStringList", "TStringListSortCompare"));
         _declarationTranslator = new CSharpDeclarationTranslator(resolver, unitName, _units);
         _functionTranslator = new DelphiToCSharpTranslator(resolver, unitName);
     }
@@ -54,9 +60,13 @@ public sealed class ProjectTranslator
 
         var resolver = new TypeResolver(
             inputs.Select(input => input.SemanticModel));
+        var units = inputs.Select(input => input.SemanticModel).ToArray();
+        bool usesStreamRuntime = RequiresStreamRuntime(units, resolver);
+        bool usesJclStringListRuntime = RequiresJclStringListRuntime(units, resolver);
+        bool usesStringListRuntime = RequiresListRuntime(
+            units, resolver, "TStrings", "TStringList", "TStringListSortCompare");
 
-        if (RequiresStreamRuntime(
-            inputs.Select(input => input.SemanticModel), resolver))
+        if (usesStreamRuntime)
         {
             File.WriteAllText(
                 Path.Combine(runtimeDirectory, "Streams.cs"),
@@ -64,8 +74,7 @@ public sealed class ProjectTranslator
                 Encoding.UTF8);
         }
 
-        if (RequiresJclStringListRuntime(
-            inputs.Select(input => input.SemanticModel), resolver))
+        if (usesJclStringListRuntime)
         {
             File.WriteAllText(
                 Path.Combine(runtimeDirectory, "JclStringLists.cs"),
@@ -102,8 +111,7 @@ public sealed class ProjectTranslator
                 CSharpAnsiStringRuntime.Source,
                 Encoding.UTF8);
 
-            if (RequiresStreamRuntime(
-                inputs.Select(input => input.SemanticModel), resolver))
+            if (usesStreamRuntime)
             {
                 File.WriteAllText(
                     Path.Combine(runtimeDirectory, "AnsiStringStreams.cs"),
@@ -112,11 +120,7 @@ public sealed class ProjectTranslator
             }
         }
 
-        if (RequiresJclStringListRuntime(
-                inputs.Select(input => input.SemanticModel), resolver) ||
-            RequiresListRuntime(
-                inputs.Select(input => input.SemanticModel), resolver,
-                "TStrings", "TStringList", "TStringListSortCompare"))
+        if (usesJclStringListRuntime || usesStringListRuntime)
         {
             File.WriteAllText(
                 Path.Combine(runtimeDirectory, "StringListCommon.cs"),
@@ -124,9 +128,7 @@ public sealed class ProjectTranslator
                 Encoding.UTF8);
         }
 
-        if (RequiresListRuntime(
-            inputs.Select(input => input.SemanticModel), resolver,
-            "TStrings", "TStringList", "TStringListSortCompare"))
+        if (usesStringListRuntime)
         {
             File.WriteAllText(
                 Path.Combine(runtimeDirectory, "StringLists.cs"),
@@ -177,7 +179,8 @@ public sealed class ProjectTranslator
         {
             var unitTranslator = new ProjectTranslator(
                 resolver, input.SemanticModel.Name,
-                inputs.Select(item => item.SemanticModel).ToList());
+                units, usesStreamRuntime,
+                usesJclStringListRuntime, usesStringListRuntime);
 
             results.Add(unitTranslator.TranslateUnit(input, outputDirectory));
         }

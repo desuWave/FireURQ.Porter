@@ -75,7 +75,11 @@ public sealed record DelphiClass(
     string Name,
     string? BaseType,
     IReadOnlyList<DelphiClassMember> Members
-) : DelphiNode;
+) : DelphiNode
+{
+    public IReadOnlyList<string> AncestorTypes { get; init; } =
+        Array.Empty<string>();
+}
 
 public sealed record DelphiInterface(
     string Name,

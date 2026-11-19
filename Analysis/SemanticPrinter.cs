@@ -40,6 +40,12 @@ public static class SemanticPrinter
                     $"  BASE: {value.BaseType}");
             }
 
+            if (value.AncestorTypes.Count > 0)
+            {
+                Console.WriteLine(
+                    $"  ANCESTORS: {string.Join(", ", value.AncestorTypes)}");
+            }
+
             PrintMembers(value.Members);
         }
 

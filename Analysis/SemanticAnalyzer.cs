@@ -113,7 +113,10 @@ public static class SemanticAnalyzer
         return new SemanticClass(
             value.Name,
             value.BaseType,
-            members);
+            members)
+        {
+            AncestorTypes = value.AncestorTypes
+        };
     }
 
     private static SemanticInterface AnalyzeInterface(DelphiInterface value)

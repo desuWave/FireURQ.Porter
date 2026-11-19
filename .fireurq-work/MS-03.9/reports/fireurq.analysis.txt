@@ -1,0 +1,1648 @@
+================================
+ FireURQ Analysis Report
+================================
+
+================================
+ Project Summary
+================================
+
+Files:             31
+Tokens:            74776
+Classes:           74
+Interfaces:        8
+Types:             40
+Constants:         261
+Functions:         787
+
+Files
+--------------------------------
+f2/f2Application.pas
+f2/f2Context.pas
+f2/f2Decorators.pas
+f2/f2DecorScript.pas
+f2/f2FontGen.pas
+f2/f2FontLoad.pas
+f2/f2FontPool.pas
+f2/f2Interpreter.pas
+f2/f2LinkParser.pas
+f2/f2PicturePool.pas
+f2/f2SaveLoadManager.pas
+f2/f2Scene.pas
+f2/f2ScnMain.pas
+f2/f2ScnSaveLoad.pas
+f2/f2ScnSplash.pas
+f2/f2SettingsStorage.pas
+f2/f2Skins.pas
+f2/f2TextPane.pas
+f2/f2Types.pas
+f2/f2Utils.pas
+furqAbout.pas
+furqBase.pas
+furqContext.pas
+furqDecoders.pas
+furqExprEval.pas
+furqFiler.pas
+furqLoader.pas
+furqTypes.pas
+furqUtils.pas
+furqWinMain.pas
+MD5.pas
+
+
+Semantic Classes
+--------------------------------
+Class: Tf2Application [Unit=f2Application]
+  Field              f_DebugMode                         Type=Boolean
+  Field              f_DefaultButtonView                 Type=Id2dFramedButtonView
+  Field              f_DefaultTextFont                   Type=Id2dFont
+  Field              f_DefaultMenuFont                   Type=Id2dFont
+  Field              f_DefaultTexture                    Type=Id2dTexture
+  Field              f_IsFromExe                         Type=Boolean
+  Field              f_IsFromPack                        Type=Boolean
+  Field              f_LogToFile                         Type=Boolean
+  Field              f_QuestFileName                     Type=string
+  Field              f_QuestToOpen                       Type=string
+  Field              f_SavePath                          Type=AnsiString
+  Field              f_SettingsStorage                   Type=Tf2SettingsStorage
+  Field              f_Skin                              Type=Tf2Skin
+  Method             pm_GetDefaultButtonView             Type=Id2dFramedButtonView
+  Method             pm_GetDefaultTextFont               Type=Id2dFont
+  Method             pm_GetDefaultMenuFont               Type=Id2dFont
+  Method             pm_GetDefaultTexture                Type=Id2dTexture
+  Method             pm_GetSavePath                      Type=AnsiString
+  Method             pm_GetSettingsStorage               Type=Tf2SettingsStorage
+  Method             Init                                Type=Boolean
+  Method             LoadGlobalResources                 Type=
+  Method             UnloadGlobalResources               Type=
+  Method             Create                              Type=
+  Property           DebugMode                           Type=Boolean
+  Property           DefaultButtonView                   Type=Id2dFramedButtonView
+  Property           DefaultTextFont                     Type=Id2dFont
+  Property           DefaultMenuFont                     Type=Id2dFont
+  Property           DefaultTexture                      Type=Id2dTexture
+  Property           IsFromExe                           Type=Boolean
+  Property           IsFromPack                          Type=Boolean
+  Property           LogToFile                           Type=Boolean
+  Property           QuestFileName                       Type=string
+  Property           QuestToOpen                         Type=string
+  Property           SavePath                            Type=AnsiString
+  Property           SettingsStorage                     Type=Tf2SettingsStorage
+  Property           Skin                                Type=Tf2Skin
+Class: Tf2Context [Unit=f2Context]
+  Field              f_BtnMenuAlign                      Type=Td2dAlign
+  Field              f_CurrentMusic                      Type=AnsiString
+  Field              f_Decorators                        Type=Tf2DecoratorList
+  Field              f_DefTPLeft                         Type=Single
+  Field              f_DefTPTop                          Type=Single
+  Field              f_DefTPWidth                        Type=Single
+  Field              f_DefTPHeight                       Type=Single
+  Field              f_DefBtnAlign                       Type=Td2dTextAlignType
+  Field              f_DefBtnTxtAlign                    Type=Td2dTextAlignType
+  Field              f_DefButtonFrame                    Type=Id2dFramedButtonView
+  Field              f_DefMenuVisualStyle                Type=Td2dMenuVisualStyle
+  Field              f_EchoColor                         Type=Td2dColor
+  Field              f_Filename                          Type=string
+  Field              f_TextAlign                         Type=Td2dTextAlignType
+  Field              f_TextColor                         Type=Td2dColor
+  Field              f_TextFont                          Type=Id2dFont
+  Field              f_TextPane                          Type=Tf2TextPane
+  Field              f_FontPool                          Type=Tf2FontPool
+  Field              f_FpFilename                        Type=string
+  Field              f_LinkColor                         Type=Td2dColor
+  Field              f_LinkHColor                        Type=Td2dColor
+  Field              f_LinkMenuAlign                     Type=Td2dAlign
+  Field              f_LocationText                      Type=string
+  Field              f_VoiceFilename                     Type=string
+  Field              f_MenuVisualStyle                   Type=Td2dMenuVisualStyle
+  Field              f_MenuFont                          Type=Id2dFont
+  Field              f_OnDecoratorAction                 Type=Tf2OnActionProc
+  Field              f_Path                              Type=string
+  Field              f_PicturePool                       Type=Id2dPictureProvider
+  Field              f_Skin                              Type=Tf2Skin
+  Field              f_SettingsStorage                   Type=Tf2SettingsStorage
+  Method             ParseDecorVar                       Type=Boolean
+  Method             AddText                             Type=
+  Method             AddLink                             Type=
+  Method             CheckIfNumber                       Type=
+  Method             pm_GetActionsData                   Type=IFURQActionData
+  Method             Cleanup                             Type=
+  Method             DoLoadData                          Type=
+  Method             DoSaveData                          Type=
+  Method             InitSysVariables                    Type=
+  Method             SetSysVariables                     Type=
+  Method             GetVirtualVariable                  Type=Variant
+  Method             IsSystemOrVirtualVariable           Type=Boolean
+  Method             SetVirtualVariables                 Type=Boolean
+  Method             Create                              Type=
+  Method             AddTextDecorator                    Type=
+  Method             AddRectDecorator                    Type=
+  Method             AddPictureDecorator                 Type=
+  Method             AddAnimationDecorator               Type=
+  Method             AddGIFDecorator                     Type=
+  Method             AddClickAreaDecorator               Type=
+  Method             AddImageButtonDecorator             Type=
+  Method             AddTextButtonDecorator              Type=
+  Method             AllowActionDecorators               Type=
+  Method             DoActionFinal                       Type=Boolean
+  Method             ClearButtons                        Type=
+  Method             ClearText                           Type=
+  Method             DropLinks                           Type=
+  Method             FadeMusic                           Type=
+  Method             GetButtonFrame                      Type=Id2dFramedButtonView
+  Method             GetDecorator                        Type=Tf2BaseDecorator
+  Method             GetMouseDecorator                   Type=Tf2BaseDecorator
+  Method             KillSettingsStorage                 Type=
+  Method             MusicPlay                           Type=
+  Method             MusicStop                           Type=
+  Method             OutPicture                          Type=
+  Method             OutText                             Type=
+  Method             Restart                             Type=
+  Method             SoundPlay                           Type=
+  Method             SoundStop                           Type=
+  Method             SystemProc                          Type=Boolean
+  Method             VoicePlay                           Type=
+  Method             VoiceStop                           Type=
+  Property           Decorators                          Type=Tf2DecoratorList
+  Property           EchoColor                           Type=Td2dColor
+  Property           LinkColor                           Type=Td2dColor
+  Property           LinkHColor                          Type=Td2dColor
+  Property           LocationText                        Type=string
+  Property           MenuFont                            Type=Id2dFont
+  Property           MenuVisualStyle                     Type=Td2dMenuVisualStyle
+  Property           OnDecoratorAction                   Type=Tf2OnActionProc
+  Property           BtnMenuAlign                        Type=Td2dAlign
+  Property           FontPool                            Type=Tf2FontPool
+  Property           FpFilename                          Type=string
+  Property           LinkMenuAlign                       Type=Td2dAlign
+  Property           SettingsStorage                     Type=Tf2SettingsStorage
+  Property           Skin                                Type=Tf2Skin
+  Property           TextAlign                           Type=Td2dTextAlignType
+  Property           TextColor                           Type=Td2dColor
+  Property           TextFont                            Type=Id2dFont
+Class: Tf2SingleTargetProcessor [Unit=f2Decorators]
+  Field              f_ActionData                        Type=IFURQActionData
+  Field              f_ActionID                          Type=string
+  Field              f_Context                           Type=TFURQContext
+  Field              f_OnAction                          Type=Tf2OnActionProc
+  Field              f_Target                            Type=string
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             GetActionsData                      Type=IFURQActionData
+  Method             ExecuteAction                       Type=
+  Method             pm_SetTarget                        Type=
+  Method             Save                                Type=
+  Property           Target                              Type=string
+  Property           OnAction                            Type=Tf2OnActionProc
+Class: Tf2BaseDecorator [Unit=f2Decorators]
+  Field              f_PositionBlender                   Type=Td2dPositionBlender
+  Field              f_PosX                              Type=Single
+  Field              f_PosY                              Type=Single
+  Field              f_PosZ                              Type=Single
+  Field              f_Script                            Type=IInterfaceList
+  Field              f_ScriptDelay                       Type=Single
+  Field              f_ScriptPos                         Type=Integer
+  Field              f_ToDie                             Type=Boolean
+  Field              f_Visible                           Type=Boolean
+  Method             ExecuteNextScriptOp                 Type=
+  Method             pm_SetPosX                          Type=
+  Method             pm_SetPosY                          Type=
+  Method             pm_SetPosZ                          Type=
+  Method             pm_SetScript                        Type=
+  Method             ProcessScript                       Type=
+  Method             UpdatePositionBlending              Type=
+  Field              f_List                              Type=Tf2DecoratorList
+  Method             Cleanup                             Type=
+  Method             ClearPositionBlender                Type=
+  Method             DoExecuteScriptOperator             Type=
+  Method             DoRender                            Type=
+  Method             DoSetPosX                           Type=
+  Method             DoSetPosY                           Type=
+  Method             pm_GetDecoratorType                 Type=Tf2DecorType
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Property           ScriptDelay                         Type=Single
+  Method             BlendPosition                       Type=
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             Render                              Type=
+  Method             Save                                Type=
+  Method             Update                              Type=
+  Method             AsActionDecorator                   Type=If2ActionDecorator
+  Property           DecoratorType                       Type=Tf2DecorType
+  Property           Height                              Type=Single
+  Property           PosX                                Type=Single
+  Property           PosY                                Type=Single
+  Property           PosZ                                Type=Single
+  Property           Script                              Type=IInterfaceList
+  Property           ToDie                               Type=Boolean
+  Property           Visible                             Type=Boolean
+  Property           Width                               Type=Single
+Class: Tf2DecoratorList [Unit=f2Decorators]
+  Method             ClearObjects                        Type=
+  Method             pm_GetDecorators                    Type=Tf2BaseDecorator
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             AddDecorator                        Type=
+  Method             Clear                               Type=
+  Method             Delete                              Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+  Method             Sort                                Type=
+  Method             Update                              Type=
+  Property           Decorators                          Type=Tf2BaseDecorator
+Class: Tf2ColoredDecorator [Unit=f2Decorators]
+  Field              f_Color                             Type=Td2dColor
+  Field              f_ColorBlender                      Type=Td2dColorBlender
+  Method             pm_SetColor                         Type=
+  Method             UpdateColorBlending                 Type=
+  Method             Cleanup                             Type=
+  Method             ClearColorBlender                   Type=
+  Method             DoExecuteScriptOperator             Type=
+  Method             DoSetColor                          Type=
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             BlendColor                          Type=
+  Method             Save                                Type=
+  Method             Update                              Type=
+  Property           Color                               Type=Td2dColor
+Class: Tf2TextDecorator [Unit=f2Decorators]
+  Field              f_Actions                           Type=IJclStringList
+  Field              f_Allowed                           Type=Boolean
+  Field              f_Context                           Type=TFURQContext
+  Field              f_FontName                          Type=string
+  Field              f_LinkColorBlender                  Type=Td2dColorBlender
+  Field              f_LinkHColorBlender                 Type=Td2dColorBlender
+  Field              f_LinksEnabled                      Type=Boolean
+  Field              f_MenuAlign                         Type=Td2dAlign
+  Field              f_OnAction                          Type=Tf2OnActionProc
+  Field              f_StaticText                        Type=Td2dStaticText
+  Field              f_Text                              Type=string
+  Method             pm_GetAlign                         Type=Td2dTextAlignType
+  Method             pm_GetFont                          Type=Id2dFont
+  Method             pm_GetLineSpacing                   Type=Single
+  Method             pm_GetLinkColor                     Type=Td2dColor
+  Method             pm_GetLinkHColor                    Type=Td2dColor
+  Method             pm_GetParaSpacing                   Type=Single
+  Method             pm_GetText                          Type=string
+  Method             pm_SetAlign                         Type=
+  Method             pm_SetFont                          Type=
+  Method             pm_SetLineSpacing                   Type=
+  Method             pm_SetLinkColor                     Type=
+  Method             pm_SetLinkHColor                    Type=
+  Method             pm_SetParaSpacing                   Type=
+  Method             pm_SetText                          Type=
+  Method             pm_SetWidth                         Type=
+  Method             ProcessEvent                        Type=
+  Method             GetActionsData                      Type=IFURQActionData
+  Method             pm_GetAllowed                       Type=Boolean
+  Method             pm_GetLinksEnabled                  Type=Boolean
+  Method             pm_GetMenuAlign                     Type=Td2dAlign
+  Method             pm_SetAllowed                       Type=
+  Method             pm_SetLinksEnabled                  Type=
+  Method             pm_SetMenuAlign                     Type=
+  Method             UpdateLinksState                    Type=
+  MethodResolution   If2ActionDecorator.pm_GetEnabled    Type=pm_GetLinksEnabled
+  MethodResolution   If2ActionDecorator.pm_SetEnabled    Type=pm_SetLinksEnabled
+  Method             Cleanup                             Type=
+  Method             DoExecuteScriptOperator             Type=
+  Method             DoRender                            Type=
+  Method             DoSetColor                          Type=
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Method             DoSetPosX                           Type=
+  Method             DoSetPosY                           Type=
+  Method             pm_GetDecoratorType                 Type=Tf2DecorType
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             AsActionDecorator                   Type=If2ActionDecorator
+  Method             BlendLinkColors                     Type=
+  Method             Save                                Type=
+  Method             Update                              Type=
+  Method             _ClickHandler                       Type=
+  Property           Align                               Type=Td2dTextAlignType
+  Property           Allowed                             Type=Boolean
+  Property           Context                             Type=TFURQContext
+  Property           Font                                Type=Id2dFont
+  Property           LineSpacing                         Type=Single
+  Property           LinkColor                           Type=Td2dColor
+  Property           LinkHColor                          Type=Td2dColor
+  Property           LinksEnabled                        Type=Boolean
+  Property           MenuAlign                           Type=Td2dAlign
+  Property           ParaSpacing                         Type=Single
+  Property           Text                                Type=string
+  Property           Width                               Type=Single
+  Property           OnAction                            Type=Tf2OnActionProc
+Class: Tf2GraphicDecorator [Unit=f2Decorators]
+  Field              f_Angle                             Type=Single
+  Field              f_HotX                              Type=Integer
+  Field              f_HotY                              Type=Integer
+  Field              f_RotationBlender                   Type=Td2dSimpleBlender
+  Field              f_ScaleBlender                      Type=Td2dSimpleBlender
+  Field              f_RotSpeed                          Type=Single
+  Field              f_Scale                             Type=Single
+  Method             pm_SetAngle                         Type=
+  Method             pm_SetRotSpeed                      Type=
+  Method             pm_SetScale                         Type=
+  Field              f_AngleRad                          Type=Single
+  Method             Cleanup                             Type=
+  Method             ClearRotationBlender                Type=
+  Method             ClearScaleBlender                   Type=
+  Method             pm_SetHotX                          Type=
+  Method             pm_SetHotY                          Type=
+  Method             SetAnglePrim                        Type=
+  Method             DoExecuteScriptOperator             Type=
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             BlendAngle                          Type=
+  Method             BlendScale                          Type=
+  Method             Save                                Type=
+  Method             Update                              Type=
+  Property           Angle                               Type=Single
+  Property           HotX                                Type=Integer
+  Property           HotY                                Type=Integer
+  Property           RotSpeed                            Type=Single
+  Property           Scale                               Type=Single
+Class: Tf2BasicSpriteDecorator [Unit=f2Decorators]
+  Field              f_FlipX                             Type=Boolean
+  Field              f_FlipY                             Type=Boolean
+  Method             pm_SetFlipX                         Type=
+  Method             pm_SetFlipY                         Type=
+  Field              f_Sprite                            Type=Td2dSprite
+  Method             ApplyFlips                          Type=
+  Method             Cleanup                             Type=
+  Method             DoRender                            Type=
+  Method             DoSetColor                          Type=
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Method             pm_SetHotX                          Type=
+  Method             pm_SetHotY                          Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+  Property           FlipX                               Type=Boolean
+  Property           FlipY                               Type=Boolean
+Class: Tf2RectangleDecorator [Unit=f2Decorators]
+  Method             pm_GetDecoratorType                 Type=Tf2DecorType
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+Class: Tf2SpriteDecorator [Unit=f2Decorators]
+  Field              f_TexName                           Type=string
+  Field              f_InitRec                           Type=Tf2SpriteInitDataRec
+  Method             pm_GetDecoratorType                 Type=Tf2DecorType
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+Class: Tf2AnimationDecorator [Unit=f2Decorators]
+  Field              f_AniType                           Type=Integer
+  Field              f_InitRec                           Type=Tf2SpriteInitDataRec
+  Field              f_TexName                           Type=string
+  Method             pm_GetAniType                       Type=Integer
+  Method             pm_GetCurFrame                      Type=Integer
+  Method             pm_GetSpeed                         Type=Single
+  Method             pm_SetAniType                       Type=
+  Method             pm_SetCurFrame                      Type=
+  Method             pm_SetSpeed                         Type=
+  Method             pm_GetDecoratorType                 Type=Tf2DecorType
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+  Method             Update                              Type=
+  Property           AniType                             Type=Integer
+  Property           CurFrame                            Type=Integer
+  Property           Speed                               Type=Single
+Class: Tf2GIFDecorator [Unit=f2Decorators]
+  Field              f_GIFName                           Type=string
+  Method             pm_GetAniSpeed                      Type=Integer
+  Method             pm_GetFrame                         Type=Integer
+  Method             pm_SetAniSpeed                      Type=
+  Method             pm_SetFrame                         Type=
+  Method             pm_GetDecoratorType                 Type=Tf2DecorType
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+  Method             Update                              Type=
+  Property           AniSpeed                            Type=Integer
+  Property           Frame                               Type=Integer
+Class: Tf2ClickAreaDecorator [Unit=f2Decorators]
+  Field              f_Allowed                           Type=Boolean
+  Field              f_Enabled                           Type=Boolean
+  Field              f_Width                             Type=Single
+  Field              f_Height                            Type=Single
+  Field              f_MenuAlign                         Type=Td2dAlign
+  Field              f_Rect                              Type=Td2dRect
+  Field              f_TargetProcessor                   Type=Tf2SingleTargetProcessor
+  Method             pm_GetAllowed                       Type=Boolean
+  Method             pm_GetEnabled                       Type=Boolean
+  Method             pm_GetMenuAlign                     Type=Td2dAlign
+  Method             pm_SetAllowed                       Type=
+  Method             pm_SetEnabled                       Type=
+  Method             pm_SetWidth                         Type=
+  Method             pm_SetHeight                        Type=
+  Method             pm_SetMenuAlign                     Type=
+  Method             RecalcRect                          Type=
+  Method             DoRender                            Type=
+  Method             DoSetPosX                           Type=
+  Method             DoSetPosY                           Type=
+  Method             pm_GetDecoratorType                 Type=Tf2DecorType
+  Method             pm_GetWidth                         Type=Single
+  Method             pm_GetHeight                        Type=Single
+  Method             Cleanup                             Type=
+  Method             ProcessEvent                        Type=
+  Method             GetActionsData                      Type=IFURQActionData
+  Method             GetTargetProcessor                  Type=Tf2SingleTargetProcessor
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             AsActionDecorator                   Type=If2ActionDecorator
+  Method             Save                                Type=
+  Property           Allowed                             Type=Boolean
+  Property           Enabled                             Type=Boolean
+  Property           Width                               Type=Single
+  Property           Height                              Type=Single
+  Property           MenuAlign                           Type=Td2dAlign
+  Property           TargetProcessor                     Type=Tf2SingleTargetProcessor
+Class: Tf2CustomButtonDecorator [Unit=f2Decorators]
+  Field              f_Allowed                           Type=Boolean
+  Field              f_Enabled                           Type=Boolean
+  Field              f_MenuAlign                         Type=Td2dAlign
+  Field              f_TargetProcessor                   Type=Tf2SingleTargetProcessor
+  Method             pm_GetAllowed                       Type=Boolean
+  Method             pm_GetEnabled                       Type=Boolean
+  Method             pm_GetMenuAlign                     Type=Td2dAlign
+  Method             pm_SetAllowed                       Type=
+  Method             pm_SetEnabled                       Type=
+  Method             pm_SetMenuAlign                     Type=
+  Method             UpdateButtonState                   Type=
+  Field              f_Button                            Type=Td2dCustomButton
+  Method             Cleanup                             Type=
+  Method             ClickHandler                        Type=
+  Method             DoRender                            Type=
+  Method             DoSetPosX                           Type=
+  Method             DoSetPosY                           Type=
+  Method             LoadButton                          Type=
+  Method             SaveButton                          Type=
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Method             ProcessEvent                        Type=
+  Method             GetActionsData                      Type=IFURQActionData
+  Method             GetTargetProcessor                  Type=Tf2SingleTargetProcessor
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             AsActionDecorator                   Type=If2ActionDecorator
+  Method             Save                                Type=
+  Method             Update                              Type=
+  Property           Allowed                             Type=Boolean
+  Property           Enabled                             Type=Boolean
+  Property           MenuAlign                           Type=Td2dAlign
+  Property           TargetProcessor                     Type=Tf2SingleTargetProcessor
+Class: Tf2ImageButtonDecorator [Unit=f2Decorators]
+  Field              f_TextureName                       Type=string
+  Field              f_TexX                              Type=Integer
+  Field              f_TexY                              Type=Integer
+  Method             LoadButton                          Type=
+  Method             pm_GetDecoratorType                 Type=Tf2DecorType
+  Method             SaveButton                          Type=
+  Method             Create                              Type=
+Class: Tf2TextButtonDecorator [Unit=f2Decorators]
+  Field              f_TextFrame                         Type=string
+  Method             pm_GetText                          Type=string
+  Method             pm_GetTextAlign                     Type=Td2dTextAlignType
+  Method             pm_SetText                          Type=
+  Method             pm_SetTextAlign                     Type=
+  Method             pm_SetWidth                         Type=
+  Method             LoadButton                          Type=
+  Method             pm_GetDecoratorType                 Type=Tf2DecorType
+  Method             pm_GetWidth                         Type=Single
+  Method             SaveButton                          Type=
+  Method             Create                              Type=
+  Property           Text                                Type=string
+  Property           TextAlign                           Type=Td2dTextAlignType
+  Property           Width                               Type=Single
+Class: Tf2DSParamPrim [Unit=f2DecorScript]
+  Method             GetValue                            Type=Double
+  Method             Save                                Type=
+Class: Tf2SimpleParam [Unit=f2DecorScript]
+  Field              f_Value                             Type=Double
+  Method             GetValue                            Type=Double
+  Method             Save                                Type=
+  Method             Create                              Type=
+  Method             Load                                Type=
+Class: Tf2RandomParam [Unit=f2DecorScript]
+  Field              f_Min                               Type=Double
+  Field              f_Max                               Type=Double
+  Method             GetValue                            Type=Double
+  Method             Save                                Type=
+  Method             Create                              Type=
+  Method             Load                                Type=
+Class: Tf2DSOperator [Unit=f2DecorScript]
+  Field              f_IsAsync                           Type=Boolean
+  Field              f_IsRelative                        Type=Boolean
+  Field              f_OpType                            Type=Tf2DSOperatorType
+  Field              f_ParamList                         Type=IInterfaceList
+  Method             pm_GetIsAsync                       Type=Boolean
+  Method             pm_GetIsRelative                    Type=Boolean
+  Method             pm_GetOpType                        Type=Tf2DSOperatorType
+  Method             pm_GetParamCount                    Type=Integer
+  Method             pm_GetParams                        Type=If2DSParameter
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             AddParam                            Type=
+  Method             Save                                Type=
+  Property           IsAsync                             Type=Boolean
+  Property           IsRelative                          Type=Boolean
+  Property           OpType                              Type=Tf2DSOperatorType
+  Property           ParamCount                          Type=Integer
+  Property           Params                              Type=If2DSParameter
+Class: TfgLetter [Unit=f2FontGen]
+  Field              f_Advance                           Type=Integer
+  Field              f_Bitmap                            Type=TGPBitmap
+  Field              f_CharCode                          Type=Byte
+  Field              f_ShiftX                            Type=Integer
+  Field              f_ShiftY                            Type=Integer
+  Field              f_TexX                              Type=Integer
+  Field              f_TexY                              Type=Integer
+  Method             pm_GetAdvance                       Type=Integer
+  Method             pm_GetBitmap                        Type=TGPBitmap
+  Method             pm_GetCharCode                      Type=Byte
+  Method             pm_GetShiftX                        Type=Integer
+  Method             pm_GetShiftY                        Type=Integer
+  Method             pm_GetTexX                          Type=Integer
+  Method             pm_GetTexY                          Type=Integer
+  Method             pm_SetTexX                          Type=
+  Method             pm_SetTexY                          Type=
+  Method             pm_GetSquare                        Type=Integer
+  Method             Destroy                             Type=
+  Property           Advance                             Type=Integer
+  Property           ShiftX                              Type=Integer
+  Property           ShiftY                              Type=Integer
+  Property           Bitmap                              Type=TGPBitmap
+  Property           CharCode                            Type=Byte
+  Property           TexX                                Type=Integer
+  Property           TexY                                Type=Integer
+Class: TfgFont [Unit=f2FontGen]
+  Field              f_Letters                           Type=IJclIntfCollection
+  Field              f_LineHeight                        Type=Integer
+  Field              f_Name                              Type=string
+  Field              f_Size                              Type=Integer
+  Field              f_SpaceAdvance                      Type=Integer
+  Field              f_TexHeight                         Type=Integer
+  Field              f_Texture                           Type=TGPBitmap
+  Field              f_TexWidth                          Type=Integer
+  Method             ArrangeToTexture                    Type=Boolean
+  Method             BuildFontTexture                    Type=
+  Method             ClearLetters                        Type=
+  Method             GetTotalSquare                      Type=Integer
+  Method             pm_SetTexture                       Type=
+  Property           Texture                             Type=TGPBitmap
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Build                               Type=
+  Method             Save                                Type=
+  Method             GetXML                              Type=IXmlDocument
+  Property           Name                                Type=string
+  Property           Size                                Type=Integer
+Class: TPlaceArea [Unit=f2FontGen]
+  Field              f_Children                          Type=array [ 1 .. 2 ] of TPlaceArea
+  Field              f_Height                            Type=Integer
+  Field              f_PosX                              Type=Integer
+  Field              f_PosY                              Type=Integer
+  Field              f_Width                             Type=Integer
+  Method             pm_GetChildren                      Type=TPlaceArea
+  Method             pm_GetIsOccupied                    Type=Boolean
+  Method             pm_GetSquare                        Type=Integer
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             FreeChildren                        Type=
+  Method             Place                               Type=Boolean
+  Property           Children                            Type=TPlaceArea
+  Property           Height                              Type=Integer
+  Property           IsOccupied                          Type=Boolean
+  Property           PosX                                Type=Integer
+  Property           PosY                                Type=Integer
+  Property           Square                              Type=Integer
+  Property           Width                               Type=Integer
+Class: Tf2FontPool [Unit=f2FontPool]
+  Field              f_Fonts                             Type=IJclStringList
+  Field              f_SysMenuFont                       Type=Id2dFont
+  Field              f_SysTextFont                       Type=Id2dFont
+  Method             Create                              Type=
+  Method             GetFont                             Type=Id2dFont
+  MethodResolution   Id2dFontProvider.GetByID            Type=GetFont
+  Method             Clear                               Type=
+  Property           SysMenuFont                         Type=Id2dFont
+  Property           SysTextFont                         Type=Id2dFont
+Class: Tf2Interpreter [Unit=f2Interpreter]
+  Method             DH_Col                              Type=
+  Method             DH_Mov                              Type=
+  Method             DH_Rot                              Type=
+  Method             DH_Scl                              Type=
+  Method             DH_Scr                              Type=
+  Method             ParseDecorParams                    Type=
+  Method             HandleDecorPrim                     Type=
+  Method             HandleDecorAdd                      Type=
+  Method             HandleDecorMov                      Type=
+  Method             HandleDecorCol                      Type=
+  Method             HandleDecorDel                      Type=
+  Method             HandleDecorRot                      Type=
+  Method             HandleDecorScl                      Type=
+  Method             HandleDecorScr                      Type=
+  Method             HandleFadeMusic                     Type=
+  Method             HandleImage                         Type=
+  Method             HandleVoice                         Type=
+  Method             HandleClsl                          Type=
+  Method             HandleFPrint                        Type=
+  Method             HandleFPrintLn                      Type=
+  Method             HandleNewFile                       Type=
+  Method             HangleGssKill                       Type=
+  Method             OutTextToFile                       Type=
+  Method             ParseDecorOperand                   Type=Boolean
+  Method             pm_GetContext                       Type=Tf2Context
+  Method             CheckParamCount                     Type=
+  Method             HandleExtraOps                      Type=Boolean
+  Property           Context                             Type=Tf2Context
+Class: Tf2PicturePool [Unit=f2PicturePool]
+  MethodResolution   Id2dPictureProvider.GetByID         Type=GetPicture
+  Method             GetPicture                          Type=Id2dPicture
+  Method             Make                                Type=Id2dPictureProvider
+Class: Tf2SaveLoadManager [Unit=f2SaveLoadManager]
+  Field              f_SaveNameBase                      Type=string
+  Field              f_SavePath                          Type=string
+  Field              f_SaveNames                         Type=array [ 0 .. cMaxSlotsNum ] of string
+  Method             GetSaveExt                          Type=string
+  Method             pm_GetIsAnySaveExists               Type=Boolean
+  Method             pm_GetIsOnlyAutoSaveExists          Type=Boolean
+  Method             pm_GetSaveName                      Type=string
+  Method             pm_SetSaveNameBase                  Type=
+  Method             pm_SetSavePath                      Type=
+  Method             RebuildSaveNames                    Type=
+  Method             GetAutoDesc                         Type=string
+  Method             GetSaveInfo                         Type=
+  Method             LoadGame                            Type=
+  Method             SaveGame                            Type=
+  Method             SetSaveBase                         Type=
+  Property           SavePath                            Type=string
+  Property           IsAnySaveExists                     Type=Boolean
+  Property           IsOnlyAutoSaveExists                Type=Boolean
+  Property           SaveName                            Type=string
+  Property           SaveNameBase                        Type=string
+Class: Tf2Scene [Unit=f2Scene]
+  Method             pm_GetF2App                         Type=Tf2Application
+  Field              f_Context                           Type=Tf2Context
+  Property           F2App                               Type=Tf2Application
+  Method             LoadButton                          Type=Td2dBitButton
+  Property           Context                             Type=Tf2Context
+Class: Tf2Clipboard [Unit=f2ScnMain]
+  Method             PutTextAsUnicode                    Type=
+Class: Tf2MainScene [Unit=f2ScnMain]
+  Field              f_BFrame                            Type=Id2dFramedButtonView
+  Field              f_BGColor                           Type=Td2dColor
+  Field              f_Clipboard                         Type=Tf2Clipboard
+  Field              f_Code                              Type=TFURQCode
+  Field              f_Interpreter                       Type=Tf2Interpreter
+  Field              f_CurFilename                       Type=string
+  Field              f_GUI                               Type=Td2dGUI
+  Field              f_InvBtn                            Type=Td2dBitButton
+  Field              f_InvMenu                           Type=Td2dMenu
+  Field              f_LogFileName                       Type=string
+  Field              f_MenuFont                          Type=Id2dFont
+  Field              f_mi_Exit                           Type=Td2dMenuItem
+  Field              f_mi_Load                           Type=Td2dMenuItem
+  Field              f_mi_Mute                           Type=Td2dMenuItem
+  Field              f_mi_Log                            Type=Td2dMenuItem
+  Field              f_mi_Restart                        Type=Td2dMenuItem
+  Field              f_PauseTime                         Type=Double
+  Field              f_SysBtn                            Type=Td2dBitButton
+  Field              f_SysMenu                           Type=Td2dMenu
+  Field              f_SysTextFont                       Type=Id2dFont
+  Field              f_ButtonsFont                       Type=Id2dFont
+  Field              f_InvMenuAlign                      Type=Td2dAlign
+  Field              f_SkinDecorList                     Type=TObjectList
+  Field              f_InvMenuEnabled                    Type=Boolean
+  Field              f_InvMenuX                          Type=Single
+  Field              f_InvMenuY                          Type=Single
+  Field              f_mi_Reload                         Type=Td2dMenuItem
+  Field              f_SaveLoadManager                   Type=Tf2SaveLoadManager
+  Field              f_SaveLoadScene                     Type=Tf2SaveLoadScene
+  Field              f_SysMenuAlign                      Type=Td2dAlign
+  Field              f_SysMenuEnabled                    Type=Boolean
+  Field              f_SysMenuX                          Type=Single
+  Field              f_SysMenuY                          Type=Single
+  Field              f_Txt                               Type=Tf2TextPane
+  Field              f_WaitSprites                       Type=array [ Tf2WaitState ] of Td2dSprite
+  Field              f_WaitState                         Type=Tf2WaitState
+  Field              f_WSAlpha                           Type=Single
+  Field              f_WSAlphaDir                        Type=Integer
+  Field              f_WSWaitTimer                       Type=Single
+  Field              f_ActionMenu                        Type=Td2dMenu
+  Field              f_KeepMenuActions                   Type=Boolean
+  Field              f_MenuActionCaller                  Type=string
+  Field              f_MenuActionCallerID                Type=Tf2MenuActionCallerID
+  Method             ActionMessage                       Type=
+  Method             BuildMenuFromAction                 Type=
+  Method             ButtonActionHandler                 Type=
+  Method             CheckWaitState                      Type=
+  Method             ClearInventory                      Type=
+  Method             ClearTextPane                       Type=
+  Method             CopyToClipboard                     Type=
+  Method             DoDebugReload                       Type=
+  Method             DoEnd                               Type=
+  Method             OpenCodeFileProc                    Type=string
+  Method             DoOpenQuest                         Type=
+  Method             DoPause                             Type=
+  Method             DoSysBtnClick                       Type=
+  Method             DoInvBtnClick                       Type=
+  Method             GetLogFilename                      Type=string
+  Method             HandleInput                         Type=
+  Method             HandleInputKey                      Type=
+  Method             InputFinishHandler                  Type=
+  Method             InvDisable                          Type=
+  Method             InvEnable                           Type=
+  Method             TextPaneStateChangeHandler          Type=
+  Method             InvMenuHandler                      Type=
+  Method             ActionMenuClickHandler              Type=
+  Method             DecoratorActionHandler              Type=
+  Method             DoLoadSavedGame                     Type=
+  Method             DoQuit                              Type=
+  Method             LinkClickHandler                    Type=
+  Method             InvPopup                            Type=
+  Method             SysPopup                            Type=
+  Method             LoadButtonsAndActions               Type=
+  Method             LoadGame                            Type=
+  Method             LoadMenuOnItem                      Type=
+  Method             LogAddTextHandler                   Type=
+  Method             miaRestart                          Type=
+  Method             miaLoad                             Type=
+  Method             miaExit                             Type=
+  Method             miaMute                             Type=
+  Method             miaLog                              Type=
+  Method             NextTurn                            Type=
+  Method             OpenInvMenu                         Type=
+  Method             OpenSysMenu                         Type=
+  Method             pm_SetInvMenuEnabled                Type=
+  Method             pm_SetSysMenuEnabled                Type=
+  Method             pm_SetWaitState                     Type=
+  Method             ReloadInventory                     Type=
+  Method             SaveGame                            Type=
+  Method             StartOver                           Type=
+  Method             RunTimeErrorHandler                 Type=
+  Method             PopupActionMenu                     Type=
+  Method             StartLogging                        Type=
+  Method             StopLogging                         Type=
+  Method             BeforeStoppingChild                 Type=
+  Method             DoLoad                              Type=
+  Method             DoUnload                            Type=
+  Method             DoFrame                             Type=
+  Method             DoRender                            Type=
+  Method             DoProcessEvent                      Type=
+  Property           InvMenuEnabled                      Type=Boolean
+  Property           SysMenuEnabled                      Type=Boolean
+  Property           WaitState                           Type=Tf2WaitState
+  Method             LoadSavegameNames                   Type=
+  Method             miaReload                           Type=
+  Method             OutError                            Type=
+Class: Tf2SaveLoadScene [Unit=f2ScnSaveLoad]
+  Field              f_BGColor                           Type=Td2dColor
+  Field              f_CaptionColor                      Type=Td2dColor
+  Field              f_CaptionFont                       Type=Id2dFont
+  Field              f_GUI                               Type=Td2dGUI
+  Field              f_Captions                          Type=array [ 0 .. cMaxSlotsNum ] of string
+  Field              f_DT                                Type=array [ 0 .. cMaxSlotsNum ] of TDateTime
+  Field              f_CaptionX                          Type=Integer
+  Field              f_CaptionY                          Type=Integer
+  Field              f_Mode                              Type=Tf2SaveLoadMode
+  Field              f_Selected                          Type=Integer
+  Method             pm_GetCaptions                      Type=string
+  Method             pm_SetCaptions                      Type=
+  Method             ButtonClickHandler                  Type=
+  Method             DoBack                              Type=
+  Method             pm_GetDT                            Type=TDateTime
+  Method             pm_SetDT                            Type=
+  Method             DoFrame                             Type=
+  Method             DoLoad                              Type=
+  Method             DoProcessEvent                      Type=
+  Method             DoRender                            Type=
+  Method             DoUnload                            Type=
+  Property           Captions                            Type=string
+  Property           DT                                  Type=TDateTime
+  Property           Mode                                Type=Tf2SaveLoadMode
+  Property           Selected                            Type=Integer
+Class: Tf2SplashScene [Unit=f2ScnSplash]
+  Field              f_Logo                              Type=Td2dSprite
+  Field              f_CurCol                            Type=Single
+  Field              f_Pause                             Type=Single
+  Field              f_Speed                             Type=Integer
+  Field              f_Version                           Type=string
+  Field              f_VFont                             Type=Id2dFont
+  Field              f_VX                                Type=Integer
+  Field              f_VY                                Type=Integer
+  Field              f_BGColor                           Type=Td2dColor
+  Field              f_LogoY                             Type=Integer
+  Method             DoLoad                              Type=
+  Method             DoUnload                            Type=
+  Method             DoFrame                             Type=
+  Method             DoRender                            Type=
+Class: Tf2SettingsStorage [Unit=f2SettingsStorage]
+  Field              f_Data                              Type=IJclStringList
+  Field              f_DataFN                            Type=AnsiString
+  Method             LoadDataFile                        Type=
+  Method             pm_GetData                          Type=Variant
+  Method             pm_SetData                          Type=
+  Method             SaveDataFile                        Type=
+  Property           Data                                Type=Variant
+  Method             Cleanup                             Type=
+  Method             Create                              Type=
+  Method             Clear                               Type=
+  Method             IsVarExists                         Type=Boolean
+Class: Tf2Skin [Unit=f2Skins]
+  Field              f_XML                               Type=IXmlDocument
+  Field              f_ScreenHeight                      Type=Integer
+  Field              f_ScreenWidth                       Type=Integer
+  Field              f_FullScreen                        Type=Boolean
+  Field              f_TexList                           Type=IJclStringList
+  Field              f_FntList                           Type=IJclStringList
+  Field              f_BFList                            Type=IJclStringList
+  Field              f_IsFromPack                        Type=Boolean
+  Field              f_ResPath                           Type=string
+  Method             LoadScreenPropetries                Type=
+  Method             pm_GetTextures                      Type=Id2dTexture
+  Method             pm_GetFonts                         Type=Id2dFont
+  Method             pm_GetFrames                        Type=Id2dFramedButtonView
+  Method             Create                              Type=
+  Method             LoadResources                       Type=
+  Property           ScreenHeight                        Type=Integer
+  Property           ScreenWidth                         Type=Integer
+  Property           FullScreen                          Type=Boolean
+  Property           Textures                            Type=Id2dTexture
+  Property           Fonts                               Type=Id2dFont
+  Property           Frames                              Type=Id2dFramedButtonView
+  Property           XML                                 Type=IXmlDocument
+Class: Tf2ButtonSlice [Unit=f2TextPane]
+  Field              f_Align                             Type=Td2dTextAlignType
+  Field              f_Frame                             Type=Id2dFramedButtonView
+  Field              f_Caption                           Type=string
+  Field              f_DispCaption                       Type=string
+  Field              f_Height                            Type=Single
+  Field              f_State                             Type=Td2dButtonState
+  Field              f_BWidth                            Type=Integer
+  Method             pm_GetFrameHeight                   Type=Single
+  Method             pm_GetRect                          Type=Td2dRect
+  Method             pm_SetBWidth                        Type=
+  Method             pm_GetHeight                        Type=Single
+  Method             pm_GetWidth                         Type=Single
+  Method             DoDraw                              Type=
+  Method             Create                              Type=
+  Method             IsInButton                          Type=Boolean
+  Property           Align                               Type=Td2dTextAlignType
+  Property           Caption                             Type=string
+  Property           State                               Type=Td2dButtonState
+  Property           BWidth                              Type=Integer
+  Property           FrameHeight                         Type=Single
+  Property           Rect                                Type=Td2dRect
+Class: Tf2TextPane [Unit=f2TextPane]
+  Field              f_ButtonAlign                       Type=Td2dTextAlignType
+  Field              f_ButtonCount                       Type=Integer
+  Field              f_ButtonsEnabled                    Type=Boolean
+  Field              f_ButtonTextAlign                   Type=Td2dTextAlignType
+  Field              f_FirstButtonPara                   Type=Integer
+  Field              f_FocusedButton                     Type=Integer
+  Field              f_Frame                             Type=Id2dFramedButtonView
+  Field              f_OnButtonAction                    Type=Tf2ButtonActionEvent
+  Field              f_MaxButtonWidth                    Type=Integer
+  Field              f_NumberedButtons                   Type=Boolean
+  Method             CheckFocusedButton                  Type=
+  Method             DoButtonAction                      Type=
+  Method             DoButtonAction                      Type=
+  Method             GetButtonAtMouse                    Type=Integer
+  Method             MakeSureFocusedIsVisible            Type=
+  Method             pm_GetButtonCaption                 Type=string
+  Method             pm_GetButtonScreenRect              Type=Td2dRect
+  Method             pm_GetButtonSlice                   Type=Tf2ButtonSlice
+  Method             pm_SetButtonsEnabled                Type=
+  Method             pm_SetFocusedButton                 Type=
+  Method             RealignButtons                      Type=
+  Method             UpdateButtonsState                  Type=
+  Method             pm_SetState                         Type=
+  Method             Scroll                              Type=
+  Property           ButtonSlice                         Type=Tf2ButtonSlice
+  Method             Create                              Type=
+  Method             AddButton                           Type=
+  Method             ClearAll                            Type=
+  Method             ClearButtons                        Type=
+  Method             ProcessEvent                        Type=
+  Property           ButtonAlign                         Type=Td2dTextAlignType
+  Property           ButtonCaption                       Type=string
+  Property           ButtonCount                         Type=Integer
+  Property           ButtonScreenRect                    Type=Td2dRect
+  Property           ButtonsEnabled                      Type=Boolean
+  Property           ButtonTextAlign                     Type=Td2dTextAlignType
+  Property           FocusedButton                       Type=Integer
+  Property           NumberedButtons                     Type=Boolean
+  Property           OnButtonAction                      Type=Tf2ButtonActionEvent
+Class: Tf2DecorationSprite [Unit=f2Types]
+  Field              f_X                                 Type=Single
+  Field              f_Y                                 Type=Single
+  Field              f_Z                                 Type=Single
+  Method             Create                              Type=
+  Method             Render                              Type=
+  Property           X                                   Type=Single
+  Property           Y                                   Type=Single
+  Property           Z                                   Type=Single
+Class: TAboutBox [Unit=furqAbout]
+  Field              Panel1                              Type=TPanel
+  Field              OKButton                            Type=TButton
+  Field              lblVersion                          Type=TLabel
+  Field              Image1                              Type=TImage
+  Method             FormCreate                          Type=
+Class: TFURQInterpreter [Unit=furqBase]
+  Field              f_OnError                           Type=TfurqOnErrorHandler
+  Method             DoAction                            Type=Boolean
+  Method             HandleAnykey                        Type=
+  Method             HandleBtn                           Type=
+  Method             HandleCls                           Type=
+  Method             HandleEnd                           Type=
+  Method             HandleForgetProcs                   Type=
+  Method             HandleInput                         Type=
+  Method             HandleInstr                         Type=
+  Method             HandleInv                           Type=
+  Method             HandleInvKill                       Type=
+  Method             HandlePause                         Type=
+  Method             HandlePerKill                       Type=
+  Method             HandlePrint                         Type=
+  Method             HandlePrintLn                       Type=
+  Method             HandleProc                          Type=
+  Method             InvMenuJump                         Type=
+  Method             ParseAssigment                      Type=
+  Method             pm_GetCurLine                       Type=string
+  Method             pm_GetEOF                           Type=Boolean
+  Method             pm_GetLine                          Type=Integer
+  Method             pm_SetLine                          Type=
+  Method             UnfoldSubst                         Type=string
+  Method             ValidVarName                        Type=Boolean
+  Method             CheckVarName                        Type=
+  Method             DoActionById                        Type=Boolean
+  Method             HandleGoto                          Type=
+  Method             HandleLoad                          Type=
+  Method             HandleMusic                         Type=
+  Method             HandlePlay                          Type=
+  Method             HandleSave                          Type=
+  Method             HandleQuit                          Type=
+  Method             HandleTokens                        Type=
+  Field              f_CurContext                        Type=TFURQContext
+  Method             ApplyParams                         Type=
+  Method             EvaluateParams                      Type=
+  Method             ExecuteNextCommand                  Type=
+  Method             HandleExtraOps                      Type=Boolean
+  Method             IncLine                             Type=
+  Method             NotAvailableWhileMenuBuild          Type=
+  Method             NotAvailableInEvents                Type=
+  Method             ParseOperators                      Type=
+  Property           Line                                Type=Integer
+  Method             Execute                             Type=
+  Method             BuildMenu                           Type=
+  Property           CurLine                             Type=string
+  Property           EOF                                 Type=Boolean
+  Property           OnError                             Type=TfurqOnErrorHandler
+Class: TFURQCodePoint [Unit=furqContext]
+  Field              f_File                              Type=Integer
+  Field              f_LineNo                            Type=Integer
+  Method             pm_GetLineNo                        Type=Integer
+  Method             pm_GetSrcFile                       Type=Integer
+  Method             Create                              Type=
+Class: TFURQCode [Unit=furqContext]
+  Field              f_ActionList                        Type=IJclStringList
+  Field              f_Labels                            Type=IJclStringList
+  Field              f_Source                            Type=IJclStringList
+  Field              f_Files                             Type=IJclStringList
+  Field              f_SourceHash                        Type=TMD5Digest
+  Method             CalcSourceHash                      Type=
+  Method             pm_GetLocCountVarName               Type=string
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Load                                Type=
+  Method             GetSourcePointStr                   Type=string
+  Property           ActionList                          Type=IJclStringList
+  Property           Labels                              Type=IJclStringList
+  Property           LocCountVarName                     Type=string
+  Property           Source                              Type=IJclStringList
+  Property           SourceHash                          Type=TMD5Digest
+Class: TFURQOperator [Unit=furqContext]
+  Field              f_Next                              Type=TFURQOperator
+  Field              f_Source                            Type=string
+  Field              f_OperatorType                      Type=Byte
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+  Property           Next                                Type=TFURQOperator
+  Property           Source                              Type=string
+Class: TFURQExecutionPoint [Unit=furqContext]
+  Field              f_CurOp                             Type=TFURQOperator
+  Field              f_Line                              Type=Integer
+  Field              f_Operators                         Type=TFURQOperator
+  Field              f_Prev                              Type=TFURQExecutionPoint
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             ClearOperators                      Type=
+  Method             DropPrev                            Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+  Property           CurOp                               Type=TFURQOperator
+  Property           Line                                Type=Integer
+  Property           Operators                           Type=TFURQOperator
+  Property           Prev                                Type=TFURQExecutionPoint
+Class: TFURQActionData [Unit=furqContext]
+  Field              f_LabelIdx                          Type=Integer
+  Field              f_Params                            Type=IJclStringList
+  Field              f_Modifier                          Type=TFURQActionModifier
+  Method             pm_GetModifier                      Type=TFURQActionModifier
+  Method             pm_GetLabelIdx                      Type=Integer
+  Method             pm_GetParams                        Type=IJclStringList
+  Method             Save                                Type=
+  Method             Create                              Type=
+  Method             Load                                Type=
+  Method             Destroy                             Type=
+Class: TFURQContext [Unit=furqContext]
+  Field              f_Actions                           Type=IJclStringList
+  Field              f_MenuActions                       Type=IJclStringList
+  Field              f_Buttons                           Type=IJclStringList
+  Field              f_Code                              Type=TFURQCode
+  Field              f_Inventory                         Type=IJclStringList
+  Field              f_NumFormatString                   Type=string
+  Field              f_Stack                             Type=TFURQExecutionPoint
+  Field              f_BackupStack                       Type=TFURQExecutionPoint
+  Field              f_State                             Type=TFURQContextState
+  Field              f_BackupState                       Type=TFURQContextState
+  Field              f_ExecutionMode                     Type=TFURQContextExecutionMode
+  Field              f_Menu                              Type=IJclStringList
+  Field              f_StateParam                        Type=array [ 1 .. cMaxStateParams ] of string
+  Field              f_StateResult                       Type=string
+  Field              f_Variables                         Type=IJclStringList
+  Method             ButtonIdxByID                       Type=Integer
+  Method             pm_GetStateParam                    Type=string
+  Method             pm_GetVariables                     Type=Variant
+  Method             pm_SetStateParam                    Type=
+  Method             pm_SetVariables                     Type=
+  Method             SaveButtons                         Type=
+  Method             LoadButtons                         Type=
+  Method             SaveActions                         Type=
+  Method             LoadActions                         Type=
+  Method             Cleanup                             Type=
+  Method             DoActionFinal                       Type=Boolean
+  Method             DoLoadData                          Type=
+  Method             DoSaveData                          Type=
+  Method             GetVirtualVariable                  Type=Variant
+  Method             InitSysVariables                    Type=
+  Method             IsSystemOrVirtualVariable           Type=Boolean
+  Method             pm_GetActionsData                   Type=IFURQActionData
+  Method             SetSysVariables                     Type=
+  Method             SetVirtualVariables                 Type=Boolean
+  Method             Create                              Type=
+  Method             ActionIsFinal                       Type=Boolean
+  Method             ActionIsMenu                        Type=Boolean
+  Method             AddAction                           Type=string
+  Method             AddButton                           Type=
+  Method             AddToInventory                      Type=
+  Method             DoAction                            Type=Boolean
+  Method             ClearButtons                        Type=
+  Method             ClearText                           Type=
+  Method             ClearInventory                      Type=
+  Method             ClearStack                          Type=
+  Method             ClearVariables                      Type=
+  Method             ClearStateParams                    Type=
+  Method             DeleteVariable                      Type=Boolean
+  Method             ExecuteProc                         Type=
+  Method             ExecuteProcAtLine                   Type=
+  Method             ForgetProcs                         Type=
+  Method             FormatNumber                        Type=string
+  Method             GetInventoryString                  Type=string
+  Method             IncLocationCount                    Type=
+  Method             IsVariableExists                    Type=Boolean
+  Method             JumpToLabelIdx                      Type=
+  Method             JumpToLine                          Type=
+  Method             LoadFromFile                        Type=
+  Method             LoadFromStream                      Type=
+  Method             MusicPlay                           Type=
+  Method             MusicStop                           Type=
+  Method             OutText                             Type=
+  Method             Restart                             Type=
+  Method             ReturnFromProc                      Type=
+  Method             SaveToFile                          Type=
+  Method             SaveToStream                        Type=
+  Method             SoundPlay                           Type=
+  Method             SoundStop                           Type=
+  Method             StartMenuBuild                      Type=
+  Method             EndMenuBuild                        Type=
+  Method             SystemProc                          Type=Boolean
+  Property           ActionsData                         Type=IFURQActionData
+  Property           Buttons                             Type=IJclStringList
+  Property           Menu                                Type=IJclStringList
+  Property           Code                                Type=TFURQCode
+  Property           ExecutionMode                       Type=TFURQContextExecutionMode
+  Property           Inventory                           Type=IJclStringList
+  Property           Stack                               Type=TFURQExecutionPoint
+  Property           State                               Type=TFURQContextState
+  Property           StateParam                          Type=string
+  Property           StateResult                         Type=string
+  Property           Variables                           Type=Variant
+Class: TFURQCondition [Unit=furqContext]
+  Field              f_ThenOp                            Type=TFURQOperator
+  Field              f_ElseOp                            Type=TFURQOperator
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Method             Load                                Type=
+  Method             Save                                Type=
+  Property           ThenOp                              Type=TFURQOperator
+  Property           ElseOp                              Type=TFURQOperator
+Class: TFURQWinContext [Unit=furqContext]
+  Field              f_Filename                          Type=string
+  Field              f_TextBuffer                        Type=string
+  Method             InitSysVariables                    Type=
+  Method             Create                              Type=
+  Method             ClearTextBuffer                     Type=
+  Method             OutText                             Type=
+  Method             Restart                             Type=
+  Property           TextBuffer                          Type=string
+Class: TfurqLexer [Unit=furqExprEval]
+  Field              f_AllowSpacesInIdent                Type=Boolean
+  Field              f_DetectStrings                     Type=Boolean
+  Field              f_Pos                               Type=Integer
+  Field              f_Source                            Type=string
+  Field              f_Token                             Type=TfurqToken
+  Field              f_TokenEnd                          Type=Integer
+  Field              f_TokenStart                        Type=Integer
+  Field              f_TokenValue                        Type=Variant
+  Method             pm_GetCurChar                       Type=Char
+  Method             pm_SetSource                        Type=
+  Property           CurChar                             Type=Char
+  Method             Create                              Type=
+  Method             NextToken                           Type=
+  Method             Reset                               Type=
+  Method             SetSourceCustom                     Type=
+  Property           AllowSpacesInIdent                  Type=Boolean
+  Property           DetectStrings                       Type=Boolean
+  Property           Source                              Type=string
+  Property           Token                               Type=TfurqToken
+  Property           TokenEnd                            Type=Integer
+  Property           TokenStart                          Type=Integer
+  Property           TokenValue                          Type=Variant
+Class: TfurqEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqUnaryEvalNode [Unit=furqExprEval]
+  Field              f_Value                             Type=IfurqEvalNode
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+Class: TfurqBinaryEvalNode [Unit=furqExprEval]
+  Field              f_First                             Type=IfurqEvalNode
+  Field              f_Second                            Type=IfurqEvalNode
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+Class: TfurqConstEvalNode [Unit=furqExprEval]
+  Field              f_Value                             Type=Variant
+  Method             Create                              Type=
+  Method             Evaluate                            Type=Variant
+Class: TfurqNegateEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqNotEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqSummaEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqSubtractEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqMultiplyEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqDivideEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqOrEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqAndEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqExprEvaluator [Unit=furqExprEval]
+  Field              f_Context                           Type=TfurqContext
+  Field              f_Expression                        Type=IfurqEvalNode
+  Field              f_Lexer                             Type=TfurqLexer
+  Method             CompileFactor                       Type=TfurqEvalNode
+  Method             CompileLevel0                       Type=TfurqEvalNode
+  Method             CompileLevel1                       Type=TfurqEvalNode
+  Method             CompileLevel2                       Type=TfurqEvalNode
+  Method             CompileLevel3                       Type=TfurqEvalNode
+  Method             CompileLevel4                       Type=TfurqEvalNode
+  Method             CompileLevel5                       Type=TfurqEvalNode
+  Method             CompileSource                       Type=
+  Method             GetIdentifierValue                  Type=Variant
+  Method             GetInventoryAmount                  Type=Extended
+  Method             pm_GetResultValue                   Type=Variant
+  Method             pm_GetSource                        Type=string
+  Method             pm_SetSource                        Type=
+  Method             Create                              Type=
+  Method             Destroy                             Type=
+  Property           ResultValue                         Type=Variant
+  Property           Source                              Type=string
+Class: TfurqEqualEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqLesserEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqLesserOrEqualEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqGreaterEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqGreaterOrEqualEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TfurqNotEqualEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: EFURQExpressionError [Unit=furqExprEval]
+Class: TfurqSimularEvalNode [Unit=furqExprEval]
+  Method             Evaluate                            Type=Variant
+Class: TFURQFiler [Unit=furqFiler]
+  Method             ReadVarValue                        Type=Variant
+  Method             WriteVarValue                       Type=
+Class: EFURQLoadError [Unit=furqLoader]
+Class: EFURQRunTimeError [Unit=furqTypes]
+Class: TMainForm [Unit=furqWinMain]
+  Field              pnlInput                            Type=TPanel
+  Field              edtInput                            Type=TEdit
+  Field              Panel2                              Type=TPanel
+  Field              JvxSplitter1                        Type=TJvxSplitter
+  Field              memTextOut                          Type=TJvMemo
+  Field              JvxSplitter2                        Type=TJvxSplitter
+  Field              lbButtons                           Type=TListBox
+  Field              XPManifest1                         Type=TXPManifest
+  Field              dlgOpenQuest                        Type=TOpenDialog
+  Field              ActionList1                         Type=TActionList
+  Field              actOpenQuest                        Type=TAction
+  Field              actFileExit                         Type=TFileExit
+  Field              MainMenu                            Type=TMainMenu
+  Field              Afq1                                Type=TMenuItem
+  Field              N1                                  Type=TMenuItem
+  Field              N2                                  Type=TMenuItem
+  Field              pnlInventory                        Type=TPanel
+  Field              lbInventory                         Type=TListBox
+  Field              Panel1                              Type=TPanel
+  Field              btnAction                           Type=TSpeedButton
+  Field              SaveDlg                             Type=TSaveDialog
+  Field              N3                                  Type=TMenuItem
+  Field              actLoadSaved                        Type=TAction
+  Field              N4                                  Type=TMenuItem
+  Field              LoadDlg                             Type=TOpenDialog
+  Field              btnEnter                            Type=TButton
+  Field              PauseTimer                          Type=TTimer
+  Field              G1                                  Type=TMenuItem
+  Field              miAbout                             Type=TMenuItem
+  Field              actStartOver                        Type=TAction
+  Field              N5                                  Type=TMenuItem
+  Method             FormDestroy                         Type=
+  Method             actOpenQuestExecute                 Type=
+  Method             lbButtonsMouseMove                  Type=
+  Method             memTextOutMouseMove                 Type=
+  Method             FormCreate                          Type=
+  Method             lbButtonsClick                      Type=
+  Method             lbInventoryClick                    Type=
+  Method             btnActionClick                      Type=
+  Method             btnActionMouseMove                  Type=
+  Method             lbButtonsDrawItem                   Type=
+  Method             actLoadSavedExecute                 Type=
+  Method             actStartOverExecute                 Type=
+  Method             btnEnterClick                       Type=
+  Method             memTextOutKeyPress                  Type=
+  Method             miAboutClick                        Type=
+  Method             PauseTimerTimer                     Type=
+  Field              f_Code                              Type=TFURQCode
+  Field              f_Interpreter                       Type=TFURQInterpreter
+  Field              f_Context                           Type=TFURQWinContext
+  Field              f_CurFilename                       Type=string
+  Field              f_InvItem                           Type=Integer
+  Field              f_InvMenus                          Type=IJclStringList
+  Field              f_MusicIsPlaying                    Type=Boolean
+  Method             ActionsHandler                      Type=
+  Method             ClearMenus                          Type=
+  Method             ClearScreen                         Type=
+  Method             ContinuePlayingMusic                Type=
+  Method             DoCls                               Type=
+  Method             DoMusic                             Type=
+  Method             DoPause                             Type=
+  Method             DoSound                             Type=
+  Method             FlushText                           Type=
+  Method             GetMenuOnItem                       Type=TPopupMenu
+  Method             HandleInput                         Type=
+  Method             HandleInputKey                      Type=
+  Method             InputkeyMode                        Type=
+  Method             InputMode                           Type=
+  Method             LoadButtonsAndActions               Type=
+  Method             NextTurn                            Type=
+  Method             NormalMode                          Type=
+  Method             OpenQuest                           Type=
+  Method             PlayMusic                           Type=
+  Method             SaveGame                            Type=
+  Method             StartOver                           Type=
+  Method             StartTimer                          Type=
+  Method             StopMusic                           Type=
+  Method             StopTimer                           Type=
+  Method             MMMCINOTIFY_Message                 Type=
+
+
+================================
+ Symbol Index
+================================
+
+Symbols: 5826
+
+Tf2Context Members
+--------------------------------
+Members: 90
+  Field              f_BtnMenuAlign                      Type=Td2dAlign
+  Field              f_CurrentMusic                      Type=AnsiString
+  Field              f_Decorators                        Type=Tf2DecoratorList
+  Field              f_DefTPLeft                         Type=Single
+  Field              f_DefTPTop                          Type=Single
+  Field              f_DefTPWidth                        Type=Single
+  Field              f_DefTPHeight                       Type=Single
+  Field              f_DefBtnAlign                       Type=Td2dTextAlignType
+  Field              f_DefBtnTxtAlign                    Type=Td2dTextAlignType
+  Field              f_DefButtonFrame                    Type=Id2dFramedButtonView
+  Field              f_DefMenuVisualStyle                Type=Td2dMenuVisualStyle
+  Field              f_EchoColor                         Type=Td2dColor
+  Field              f_Filename                          Type=string
+  Field              f_TextAlign                         Type=Td2dTextAlignType
+  Field              f_TextColor                         Type=Td2dColor
+  Field              f_TextFont                          Type=Id2dFont
+  Field              f_TextPane                          Type=Tf2TextPane
+  Field              f_FontPool                          Type=Tf2FontPool
+  Field              f_FpFilename                        Type=string
+  Field              f_LinkColor                         Type=Td2dColor
+  Field              f_LinkHColor                        Type=Td2dColor
+  Field              f_LinkMenuAlign                     Type=Td2dAlign
+  Field              f_LocationText                      Type=string
+  Field              f_VoiceFilename                     Type=string
+  Field              f_MenuVisualStyle                   Type=Td2dMenuVisualStyle
+  Field              f_MenuFont                          Type=Id2dFont
+  Field              f_OnDecoratorAction                 Type=Tf2OnActionProc
+  Field              f_Path                              Type=string
+  Field              f_PicturePool                       Type=Id2dPictureProvider
+  Field              f_Skin                              Type=Tf2Skin
+  Field              f_SettingsStorage                   Type=Tf2SettingsStorage
+  Method             ParseDecorVar                       Type=Boolean
+  Method             AddText                             Type=
+  Method             AddLink                             Type=
+  Method             CheckIfNumber                       Type=
+  Method             pm_GetActionsData                   Type=IFURQActionData
+  Method             Cleanup                             Type=
+  Method             DoLoadData                          Type=
+  Method             DoSaveData                          Type=
+  Method             InitSysVariables                    Type=
+  Method             SetSysVariables                     Type=
+  Method             GetVirtualVariable                  Type=Variant
+  Method             IsSystemOrVirtualVariable           Type=Boolean
+  Method             SetVirtualVariables                 Type=Boolean
+  Method             Create                              Type=
+  Method             AddTextDecorator                    Type=
+  Method             AddRectDecorator                    Type=
+  Method             AddPictureDecorator                 Type=
+  Method             AddAnimationDecorator               Type=
+  Method             AddGIFDecorator                     Type=
+  Method             AddClickAreaDecorator               Type=
+  Method             AddImageButtonDecorator             Type=
+  Method             AddTextButtonDecorator              Type=
+  Method             AllowActionDecorators               Type=
+  Method             DoActionFinal                       Type=Boolean
+  Method             ClearButtons                        Type=
+  Method             ClearText                           Type=
+  Method             DropLinks                           Type=
+  Method             FadeMusic                           Type=
+  Method             GetButtonFrame                      Type=Id2dFramedButtonView
+  Method             GetDecorator                        Type=Tf2BaseDecorator
+  Method             GetMouseDecorator                   Type=Tf2BaseDecorator
+  Method             KillSettingsStorage                 Type=
+  Method             MusicPlay                           Type=
+  Method             MusicStop                           Type=
+  Method             OutPicture                          Type=
+  Method             OutText                             Type=
+  Method             Restart                             Type=
+  Method             SoundPlay                           Type=
+  Method             SoundStop                           Type=
+  Method             SystemProc                          Type=Boolean
+  Method             VoicePlay                           Type=
+  Method             VoiceStop                           Type=
+  Property           Decorators                          Type=Tf2DecoratorList
+  Property           EchoColor                           Type=Td2dColor
+  Property           LinkColor                           Type=Td2dColor
+  Property           LinkHColor                          Type=Td2dColor
+  Property           LocationText                        Type=string
+  Property           MenuFont                            Type=Id2dFont
+  Property           MenuVisualStyle                     Type=Td2dMenuVisualStyle
+  Property           OnDecoratorAction                   Type=Tf2OnActionProc
+  Property           BtnMenuAlign                        Type=Td2dAlign
+  Property           FontPool                            Type=Tf2FontPool
+  Property           FpFilename                          Type=string
+  Property           LinkMenuAlign                       Type=Td2dAlign
+  Property           SettingsStorage                     Type=Tf2SettingsStorage
+  Property           Skin                                Type=Tf2Skin
+  Property           TextAlign                           Type=Td2dTextAlignType
+  Property           TextColor                           Type=Td2dColor
+  Property           TextFont                            Type=Id2dFont
+
+Lookup: gD2DE
+  Variable     d2dCore.gD2DE                            Unit=d2dCore Type=Td2dCore
+
+Lookup: Tf2Context
+  Class        f2Context.Tf2Context                     Unit=f2Context
+
+Lookup: System_Log
+  Method       Td2dCore.System_Log                      Unit=d2dCore Owner=Td2dCore
+
+Lookup: WHandle
+  Property     Td2dCore.WHandle                         Unit=d2dCore Owner=Td2dCore Type=HWND
+
+Lookup: OutError
+  Procedure    f2Application.OutError                   Unit=f2Application
+  Method       Tf2MainScene.OutError                    Unit=f2ScnMain Owner=Tf2MainScene
+
+Lookup: VariantToAlign
+  Procedure    f2Context.VariantToAlign                 Unit=f2Context
+
+Lookup: f_CurrentSceneObj
+  Field        Td2dApplication.f_CurrentSceneObj        Unit=d2dApplication Owner=Td2dApplication Type=Td2dScene
+
+Index lookup: HMUSIC
+  Name: HMUSIC
+  QualifiedName: d2dTypes.HMUSIC
+  Kind: Type
+  Unit: d2dTypes
+  Name: HMUSIC
+  QualifiedName: Dynamic_Bass.HMUSIC
+  Kind: Type
+  Unit: Dynamic_Bass
+
+Resolve: gD2DE.System_Log
+  Result: Method
+  QualifiedName: Td2dCore.System_Log
+  Unit: d2dCore
+  Type: 
+
+Resolve: gD2DE.WHandle
+  Result: Property
+  QualifiedName: Td2dCore.WHandle
+  Unit: d2dCore
+  Type: HWND
+
+Resolve: gD2DE.Input_GetEvent
+  Result: Method
+  QualifiedName: Td2dCore.Input_GetEvent
+  Unit: d2dCore
+  Type: Boolean
+
+Resolve: f_CurrentSceneObj.ProcessEvent
+  Result: Method
+  QualifiedName: Td2dScene.ProcessEvent
+  Unit: d2dApplication
+  Type: 
+
+Resolve: Dynamic_Bass.HMUSIC
+  Result: Type
+  QualifiedName: Dynamic_Bass.HMUSIC
+  Unit: Dynamic_Bass
+  Type: <none>
+
+Failure Categories
+--------------------------------
+Failure details are reported by BatchAnalyzer.
+
+
+Behavior Names
+--------------------------------
+OutError                                           /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas
+Tf2Application.Create                              /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas
+Tf2Application.Init                                /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas
+Tf2Application.LoadGlobalResources                 /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas
+Tf2Application.pm_GetDefaultButtonView             /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas
+Tf2Application.pm_GetDefaultTextFont               /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas
+Tf2Application.pm_GetDefaultMenuFont               /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas
+Tf2Application.pm_GetDefaultTexture                /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas
+Tf2Application.pm_GetSavePath                      /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas
+Tf2Application.pm_GetSettingsStorage               /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas
+Tf2Application.UnloadGlobalResources               /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas
+VariantToAlign                                     /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.Create                                  /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.Cleanup                                 /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.AddAnimationDecorator                   /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.AddPictureDecorator                     /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.AddGIFDecorator                         /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.AddLink                                 /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.AddTextDecorator                        /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.AddRectDecorator                        /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.AddClickAreaDecorator                   /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.AddImageButtonDecorator                 /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.AddTextButtonDecorator                  /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.AddText                                 /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.AllowActionDecorators                   /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.CheckIfNumber                           /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.DoActionFinal                           /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.ClearButtons                            /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.ClearText                               /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+Tf2Context.DoLoadData                              /data/data/com.termux/files/home/fireurq-master/f2/f2Context.pas
+
+================================
+ Expression Census
+================================
+
+Expression nodes:           22965
+Statements with expression: 4768
+
+By kind
+--------------------------------
+Empty                47
+Identifier        14006
+Literal            1673
+MemberAccess       2584
+IndexAccess         651
+Call               2260
+Unary                83
+Binary             1464
+AddressOf            46
+Dereference          21
+TypeTest             21
+TypeCast             26
+Set                  76
+Range                 0
+Inherited             7
+Raw                   0
+
+Structured:                  22965
+Raw:                         0
+Structured coverage:         100.0%
+Raw share:                   0.0%
+
+
+================================
+ Semantic Census
+================================
+
+Read               9132
+Write              2290
+Call               2260
+MemberAccess       2584
+IndexAccess         651
+
+Semantic References
+--------------------------------
+Call             gD2DE.System_Log                         /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:96 [OutError]
+MemberAccess     gD2DE.System_Log                         /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:96 [OutError]
+Read             gD2DE                                    /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:96 [OutError]
+Read             aMsg                                     /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:96 [OutError]
+Call             MessageBox                               /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97 [OutError]
+Read             MessageBox                               /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97 [OutError]
+MemberAccess     gD2DE.WHandle                            /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97 [OutError]
+Read             gD2DE                                    /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97 [OutError]
+Call             PAnsiChar                                /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97 [OutError]
+Read             PAnsiChar                                /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97 [OutError]
+Read             aMsg                                     /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97 [OutError]
+Read             sFireURQError                            /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97 [OutError]
+Read             MB_OK                                    /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97 [OutError]
+Read             MB_ICONERROR                             /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97 [OutError]
+MemberAccess     gD2DE.FixedFPS                           /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:107 [Tf2Application.Create]
+Write            gD2DE                                    /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:107 [Tf2Application.Create]
+Write            l_Dir                                    /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:108 [Tf2Application.Create]
+Call             ExtractFilePath                          /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:108 [Tf2Application.Create]
+Read             ExtractFilePath                          /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:108 [Tf2Application.Create]
+Call             ParamStr                                 /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:108 [Tf2Application.Create]
+
+Total semantic references: 16917
+
+
+================================
+ Semantic Dependency Graph
+================================
+
+OutError                                 --Calls--> gD2DE.System_Log                                   /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:96
+OutError                                 --AccessesMember--> gD2DE.System_Log                                   /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:96
+OutError                                 --Reads--> gD2DE                                              /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:96
+OutError                                 --Reads--> aMsg                                               /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:96
+OutError                                 --Calls--> MessageBox                                         /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97
+OutError                                 --Reads--> MessageBox                                         /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97
+OutError                                 --AccessesMember--> gD2DE.WHandle                                      /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97
+OutError                                 --Reads--> gD2DE                                              /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97
+OutError                                 --Calls--> PAnsiChar                                          /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97
+OutError                                 --Reads--> PAnsiChar                                          /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97
+OutError                                 --Reads--> aMsg                                               /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97
+OutError                                 --Reads--> sFireURQError                                      /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97
+OutError                                 --Reads--> MB_OK                                              /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97
+OutError                                 --Reads--> MB_ICONERROR                                       /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:97
+Tf2Application.Create                    --AccessesMember--> gD2DE.FixedFPS                                     /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:107
+Tf2Application.Create                    --Writes--> gD2DE                                              /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:107
+Tf2Application.Create                    --Writes--> l_Dir                                              /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:108
+Tf2Application.Create                    --Calls--> ExtractFilePath                                    /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:108
+Tf2Application.Create                    --Reads--> ExtractFilePath                                    /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:108
+Tf2Application.Create                    --Calls--> ParamStr                                           /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:108
+Tf2Application.Create                    --Reads--> ParamStr                                           /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:108
+Tf2Application.Create                    --Calls--> IsDirWritable                                      /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:109
+Tf2Application.Create                    --Reads--> IsDirWritable                                      /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:109
+Tf2Application.Create                    --Reads--> l_Dir                                              /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:109
+Tf2Application.Create                    --Calls--> SHGetSpecialFolderPath                             /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:111
+Tf2Application.Create                    --Reads--> SHGetSpecialFolderPath                             /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:111
+Tf2Application.Create                    --Reads--> l_Path                                             /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:111
+Tf2Application.Create                    --Reads--> CSIDL_APPDATA                                      /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:111
+Tf2Application.Create                    --Reads--> True                                               /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:111
+Tf2Application.Create                    --Writes--> l_Dir                                              /data/data/com.termux/files/home/fireurq-master/f2/f2Application.pas:113
+
+Semantic dependency edges: 16917
+
+================================
+ Report Complete
+================================

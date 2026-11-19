@@ -17,7 +17,11 @@ public sealed record SemanticClass(
     string Name,
     string? BaseType,
     IReadOnlyList<SemanticMember> Members
-);
+)
+{
+    public IReadOnlyList<string> AncestorTypes { get; init; } =
+        Array.Empty<string>();
+}
 
 public sealed record SemanticInterface(
     string Name,
