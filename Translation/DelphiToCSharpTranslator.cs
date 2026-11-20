@@ -1272,6 +1272,27 @@ public sealed class DelphiToCSharpTranslator
         return true;
     }
 
+    private bool TryGetConstructorFactory(ExpressionParser.ExpressionNode target, int arity,
+        out string factory, out IReadOnlyList<SemanticParameter>? parameters)
+    {
+        factory = string.Empty;
+        parameters = null;
+        if (_resolver is null || target.Kind != ExpressionParser.ExpressionKind.MemberAccess ||
+            target.Children.Count != 2 || target.Children[0].Kind != ExpressionParser.ExpressionKind.Identifier ||
+            ResolveExpressionType(target.Children[0]) is not null || ResolveUnaryMemberType(target.Children[0]) is not null)
+            return false;
+
+        var type = _resolver.Resolve(target.Children[0].Text, _unitName);
+        if (type.IsPointer || type.DeclaringUnitName is null ||
+            ProjectTranslator.UsesManagedStandaloneClass(type.DeclaringUnitName, type.ResolvedName) ||
+            _resolver.FindMember(type.ResolvedName, target.Children[1].Text, type.DeclaringUnitName, arity, constructor: true) is not { } binding)
+            return false;
+
+        factory = $"{type.ResolvedName}.__New_{binding.Member.Name}<{type.ResolvedName}>";
+        parameters = binding.Member.Parameters;
+        return true;
+    }
+
     private string TranslateCallTarget(
         ExpressionParser.ExpressionNode expression)
     {
@@ -1326,6 +1347,9 @@ public sealed class DelphiToCSharpTranslator
 
         if (TryGetStandardListFactoryTarget(expression, out string factoryTarget))
             return factoryTarget + "()";
+
+        if (TryGetConstructorFactory(expression, 0, out string constructorFactory, out _))
+            return constructorFactory + "()";
 
         bool isFontMemberCall =
             string.Equals(_unitName, "f2FontGen", StringComparison.OrdinalIgnoreCase) &&
@@ -2821,6 +2845,11 @@ private string TranslateCall(
         : null;
 
     IReadOnlyList<SemanticParameter>? formals = signature?.Parameters;
+    if (TryGetConstructorFactory(targetExpression, expression.Children.Count - 1, out string constructorFactory, out var constructorParameters))
+    {
+        target = constructorFactory;
+        formals = constructorParameters;
+    }
     if (formals is null && targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
         _currentTypeContext?.OwnerClass is null && ResolveExpressionType(targetExpression) is null &&
         _currentTypeContext?.ResolveLocalFunction(targetExpression.Text, expression.Children.Count - 1).Found != true)

@@ -384,7 +384,7 @@ public sealed class TypeResolver
             ? (method.Member.Name, Resolve(method.Member.Type, method.UnitName)) : null;
 
     internal (SemanticMember Member, string UnitName)? FindMember(
-        string receiver, string memberName, string? unitName, int? argumentCount)
+        string receiver, string memberName, string? unitName, int? argumentCount, bool constructor = false)
     {
         string? context = unitName;
         var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -411,7 +411,7 @@ public sealed class TypeResolver
                         member.Parameters.Count == (argumentCount ?? 0) &&
                         (argumentCount.HasValue
                             ? member.Kind == SemanticMemberKind.Method &&
-                              !member.IsConstructor && !member.IsDestructor
+                              member.IsConstructor == constructor && !member.IsDestructor
                             : member.Kind is SemanticMemberKind.Field or SemanticMemberKind.Property)).ToArray();
                     return candidates.Length == 1
                         ? (candidates[0], owner)

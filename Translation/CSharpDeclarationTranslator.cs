@@ -1053,6 +1053,8 @@ public sealed class CSharpDeclarationTranslator
                     : member).ToArray();
         }
         AppendMembers(builder, members, @class.Name, isInterface: false);
+        foreach (var constructor in members.Where(member => member.IsConstructor))
+            AppendConstructorFactory(builder, @class.Name, constructor);
         AppendDirectInterfaceAdapters(builder, @class);
         AppendRuntimeIInterfaceAdapter(builder, @class);
         builder.Append('}');
@@ -1495,6 +1497,29 @@ public sealed class CSharpDeclarationTranslator
         builder.AppendLine($"        get => {getter}();");
         builder.AppendLine(
             $"        set => {setters[0].Name}({argument});");
+        builder.AppendLine("    }");
+    }
+
+    private void AppendConstructorFactory(StringBuilder builder, string owner, SemanticMember constructor)
+    {
+        string visibility = MapVisibility(constructor.Visibility);
+        string parameters = string.Join(", ", constructor.Parameters.Select(p =>
+            $"{MapParameterKind(p.Kind)}{MapType(p.Type)} {p.Name}"));
+        string arguments = string.Join(", ", constructor.Parameters.Select(p =>
+            MapParameterKind(p.Kind) + p.Name));
+        builder.AppendLine($"    {visibility}static TInstance __New_{constructor.Name}<TInstance>({parameters}) where TInstance : {owner}, new()");
+        builder.AppendLine("    {");
+        builder.AppendLine("        var instance = new TInstance();");
+        builder.AppendLine("        try");
+        builder.AppendLine("        {");
+        builder.AppendLine($"            instance.{constructor.Name}({arguments});");
+        builder.AppendLine("            return instance;");
+        builder.AppendLine("        }");
+        builder.AppendLine("        catch");
+        builder.AppendLine("        {");
+        builder.AppendLine("            instance.Destroy();");
+        builder.AppendLine("            throw;");
+        builder.AppendLine("        }");
         builder.AppendLine("    }");
     }
 

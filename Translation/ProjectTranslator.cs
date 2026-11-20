@@ -347,7 +347,7 @@ public sealed class ProjectTranslator
         return false;
     }
 
-    private static bool UsesManagedStandaloneClass(string unitName, string className) =>
+    internal static bool UsesManagedStandaloneClass(string unitName, string className) =>
         (unitName.Equals("d2dGIF", StringComparison.OrdinalIgnoreCase) &&
          className.Equals("Td2dGIFSprite", StringComparison.OrdinalIgnoreCase)) ||
         (unitName.Equals("SimpleXML", StringComparison.OrdinalIgnoreCase) &&
