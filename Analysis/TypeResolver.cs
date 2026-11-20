@@ -390,7 +390,9 @@ public sealed class TypeResolver
             "D3DPRESENT_PARAMETERS" when name.ToUpperInvariant() is
                 "WINDOWED" or "ENABLEAUTODEPTHSTENCIL" => "Boolean",
             "D3DPRESENT_PARAMETERS" when name.Equals("hDeviceWindow", StringComparison.OrdinalIgnoreCase) => "HWND",
-            "D3DPRESENT_PARAMETERS" => "Integer",
+            "D3DPRESENT_PARAMETERS" when name.ToUpperInvariant() is
+                "BACKBUFFERFORMAT" or "MULTISAMPLETYPE" or "SWAPEFFECT" or
+                "AUTODEPTHSTENCILFORMAT" => "Integer",
             _ => null
         };
         if (runtimeFieldType is not null)
