@@ -110,6 +110,9 @@ internal static class DelphiSystem
         bytes[..Math.Min(Math.Max(count, 0), bytes.Length)].Fill(unchecked((byte)fill));
     }
 
+    public static void FillChar<T>(ref T[] value, int count, int fill) where T : struct =>
+        FillChar(value, count, fill);
+
     public static void Move<TSource, TDestination>(
         ref TSource source, ref TDestination destination, int count)
         where TSource : struct where TDestination : struct
