@@ -2019,7 +2019,7 @@ public sealed class DelphiToCSharpTranslator
         if (receiver is not null && _resolver is not null)
         {
             TypeResolution receiverResolution = _resolver.Resolve(receiver, receiverUnit);
-            if (receiverResolution.IsPointer && receiverResolution.DeclaringUnitName is not null &&
+            if (receiverResolution.IsPointer && MapType(receiver) != "Td2dRenderTarget" && receiverResolution.DeclaringUnitName is not null &&
                 _resolver.FindRecordField(receiver, member, receiverUnit) is { } pointerField)
             {
                 target = $"global::FireURQ.Runtime.DelphiSystem.Dereference<{receiverResolution.ResolvedName}>({target})";
@@ -2576,6 +2576,29 @@ private string TranslateCall(
         return "global::FireURQ.Runtime.DelphiWindows.mciSendString(" +
             TranslateExpression(mciCast.Children[1]) + ", " +
             string.Join(", ", expression.Children.Skip(2).Select(TranslateExpression)) + ")";
+    }
+
+    // This D2D pointer is represented by a managed object because its fields own COM references.
+    if (_unitName?.Equals("d2dCore", StringComparison.OrdinalIgnoreCase) == true &&
+        expression.Children.Count == 2 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } renderOperation)
+    {
+        var operand = expression.Children[1];
+        if (renderOperation.Text.Equals("Pd2dRenderTarget", StringComparison.OrdinalIgnoreCase) &&
+            operand.Kind == ExpressionParser.ExpressionKind.IndexAccess && operand.Children.Count == 2 &&
+            operand.Children[0] is { Kind: ExpressionParser.ExpressionKind.MemberAccess } items &&
+            items.Children.Count == 2 && items.Children[0].Text.Equals("f_Targets", StringComparison.OrdinalIgnoreCase) &&
+            items.Children[1].Text.Equals("Items", StringComparison.OrdinalIgnoreCase))
+            return $"f_Targets[{TranslateExpression(operand.Children[1])}]";
+
+        if (renderOperation.Text.Equals("Dispose", StringComparison.OrdinalIgnoreCase) &&
+            (MapType(ResolveExpressionType(operand)) == "Td2dRenderTarget" ||
+             operand.Kind == ExpressionParser.ExpressionKind.Call && operand.Children.Count == 2 &&
+             operand.Children[0].Text.Equals("Pd2dRenderTarget", StringComparison.OrdinalIgnoreCase)))
+            return $"ReleaseTargetResources({TranslateExpression(operand)})";
+        if (renderOperation.Text.Equals("New", StringComparison.OrdinalIgnoreCase) &&
+            MapType(ResolveExpressionType(operand)) == "Td2dRenderTarget")
+            return $"{TranslateExpression(operand)} = new Td2dRenderTarget()";
     }
 
     if (expression.Children.Count > 1 &&
