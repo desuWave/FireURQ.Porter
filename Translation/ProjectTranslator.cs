@@ -375,6 +375,19 @@ public sealed class ProjectTranslator
             builder.AppendLine("using System.Linq;");
             builder.AppendLine("using System.Runtime.InteropServices;");
             builder.AppendLine("using FireURQ.Runtime;");
+            IEnumerable<SemanticUnit> importedModules = _units
+                .Where(unit =>
+                    unit.Name.Equals(input.SemanticModel.Name, StringComparison.OrdinalIgnoreCase) ||
+                    input.SemanticModel.Uses.Any(name =>
+                        name.Equals(unit.Name, StringComparison.OrdinalIgnoreCase)))
+                .Where(unit =>
+                    unit.Variables.Count > 0 ||
+                    unit.Constants.Count > 0 ||
+                    unit.Functions.Count > 0)
+                .DistinctBy(unit => unit.Name, StringComparer.OrdinalIgnoreCase);
+
+            foreach (SemanticUnit module in importedModules)
+                builder.AppendLine($"using static global::{module.Name}Module;");
             builder.AppendLine("using static global::FireURQ.Runtime.DelphiVariants;");
             if (input.SemanticModel.Name.Equals("f2FontGen", StringComparison.OrdinalIgnoreCase))
             {
