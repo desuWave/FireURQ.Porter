@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Remove="Tools\**" />
     <Compile Remove="Standalone\**" />
+    <Compile Remove=".fireurq-work\**" />
     <Compile Remove="translation-output\**" />
   </ItemGroup>
 
