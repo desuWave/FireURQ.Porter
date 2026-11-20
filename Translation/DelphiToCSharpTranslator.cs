@@ -2521,6 +2521,29 @@ private bool TryTranslateStreamCall(
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
+    if (expression.Children.Count >= 2 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } d3dxMatrix &&
+        (_resolver is null || _unitName is null ||
+         !_resolver.HasVisibleValueDeclaration(d3dxMatrix.Text, _unitName)))
+    {
+        string operation = d3dxMatrix.Text.ToUpperInvariant();
+        string[] matrixArguments = expression.Children.Skip(1)
+            .Select(TranslateExpression).ToArray();
+        if (operation == "D3DXMATRIXIDENTITY" && matrixArguments.Length == 1)
+            return $"D3DXMatrixIdentity(ref {matrixArguments[0]})";
+        if (operation is "D3DXMATRIXTRANSLATION" or "D3DXMATRIXSCALING" &&
+            matrixArguments.Length == 4)
+            return $"{d3dxMatrix.Text}(ref {matrixArguments[0]}, " +
+                string.Join(", ", matrixArguments.Skip(1).Select(value => $"(float)({value})")) + ")";
+        if (operation == "D3DXMATRIXROTATIONZ" && matrixArguments.Length == 2)
+            return $"D3DXMatrixRotationZ(ref {matrixArguments[0]}, (float)({matrixArguments[1]}))";
+        if (operation == "D3DXMATRIXMULTIPLY" && matrixArguments.Length == 3)
+            return $"D3DXMatrixMultiply(ref {matrixArguments[0]}, in {matrixArguments[1]}, in {matrixArguments[2]})";
+        if (operation == "D3DXMATRIXORTHOOFFCENTERLH" && matrixArguments.Length == 7)
+            return $"D3DXMatrixOrthoOffCenterLH(ref {matrixArguments[0]}, " +
+                string.Join(", ", matrixArguments.Skip(1).Select(value => $"(float)({value})")) + ")";
+    }
+
     if (expression.Children.Count == 3 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } setLength &&
         setLength.Text.Equals("SetLength", StringComparison.OrdinalIgnoreCase) &&
