@@ -2521,6 +2521,39 @@ private bool TryTranslateStreamCall(
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
+    if (expression.Children.Count > 1 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } d3dxFactory &&
+        (_resolver is null || _unitName is null ||
+         !_resolver.HasVisibleValueDeclaration(d3dxFactory.Text, _unitName)))
+    {
+        string factory = d3dxFactory.Text.ToUpperInvariant();
+        string[] factoryArguments = expression.Children.Skip(1)
+            .Select(TranslateExpression).ToArray();
+        if (factory == "D3DXCREATETEXTURE" && factoryArguments.Length == 8)
+        {
+            for (int index = 1; index <= 4; index++)
+                factoryArguments[index] = $"checked((uint)({factoryArguments[index]}))";
+            factoryArguments[7] = "out " + factoryArguments[7];
+            return $"D3DXCreateTexture({string.Join(", ", factoryArguments)})";
+        }
+        if (factory == "D3DXCREATETEXTUREFROMFILEINMEMORYEX" &&
+            factoryArguments.Length == 15)
+        {
+            foreach (int index in new[] { 2, 3, 4, 5, 6, 9, 10, 11 })
+                factoryArguments[index] = $"unchecked((uint)({factoryArguments[index]}))";
+            factoryArguments[12] = "out " + factoryArguments[12];
+            factoryArguments[14] = "out " + factoryArguments[14];
+            return "global::FireURQ.Runtime.D3DX8.CreateTextureFromFileInMemoryEx(" +
+                string.Join(", ", factoryArguments) + ")";
+        }
+        if (factory == "D3DXCREATEFONTINDIRECT" && factoryArguments.Length == 3)
+        {
+            factoryArguments[1] = "in " + factoryArguments[1];
+            factoryArguments[2] = "out " + factoryArguments[2];
+            return $"D3DXCreateFontIndirect({string.Join(", ", factoryArguments)})";
+        }
+    }
+
     if (expression.Children.Count >= 2 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } d3dxMatrix &&
         (_resolver is null || _unitName is null ||
