@@ -681,6 +681,17 @@ public sealed class TypeResolver
 
         return constant is not null;
     }
+    internal bool IsZeroBasedEnumeration(string name, string? unitName)
+    {
+        TypeResolution resolved = Resolve(name, unitName);
+        if (!resolved.IsResolved || resolved.IsPointer || resolved.DeclaringUnitName is null)
+            return false;
+        Declaration? declaration = Find(resolved.ResolvedName, resolved.DeclaringUnitName, out _);
+        // A list of names without explicit ordinal assignments starts at zero.
+        return declaration is not null && System.Text.RegularExpressions.Regex.IsMatch(
+            declaration.Type.Definition, @"^\s*\(\s*\w+(?:\s*,\s*\w+)*\s*\)\s*$");
+    }
+
     public bool TryGetCompositeDefinition(
         string typeName,
         string? unitName,
