@@ -591,6 +591,27 @@ public sealed class TypeResolver
         return ambiguous ? null : declaration?.Type.ProcedureType;
     }
 
+    internal TypeResolution? FindUnitVariableType(string name, string? unitName)
+    {
+        if (unitName is null || !_units.TryGetValue(unitName, out var unit))
+            return null;
+        SemanticVariable? VariableIn(SemanticUnit owner) => owner.Variables.FirstOrDefault(
+            v => v.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (VariableIn(unit) is { } local)
+            return Resolve(local.Type, unit.Name);
+
+        TypeResolution? match = null;
+        foreach (string dependency in unit.Uses.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!_units.TryGetValue(dependency, out var imported) || VariableIn(imported) is not { } variable)
+                continue;
+            if (match is not null)
+                return null;
+            match = Resolve(variable.Type, imported.Name);
+        }
+        return match;
+    }
+
     internal SemanticProcedureType? FindUnitProcedureVariable(string name, string? unitName)
     {
         if (unitName is null || !_units.TryGetValue(unitName, out var unit))
