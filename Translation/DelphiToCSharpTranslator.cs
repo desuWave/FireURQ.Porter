@@ -885,19 +885,9 @@ public sealed class DelphiToCSharpTranslator
         string variable =
             loop.Variable;
 
-        string comparison =
-            loop.Direction.Equals(
-                "down",
-                StringComparison.OrdinalIgnoreCase)
-                ? ">="
-                : "<=";
-
-        string increment =
-            loop.Direction.Equals(
-                "down",
-                StringComparison.OrdinalIgnoreCase)
-                ? "--"
-                : "++";
+        bool descending = loop.Direction.Equals("downto", StringComparison.OrdinalIgnoreCase);
+        string comparison = descending ? ">=" : "<=";
+        string increment = descending ? "--" : "++";
 
         AppendLine(
             builder,
