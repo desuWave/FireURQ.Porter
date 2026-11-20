@@ -258,8 +258,17 @@ public sealed class DelphiToCSharpTranslator
                 }
                 else
                 {
-                    builder.AppendLine(
-                        $"    {MapType(variable.Type)} {variable.Name} = default!;");
+                    string localType = MapType(variable.Type);
+                    string initializer = "default!";
+                    // A zero-based static array owns storage from procedure entry.
+                    var fixedArray = System.Text.RegularExpressions.Regex.Match(variable.Type,
+                        @"^array\s*\[\s*0\s*\.\.\s*(\d+)\s*\]\s*of\s+(.+)$",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    if (fixedArray.Success && int.TryParse(fixedArray.Groups[1].Value, out int upper)
+                        && upper < int.MaxValue && localType.EndsWith("[]", StringComparison.Ordinal)
+                        && !localType[..^2].Contains('['))
+                        initializer = $"new {localType[..^2]}[{upper + 1}]";
+                    builder.AppendLine($"    {localType} {variable.Name} = {initializer};");
                 }
             }
 
@@ -2538,6 +2547,7 @@ private string TranslateCall(
 
     if (expression.Children.Count > 1 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } d3dxFactory &&
+        d3dxFactory.Text.ToUpperInvariant() is ("D3DXCREATETEXTURE" or "D3DXCREATETEXTUREFROMFILEINMEMORYEX" or "D3DXCREATEFONTINDIRECT") &&
         (_resolver is null || _unitName is null ||
          !_resolver.HasVisibleValueDeclaration(d3dxFactory.Text, _unitName)))
     {
@@ -2571,6 +2581,8 @@ private string TranslateCall(
 
     if (expression.Children.Count >= 2 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } d3dxMatrix &&
+        d3dxMatrix.Text.ToUpperInvariant() is ("D3DXMATRIXIDENTITY" or "D3DXMATRIXTRANSLATION" or "D3DXMATRIXSCALING" or
+            "D3DXMATRIXROTATIONZ" or "D3DXMATRIXMULTIPLY" or "D3DXMATRIXORTHOOFFCENTERLH") &&
         (_resolver is null || _unitName is null ||
          !_resolver.HasVisibleValueDeclaration(d3dxMatrix.Text, _unitName)))
     {
