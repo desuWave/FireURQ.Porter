@@ -330,12 +330,95 @@ public sealed class DelphiToCSharpTranslator
         return TranslateExpression(expression);
     }
 
+    private readonly Stack<(string Alias, string Type)> _withScopes = new();
+
+    private ExpressionParser.ExpressionNode BindWithExpression(ExpressionParser.ExpressionNode node, int? arity = null)
+    {
+        if (node.Kind == ExpressionParser.ExpressionKind.Identifier && _resolver is not null)
+        {
+            foreach (var scope in _withScopes)
+            {
+                var member = _resolver.FindMember(scope.Type, node.Text, _unitName, arity);
+                string? name = member?.Member.Name;
+                if (name is null && arity is null)
+                    name = _resolver.FindRecordField(scope.Type, node.Text, _unitName)?.Name
+                        ?? _resolver.FindMember(scope.Type, node.Text, _unitName, 0)?.Member.Name;
+                if (name is null)
+                    continue;
+                return new ExpressionParser.ExpressionNode(ExpressionParser.ExpressionKind.MemberAccess, "",
+                    new[] { node with { Text = scope.Alias }, node with { Text = name } });
+            }
+            return node;
+        }
+        if (node.Children.Count == 0)
+            return node;
+        return node with { Children = node.Children.Select((child, index) =>
+            node.Kind == ExpressionParser.ExpressionKind.MemberAccess && index == 1 ? child :
+            BindWithExpression(child, node.Kind == ExpressionParser.ExpressionKind.Call && index == 0
+                ? node.Children.Count - 1 : null)).ToArray() };
+    }
+
+    private void TranslateWith(BehaviorAnalyzer.BehaviorStatement statement, SemanticFunction function,
+        StringBuilder builder, int indent)
+    {
+        if (statement.Expression is not { } receiver || _currentTypeContext is null)
+            throw new InvalidOperationException("Missing Delphi with receiver.");
+        string? type = ResolveExpressionType(receiver) ?? ResolveUnaryMemberType(receiver)?.ResolvedName
+            ?? ResolveUnaryFunctionTarget(receiver, 0)?.Type.ResolvedName;
+        string alias = "__with" + _withScopes.Count;
+        while (_currentTypeContext.ResolveIdentifier(alias) is not null)
+            alias += "_";
+        string target = TranslateValueOperand(receiver, out _);
+        bool recordVariable = receiver.Kind == ExpressionParser.ExpressionKind.Identifier && type is not null &&
+            _resolver?.ResolveDeclarationKind(type, _unitName) != "Class" &&
+            _resolver?.ResolveDeclarationKind(type, _unitName) != "Interface" &&
+            (ResolveExpressionType(receiver) is not null ||
+             (_currentTypeContext.OwnerClass is { } owner &&
+              _resolver?.FindMember(owner, receiver.Text, _unitName, null)?.Member.Kind == SemanticMemberKind.Field));
+        AppendLine(builder, indent, "{");
+        AppendLine(builder, indent + 1, recordVariable ? $"ref var {alias} = ref {target};" : $"var {alias} = {target};");
+        _currentTypeContext.AddWithAlias(alias, type ?? "object");
+        _withScopes.Push((alias, type ?? "object"));
+        try
+        {
+            foreach (var child in statement.Children)
+                TranslateStatement(child, function, builder, indent + 1);
+        }
+        finally
+        {
+            _withScopes.Pop();
+            _currentTypeContext.RemoveWithAlias(alias);
+        }
+        AppendLine(builder, indent, "}");
+    }
+
     private void TranslateStatement(
         BehaviorAnalyzer.BehaviorStatement statement,
         SemanticFunction function,
         StringBuilder builder,
         int indent)
     {
+        if (_withScopes.Count > 0)
+        {
+            statement = statement with
+            {
+                Expression = statement.Expression is { } expression ? BindWithExpression(expression) : null,
+                Assignment = statement.Assignment is { } assignment ? assignment with
+                {
+                    Target = BindWithExpression(assignment.Target),
+                    Value = BindWithExpression(assignment.Value)
+                } : null,
+                ForLoop = statement.ForLoop is { } loop ? loop with
+                {
+                    From = BindWithExpression(loop.From), To = BindWithExpression(loop.To)
+                } : null
+            };
+        }
+        if (statement.Kind == BehaviorAnalyzer.StatementKind.With)
+        {
+            TranslateWith(statement, function, builder, indent);
+            return;
+        }
         if (statement.InheritedCall is not null)
         {
             string method = statement.InheritedCall.Method;
@@ -3477,6 +3560,9 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
 
             _returnType = function.ReturnType;
         }
+
+        public void AddWithAlias(string name, string type) => _identifiers.Add(name, (name, type));
+        public void RemoveWithAlias(string name) => _identifiers.Remove(name);
 
         public (bool Found, DelphiFunction? Function) ResolveLocalFunction(string name, int argumentCount)
         {

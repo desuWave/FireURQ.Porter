@@ -373,6 +373,18 @@ public sealed class TypeResolver
         return false;
     }
 
+    internal SemanticField? FindRecordField(string receiver, string name, string? unitName)
+    {
+        var type = Resolve(receiver, unitName);
+        if (type.IsPointer || type.DeclaringUnitName is null)
+            return null;
+        var declaration = Find(type.ResolvedName, type.DeclaringUnitName, out _);
+        var record = declaration?.Type;
+        return record?.Fields?.FirstOrDefault(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            ?? record?.VariantPart?.Variants.SelectMany(v => v.Fields)
+                .FirstOrDefault(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+    }
+
     internal TypeResolution? ResolveDataMemberType(string receiver, string memberName, string? unitName) =>
         FindMember(receiver, memberName, unitName, null) is { } data
             ? Resolve(data.Member.Type, data.UnitName) : null;

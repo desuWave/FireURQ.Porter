@@ -14,6 +14,7 @@ public static class BehaviorAnalyzer
         For,
         Case,
         Repeat,
+        With,
         Try,
         Raise,
         Exit,
@@ -1110,7 +1111,7 @@ private bool IsNextCaseLabel()
             }
 
             return new BehaviorStatement(
-                StatementKind.Expression,
+                StatementKind.With,
                 $"with {targetText}",
                 line,
                 children,
