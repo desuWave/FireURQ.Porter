@@ -979,6 +979,11 @@ public sealed class DelphiToCSharpTranslator
             return "null";
         }
 
+        if (_currentTypeContext?.ResolveIdentifier(text) is null &&
+            _currentTypeContext?.OwnerClass is { } ownerType &&
+            _resolver?.FindMember(ownerType, text, _unitName, null) is { } dataMember)
+            return dataMember.Member.Name;
+
         return _currentTypeContext?.ResolveSpelling(text) ?? text;
     }
 
@@ -1715,8 +1720,9 @@ public sealed class DelphiToCSharpTranslator
         if (expression.Kind ==
             ExpressionParser.ExpressionKind.Identifier)
         {
-            return _currentTypeContext.ResolveIdentifier(
-                expression.Text);
+            if (expression.Text.Equals("Self", StringComparison.OrdinalIgnoreCase))
+                return _currentTypeContext.OwnerClass;
+            return _currentTypeContext.ResolveIdentifier(expression.Text);
         }
 
         return null;
@@ -1733,6 +1739,16 @@ public sealed class DelphiToCSharpTranslator
                 expression.Children[0]);
 
         string member = expression.Children[1].Text;
+        var instance = expression.Children[0];
+        string? receiver = ResolveExpressionType(instance);
+        string? receiverUnit = _unitName;
+        if (receiver is null && ResolveUnaryMemberType(instance) is { IsResolved: true, IsPointer: false } field)
+        {
+            receiver = field.ResolvedName;
+            receiverUnit = field.DeclaringUnitName ?? _unitName;
+        }
+        if (receiver is not null && _resolver?.FindMember(receiver, member, receiverUnit, null) is { } binding)
+            member = binding.Member.Name;
 
         // A read of LongRec exposes the low or high Word of a 32-bit value.
         // Keep address-taking and writes on the separate lvalue path.
