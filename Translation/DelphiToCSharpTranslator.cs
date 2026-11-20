@@ -1957,9 +1957,13 @@ public sealed class DelphiToCSharpTranslator
         if (_resolver is null)
             return null;
 
-        if (expression.Kind == ExpressionParser.ExpressionKind.Identifier &&
-            _currentTypeContext?.OwnerClass is { } owner)
-            return _resolver.ResolveDataMemberType(owner, expression.Text, _unitName);
+        if (expression.Kind == ExpressionParser.ExpressionKind.Identifier)
+        {
+            if (_currentTypeContext?.OwnerClass is { } owner &&
+                _resolver.ResolveDataMemberType(owner, expression.Text, _unitName) is { } memberType)
+                return memberType;
+            return _resolver.FindUnitVariableType(expression.Text, _unitName);
+        }
 
         if (expression.Kind != ExpressionParser.ExpressionKind.MemberAccess ||
             expression.Children.Count != 2)
@@ -3518,6 +3522,16 @@ private string TranslateCall(
         ResolveUnaryMemberType(targetExpression) is null &&
         _currentTypeContext?.ResolveLocalFunction(targetExpression.Text, expression.Children.Count - 1).Found != true)
         formals = _resolver?.FindUnitRoutineParameters(targetExpression.Text, _unitName, expression.Children.Count - 1);
+
+    if (formals is null && _resolver is not null &&
+        targetExpression.Kind is ExpressionParser.ExpressionKind.Identifier or ExpressionParser.ExpressionKind.MemberAccess)
+    {
+        string? declared = ResolveExpressionType(targetExpression);
+        var dataType = declared is null ? ResolveUnaryMemberType(targetExpression) : _resolver.Resolve(declared, _unitName);
+        if (dataType is { IsResolved: true, IsPointer: false })
+            formals = _resolver.ResolveProcedureType(dataType.ResolvedName,
+                dataType.DeclaringUnitName ?? _unitName)?.Parameters;
+    }
 
     var arguments = new List<string>();
     for (int i = 1; i < expression.Children.Count; i++)
