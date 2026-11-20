@@ -133,4 +133,90 @@ internal static class DelphiText
 
     public static string UpperCase(string? value) =>
         (value ?? string.Empty).ToUpperInvariant();
+
+    public static string Format(string format, object?[] values)
+    {
+        var result = new System.Text.StringBuilder();
+        int argument = 0;
+
+        for (int index = 0; index < format.Length; index++)
+        {
+            if (format[index] != '%')
+            {
+                result.Append(format[index]);
+                continue;
+            }
+
+            index++;
+            if (index < format.Length && format[index] == '%')
+            {
+                result.Append('%');
+                continue;
+            }
+
+            bool leftAligned = false;
+            if (index < format.Length && format[index] == '-')
+            {
+                leftAligned = true;
+                index++;
+            }
+
+            int width = 0;
+            while (index < format.Length && char.IsDigit(format[index]))
+                width = checked(width * 10 + format[index++] - '0');
+
+            int precision = -1;
+            if (index < format.Length && format[index] == '.')
+            {
+                index++;
+                precision = 0;
+                while (index < format.Length && char.IsDigit(format[index]))
+                    precision = checked(precision * 10 + format[index++] - '0');
+            }
+
+            if (index >= format.Length || argument >= values.Length)
+                throw new FormatException("Invalid Delphi format string.");
+
+            object? value = values[argument++];
+            char specifier = format[index];
+            string formatted = specifier switch
+            {
+                'd' => FormatDecimal(value, precision),
+                'u' => Convert.ToUInt64(value, System.Globalization.CultureInfo.InvariantCulture)
+                    .ToString(System.Globalization.CultureInfo.InvariantCulture),
+                'x' => Convert.ToUInt64(value, System.Globalization.CultureInfo.InvariantCulture)
+                    .ToString(precision >= 0 ? $"x{precision}" : "x",
+                        System.Globalization.CultureInfo.InvariantCulture),
+                'X' => Convert.ToUInt64(value, System.Globalization.CultureInfo.InvariantCulture)
+                    .ToString(precision >= 0 ? $"X{precision}" : "X",
+                        System.Globalization.CultureInfo.InvariantCulture),
+                's' => Convert.ToString(value, System.Globalization.CultureInfo.CurrentCulture) ?? string.Empty,
+                'f' => Convert.ToDouble(value, System.Globalization.CultureInfo.InvariantCulture)
+                    .ToString(precision >= 0 ? $"F{precision}" : "F",
+                        System.Globalization.CultureInfo.CurrentCulture),
+                _ => throw new FormatException($"Unsupported Delphi format specifier %{specifier}.")
+            };
+
+            if (specifier == 's' && precision >= 0 && formatted.Length > precision)
+                formatted = formatted[..precision];
+
+            result.Append(width > formatted.Length
+                ? leftAligned ? formatted.PadRight(width) : formatted.PadLeft(width)
+                : formatted);
+        }
+
+        return result.ToString();
+    }
+
+    private static string FormatDecimal(object? value, int precision)
+    {
+        long number = Convert.ToInt64(value, System.Globalization.CultureInfo.InvariantCulture);
+        if (precision < 0)
+            return number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        string sign = number < 0 ? "-" : string.Empty;
+        string digits = Math.Abs(number).ToString(
+            $"D{precision}", System.Globalization.CultureInfo.InvariantCulture);
+        return sign + digits;
+    }
 }
