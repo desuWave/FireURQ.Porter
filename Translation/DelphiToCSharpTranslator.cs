@@ -2530,8 +2530,8 @@ private string TranslateCall(
         if (memoryOperation.Text.Equals("FillChar", StringComparison.OrdinalIgnoreCase))
         {
             ExpressionParser.ExpressionNode destination = expression.Children[1];
-            string destinationType = MapType(ResolveExpressionType(destination));
-            string destinationArgument = destinationType.EndsWith("[]", StringComparison.Ordinal)
+            string memoryDestinationType = MapType(ResolveExpressionType(destination));
+            string destinationArgument = memoryDestinationType.EndsWith("[]", StringComparison.Ordinal)
                 ? TranslateExpression(destination)
                 : "ref " + TranslateExpression(destination);
             return "global::FireURQ.Runtime.DelphiSystem.FillChar(" +
