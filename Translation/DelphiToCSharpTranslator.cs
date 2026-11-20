@@ -2207,10 +2207,30 @@ public sealed class DelphiToCSharpTranslator
         if (expression.Children.Count == 2 && IsManagedString(expression.Children[0]))
             return $"{target}[({TranslateValueOperand(expression.Children[1], out _)}) - 1]";
 
-        string indices = string.Join(", ",
-            expression.Children.Skip(1).Select(TranslateExpression));
-
-        return $"{target}[{indices}]";
+        string[] indices = expression.Children.Skip(1).Select(TranslateExpression).ToArray();
+        if (_resolver is not null)
+        {
+            var field = ResolveUnaryMemberType(expression.Children[0]);
+            string? arrayType = ResolveExpressionType(expression.Children[0]) ?? field?.ResolvedName;
+            string? context = field?.DeclaringUnitName ?? _unitName;
+            if (arrayType is not null && _resolver.TryGetCompositeDefinition(arrayType, context,
+                out string definition, out string? declarationUnit))
+            {
+                arrayType = definition;
+                context = declarationUnit;
+            }
+            var bounds = System.Text.RegularExpressions.Regex.Match(arrayType ?? string.Empty,
+                @"^array\s*\[([^\]]+)\]", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (bounds.Success)
+            {
+                string[] domains = bounds.Groups[1].Value.Split(',');
+                if (domains.Length == indices.Length)
+                    for (int i = 0; i < domains.Length; i++)
+                        if (_resolver.IsZeroBasedEnumeration(domains[i].Trim(), context))
+                            indices[i] = $"(int)({indices[i]})";
+            }
+        }
+        return $"{target}[{string.Join(", ", indices)}]";
     }
 
 private bool TryTranslateStreamCall(
