@@ -493,6 +493,23 @@ public sealed class TypeResolver
                 unit.Functions.Any(value => value.Name.Equals(
                     name, StringComparison.OrdinalIgnoreCase)));
     }
+    internal IReadOnlyList<SemanticParameter>? FindUnitRoutineParameters(string name, string? unitName, int arity)
+    {
+        if (unitName is null || !_units.TryGetValue(unitName, out var unit))
+            return null;
+
+        var matches = unit.Functions.Where(function => function.Parameters.Count == arity &&
+            function.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
+        if (matches.Length == 0)
+            return null;
+        var parameters = matches[0].Parameters;
+        // The interface declaration and implementation may both be present.
+        return matches.All(match => match.Parameters.Zip(parameters).All(pair =>
+            pair.First.Kind.Equals(pair.Second.Kind, StringComparison.OrdinalIgnoreCase) &&
+            pair.First.Type.Equals(pair.Second.Type, StringComparison.OrdinalIgnoreCase)))
+            ? parameters : null;
+    }
+
     internal SemanticProcedureType? FindUnitProcedureVariable(string name, string? unitName)
     {
         if (unitName is null || !_units.TryGetValue(unitName, out var unit))

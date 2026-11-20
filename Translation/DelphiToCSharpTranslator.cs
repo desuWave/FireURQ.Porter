@@ -2819,6 +2819,12 @@ private string TranslateCall(
         ? _resolver?.FindUnitProcedureVariable(targetExpression.Text, _unitName)
         : null;
 
+    IReadOnlyList<SemanticParameter>? formals = signature?.Parameters;
+    if (formals is null && targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        _currentTypeContext?.OwnerClass is null && ResolveExpressionType(targetExpression) is null &&
+        _currentTypeContext?.ResolveLocalFunction(targetExpression.Text, expression.Children.Count - 1).Found != true)
+        formals = _resolver?.FindUnitRoutineParameters(targetExpression.Text, _unitName, expression.Children.Count - 1);
+
     var arguments = new List<string>();
     for (int i = 1; i < expression.Children.Count; i++)
     {
@@ -2826,14 +2832,20 @@ private string TranslateCall(
         string value = TranslateExpression(argument);
         // Delphi types a real literal from its formal parameter. An unsuffixed
         // fractional C# literal would instead be a double.
-        if (signature?.Parameters.Count == expression.Children.Count - 1 &&
-            MapType(signature.Parameters[i - 1].Type) == "float" &&
+        if (formals?.Count == expression.Children.Count - 1 &&
+            MapType(formals[i - 1].Type) == "float" &&
             argument.Kind == ExpressionParser.ExpressionKind.Literal &&
             (value.Contains('.') || value.Contains('e', StringComparison.OrdinalIgnoreCase)) &&
             float.TryParse(value, System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out _))
             value += "f";
 
+        if (formals?.Count == expression.Children.Count - 1)
+        {
+            string mode = formals[i - 1].Kind;
+            if (mode.Equals("var", StringComparison.OrdinalIgnoreCase)) value = "ref " + value;
+            if (mode.Equals("out", StringComparison.OrdinalIgnoreCase)) value = "out " + value;
+        }
         arguments.Add(value);
     }
 
