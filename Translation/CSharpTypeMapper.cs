@@ -123,7 +123,7 @@ public static class CSharpTypeMapper
             "single" => "float",
             "char" => "char",
             "tcharset" => "HashSet<char>",
-            "byte" => "byte",
+            "ansichar" or "byte" => "byte",
             "word" => "ushort",
             "cardinal" or "longword" or "dword" => "uint",
             "smallint" => "short",
