@@ -51,6 +51,10 @@ internal static class SimpleXmlVariantValue
                 BinaryPrimitives.WriteInt32LittleEndian(payload, integer);
                 length = sizeof(int);
                 break;
+            case 7 when value.BoxedValue is double date:
+                BinaryPrimitives.WriteDoubleLittleEndian(payload, date);
+                length = sizeof(double);
+                break;
             case 5 when value.TryGetDouble(out double number):
                 BinaryPrimitives.WriteDoubleLittleEndian(payload, number);
                 length = sizeof(double);
