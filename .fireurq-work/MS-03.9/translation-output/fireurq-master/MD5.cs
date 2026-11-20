@@ -330,7 +330,7 @@ public static class md5Module
     
     public static TMD5Digest MD5String(in string S)
     {
-        TMD5Digest result;
+        TMD5Digest result = default;
         result = MD5Buffer(PChar(S), Length(S));
         return result;
     }
@@ -338,7 +338,7 @@ public static class md5Module
     public static TMD5Digest MD5File(in string FileName)
     {
         TFileStream F;
-        TMD5Digest result;
+        TMD5Digest result = default;
     
         F = TFileStream.Create(FileName, fmOpenRead);
         try
@@ -354,13 +354,13 @@ public static class md5Module
     
     public static TMD5Digest MD5Stream(in TStream Stream)
     {
-        TMD5Context Context;
-        byte[] Buffer;
+        TMD5Context Context = default;
+        byte[] Buffer = new byte[64];
         int Size;
         int ReadBytes;
         int TotalBytes;
         int SavePos;
-        TMD5Digest result;
+        TMD5Digest result = default;
     
         MD5Init(Context);
         Size = Stream.Size;
@@ -387,8 +387,8 @@ public static class md5Module
     
     public static TMD5Digest MD5Buffer(in object Buffer, int Size)
     {
-        TMD5Context Context;
-        TMD5Digest result;
+        TMD5Context Context = default;
+        TMD5Digest result = default;
     
         MD5Init(Context);
         MD5Update(Context, PByteArray(/* TODO: Delphi address-of */ Buffer), Size);

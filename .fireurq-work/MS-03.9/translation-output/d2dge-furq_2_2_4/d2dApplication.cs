@@ -66,7 +66,7 @@ public partial class Td2dApplication
     
     protected void FrameFunc(float aDelta, ref bool theFinish)
     {
-        Td2dInputEvent l_Ev;
+        Td2dInputEvent l_Ev = default;
     
         if (f_CurrentSceneObj != null)
         {

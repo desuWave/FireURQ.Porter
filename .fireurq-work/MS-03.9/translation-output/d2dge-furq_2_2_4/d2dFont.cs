@@ -459,7 +459,7 @@ public partial class Td2dCustomFont
     public string CalcStringBySize(in string aStr, float aWidth, in string aEllipsis)
     {
         int l_Len;
-        Td2dPoint l_Size;
+        Td2dPoint l_Size = default;
         string result;
     
         result = aStr;

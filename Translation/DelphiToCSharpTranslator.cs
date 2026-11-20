@@ -251,24 +251,14 @@ public sealed class DelphiToCSharpTranslator
                 else
                 {
                     builder.AppendLine(
-                        $"    {MapType(variable.Type)} " +
-                        $"{variable.Name}" +
-                        (MapType(variable.Type) == "AnsiString" ||
-                         (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
-                          variable.Name.Equals("l_DevInfo", StringComparison.OrdinalIgnoreCase) &&
-                          MapType(variable.Type) == "BASS_DEVICEINFO") ||
-                         (string.Equals(_unitName, "f2PicturePool", StringComparison.OrdinalIgnoreCase) &&
-                          variable.Name.Equals("l_PicSize", StringComparison.OrdinalIgnoreCase) &&
-                          MapType(variable.Type) == "TPoint")
-                            ? " = default;" : ";"));
+                        $"    {MapType(variable.Type)} {variable.Name} = default!;");
                 }
             }
 
             if (!function.IsProcedure)
             {
                 builder.AppendLine(
-                    $"    {MapType(function.ReturnType)} {context.ResultName}" +
-                    (MapType(function.ReturnType) == "AnsiString" ? " = default;" : ";"));
+                    $"    {MapType(function.ReturnType)} {context.ResultName} = default!;");
             }
 
             foreach (var local in function.LocalFunctions)
