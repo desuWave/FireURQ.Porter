@@ -4,6 +4,7 @@ public static class CSharpD3D8AdapterRuntime
 {
     public const string Source = """
 global using static FireURQ.Runtime.D3D8;
+global using TD3DXMatrix = FireURQ.Runtime.TD3DMatrix;
 
 using System;
 using System.Runtime.InteropServices;
@@ -60,6 +61,13 @@ public struct D3DDISPLAYMODE
 {
     public uint Width, Height, RefreshRate;
     public int Format;
+}
+
+[StructLayout(LayoutKind.Sequential)]
+public struct D3DVIEWPORT8
+{
+    public uint X, Y, Width, Height;
+    public float MinZ, MaxZ;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
@@ -166,6 +174,9 @@ public interface IDirect3DDevice8
     [PreserveSig] int EndScene();
     [PreserveSig] int Clear(uint count, IntPtr rects, uint flags, uint color, float z, uint stencil);
     [PreserveSig] int SetTransform(int state, [In] ref TD3DMatrix matrix);
+    [PreserveSig] int GetTransform(int state, out TD3DMatrix matrix);
+    [PreserveSig] int MultiplyTransform(int state, [In] ref TD3DMatrix matrix);
+    [PreserveSig] int SetViewport([In] ref D3DVIEWPORT8 viewport);
 }
 
 [ComImport]
