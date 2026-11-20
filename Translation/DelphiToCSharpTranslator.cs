@@ -2685,6 +2685,17 @@ private string TranslateCall(
         return $"{method}({format}, new object[] {{ {values} }})";
     }
 
+    if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Text.Equals("FreeAndNil", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count == 2 && _unitName is not null && _resolver is not null &&
+        !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName) &&
+        ResolveExpressionType(targetExpression) is null)
+    {
+        var variable = expression.Children[1];
+        if (variable.Kind is ExpressionParser.ExpressionKind.Identifier or ExpressionParser.ExpressionKind.MemberAccess)
+            return $"global::FireURQ.Runtime.TObject.FreeAndNil(ref {TranslateExpression(variable)})";
+    }
+
     if (TryTranslateStreamCall(expression, targetExpression, out string streamCall))
         return streamCall;
 
