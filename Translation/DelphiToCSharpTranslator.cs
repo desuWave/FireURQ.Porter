@@ -2790,9 +2790,9 @@ private string TranslateCall(
         !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName))
     {
         var operand = expression.Children[1];
-        string? operandType = ResolveExpressionType(operand) ??
-            ResolveUnaryMemberType(operand)?.ResolvedName;
-        if (operandType is not null && MapType(operandType) is
+        string? localType = ResolveExpressionType(operand);
+        var resolved = localType is null ? ResolveUnaryMemberType(operand) : _resolver.Resolve(localType, _unitName);
+        if (resolved is { IsResolved: true, IsPointer: false } && MapType(resolved.ResolvedName) is
             "sbyte" or "byte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong")
             return arguments.Count == 1
                 ? $"{arguments[0]}--"
