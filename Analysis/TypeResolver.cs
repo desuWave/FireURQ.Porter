@@ -443,7 +443,8 @@ public sealed class TypeResolver
                 if (named.Length > 0)
                 {
                     var candidates = named.Where(member =>
-                        member.Parameters.Count == (argumentCount ?? 0) &&
+                        (!argumentCount.HasValue ||
+                         AcceptsArity(member.Parameters, argumentCount.Value)) &&
                         (argumentCount.HasValue
                             ? member.Kind == SemanticMemberKind.Method &&
                               member.IsConstructor == constructor && !member.IsDestructor
@@ -460,6 +461,12 @@ public sealed class TypeResolver
 
         return null;
     }
+
+    private static bool AcceptsArity(
+        IReadOnlyList<SemanticParameter> parameters, int supplied) =>
+        supplied <= parameters.Count &&
+        parameters.Skip(supplied).All(parameter =>
+            !string.IsNullOrWhiteSpace(parameter.DefaultValue));
 
     public bool IsInheritedTObjectFree(string typeName, string? unitName)
     {
@@ -535,11 +542,15 @@ public sealed class TypeResolver
         if (unitName is null || !_units.TryGetValue(unitName, out var unit))
             return null;
 
-        var matches = unit.Functions.Where(function => function.Parameters.Count == arity &&
+        var matches = unit.Functions.Where(function =>
+            AcceptsArity(function.Parameters, arity) &&
             function.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
         if (matches.Length == 0)
             return null;
-        var parameters = matches[0].Parameters;
+        var parameters = matches
+            .OrderByDescending(match => match.Parameters.Count(parameter =>
+                !string.IsNullOrWhiteSpace(parameter.DefaultValue)))
+            .First().Parameters;
         // The interface declaration and implementation may both be present.
         return matches.All(match => match.Parameters.Zip(parameters).All(pair =>
             pair.First.Kind.Equals(pair.Second.Kind, StringComparison.OrdinalIgnoreCase) &&

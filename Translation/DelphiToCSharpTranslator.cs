@@ -1794,6 +1794,26 @@ public sealed class DelphiToCSharpTranslator
             : _resolver.ResolveFunctionMember(receiverName, target.Children[1].Text, unitName, argumentCount);
     }
 
+    private string TranslateDefaultArgument(SemanticParameter parameter)
+    {
+        string literal = parameter.DefaultValue?.Trim() ??
+            throw new InvalidOperationException($"Missing default for {parameter.Name}.");
+        string mapped = MapType(parameter.Type);
+
+        if (literal == "[]" && mapped.StartsWith("HashSet<", StringComparison.Ordinal))
+            return $"new {mapped}()";
+        if (literal.Equals("nil", StringComparison.OrdinalIgnoreCase))
+            return "default";
+        if (mapped == "bool" && bool.TryParse(literal, out bool boolean))
+            return boolean ? "true" : "false";
+        if (mapped is "string" or "char" &&
+            TryTranslatePascalStringLiteral(literal, out string text, mapped == "char"))
+            return text;
+        if (literal.StartsWith('$') && literal.Length > 1 && literal[1..].All(Uri.IsHexDigit))
+            return "0x" + literal[1..];
+        return literal;
+    }
+
     private static bool IsAssignedCall(ExpressionParser.ExpressionNode expression) =>
         expression.Kind == ExpressionParser.ExpressionKind.Call &&
         expression.Children.Count == 2 &&
@@ -3161,13 +3181,13 @@ private string TranslateCall(
     for (int i = 1; i < expression.Children.Count; i++)
     {
         var argument = expression.Children[i];
-        var formal = formals?.Count == expression.Children.Count - 1 ? formals[i - 1] : null;
+        var formal = formals?.Count >= expression.Children.Count - 1 ? formals[i - 1] : null;
         string value = formal is not null && !formal.Kind.Equals("var", StringComparison.OrdinalIgnoreCase) &&
             !formal.Kind.Equals("out", StringComparison.OrdinalIgnoreCase)
             ? TranslateExpectedValue(argument, formal.Type) : TranslateExpression(argument);
         // Delphi types a real literal from its formal parameter. An unsuffixed
         // fractional C# literal would instead be a double.
-        if (formals?.Count == expression.Children.Count - 1 &&
+        if (formals?.Count >= expression.Children.Count - 1 &&
             MapType(formals[i - 1].Type) == "float" &&
             argument.Kind == ExpressionParser.ExpressionKind.Literal &&
             (value.Contains('.') || value.Contains('e', StringComparison.OrdinalIgnoreCase)) &&
@@ -3175,13 +3195,20 @@ private string TranslateCall(
                 System.Globalization.CultureInfo.InvariantCulture, out _))
             value += "f";
 
-        if (formals?.Count == expression.Children.Count - 1)
+        if (formals?.Count >= expression.Children.Count - 1)
         {
             string mode = formals[i - 1].Kind;
             if (mode.Equals("var", StringComparison.OrdinalIgnoreCase)) value = "ref " + value;
             if (mode.Equals("out", StringComparison.OrdinalIgnoreCase)) value = "out " + value;
         }
         arguments.Add(value);
+    }
+
+    int suppliedArguments = expression.Children.Count - 1;
+    if (formals is not null && formals.Count > suppliedArguments)
+    {
+        foreach (SemanticParameter parameter in formals.Skip(suppliedArguments))
+            arguments.Add(TranslateDefaultArgument(parameter));
     }
 
     // Delphi Assigned(P) is a null/non-null test, including the common
