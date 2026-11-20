@@ -4,6 +4,11 @@ namespace FireURQ.Runtime;
 
 internal static class DelphiText
 {
+    // Delphi SysUtils uses the current locale for case-insensitive comparisons.
+    public static bool AnsiSameText(string? left, string? right) =>
+        string.Equals(left ?? string.Empty, right ?? string.Empty,
+            StringComparison.CurrentCultureIgnoreCase);
+
     public static string Copy(string? value, int index, int count)
     {
         if (string.IsNullOrEmpty(value) || count <= 0)
