@@ -2825,6 +2825,36 @@ private string TranslateCall(
         _currentTypeContext?.ResolveLocalFunction(targetExpression.Text, expression.Children.Count - 1).Found != true)
         formals = _resolver?.FindUnitRoutineParameters(targetExpression.Text, _unitName, expression.Children.Count - 1);
 
+    if (formals is null && _resolver is not null)
+    {
+        string? receiver = null;
+        string? receiverUnit = _unitName;
+        string method = targetExpression.Text;
+        if (targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess && targetExpression.Children.Count == 2)
+        {
+            var instance = targetExpression.Children[0];
+            method = targetExpression.Children[1].Text;
+            receiver = ResolveExpressionType(instance);
+            if (receiver is null && ResolveUnaryMemberType(instance) is { IsResolved: true, IsPointer: false } field)
+            {
+                receiver = field.ResolvedName;
+                receiverUnit = field.DeclaringUnitName ?? _unitName;
+            }
+        }
+        else if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+            ResolveExpressionType(targetExpression) is null &&
+            _currentTypeContext?.ResolveLocalFunction(method, expression.Children.Count - 1).Found != true)
+            receiver = _currentTypeContext?.OwnerClass;
+
+        if (receiver is not null && _resolver.FindMember(receiver, method, receiverUnit, expression.Children.Count - 1) is { } binding)
+        {
+            formals = binding.Member.Parameters;
+            target = targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess
+                ? TranslateExpression(targetExpression.Children[0]) + "." + binding.Member.Name
+                : binding.Member.Name;
+        }
+    }
+
     var arguments = new List<string>();
     for (int i = 1; i < expression.Children.Count; i++)
     {

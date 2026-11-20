@@ -374,13 +374,16 @@ public sealed class TypeResolver
     }
 
     internal TypeResolution? ResolveDataMemberType(string receiver, string memberName, string? unitName) =>
-        ResolveValueMember(receiver, memberName, unitName, argumentCount: null)?.Type;
+        FindMember(receiver, memberName, unitName, null) is { } data
+            ? Resolve(data.Member.Type, data.UnitName) : null;
 
     internal (string Name, TypeResolution Type)? ResolveFunctionMember(
         string receiver, string memberName, string? unitName, int argumentCount) =>
-        ResolveValueMember(receiver, memberName, unitName, argumentCount);
+        FindMember(receiver, memberName, unitName, argumentCount) is { } method &&
+        !string.IsNullOrWhiteSpace(method.Member.Type)
+            ? (method.Member.Name, Resolve(method.Member.Type, method.UnitName)) : null;
 
-    private (string Name, TypeResolution Type)? ResolveValueMember(
+    internal (SemanticMember Member, string UnitName)? FindMember(
         string receiver, string memberName, string? unitName, int? argumentCount)
     {
         string? context = unitName;
@@ -408,11 +411,10 @@ public sealed class TypeResolver
                         member.Parameters.Count == (argumentCount ?? 0) &&
                         (argumentCount.HasValue
                             ? member.Kind == SemanticMemberKind.Method &&
-                              !member.IsConstructor && !member.IsDestructor &&
-                              !string.IsNullOrWhiteSpace(member.Type)
+                              !member.IsConstructor && !member.IsDestructor
                             : member.Kind is SemanticMemberKind.Field or SemanticMemberKind.Property)).ToArray();
                     return candidates.Length == 1
-                        ? (candidates[0].Name, Resolve(candidates[0].Type, owner))
+                        ? (candidates[0], owner)
                         : null;
                 }
             }
