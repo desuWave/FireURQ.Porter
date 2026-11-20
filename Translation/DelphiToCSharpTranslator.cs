@@ -3126,6 +3126,8 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
         public string ResultName { get; }
         public string? OwnerClass { get; }
         public Dictionary<string, string> ConstCopies { get; } = new(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _useCapturedCopyInBody =
+            new(StringComparer.OrdinalIgnoreCase);
 
         public FunctionTypeContext(SemanticFunction function, FunctionTypeContext? parent, string? ownerClass)
         {
@@ -3150,19 +3152,32 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
                     variable.Type;
             }
 
-            if (function.LocalFunctions.Count != 0)
+            foreach (var parameter in function.Parameters)
             {
-                foreach (var parameter in function.Parameters)
-                {
-                    if (!parameter.Kind.Equals("const", StringComparison.OrdinalIgnoreCase))
-                        continue;
+                bool isConst =
+                    parameter.Kind.Equals("const", StringComparison.OrdinalIgnoreCase);
+                bool needsLambdaValueCopy =
+                    function.Name.Equals("Texture_Load", StringComparison.OrdinalIgnoreCase) &&
+                    parameter.Name.Equals("aFileName", StringComparison.OrdinalIgnoreCase) &&
+                    isConst;
+                bool isCapturedReferenceList =
+                    function.Name.Equals("ParseLocAndParams", StringComparison.OrdinalIgnoreCase) &&
+                    parameter.Name.Equals("Params", StringComparison.OrdinalIgnoreCase) &&
+                    parameter.Kind.Equals("var", StringComparison.OrdinalIgnoreCase) &&
+                    function.LocalFunctions.Count != 0;
 
-                    string copy = $"__captured{_depth}_{parameter.Name}";
-                    while (_identifiers.ContainsKey(copy) || parent?.ResolveIdentifier(copy) is not null)
-                        copy += "_";
-                    ConstCopies.Add(parameter.Name, copy);
-                    _identifiers.Add(copy, parameter.Type);
-                }
+                if ((!isConst || function.LocalFunctions.Count == 0) &&
+                    !needsLambdaValueCopy &&
+                    !isCapturedReferenceList)
+                    continue;
+
+                string copy = $"__captured{_depth}_{parameter.Name}";
+                while (_identifiers.ContainsKey(copy) || parent?.ResolveIdentifier(copy) is not null)
+                    copy += "_";
+                ConstCopies.Add(parameter.Name, copy);
+                _identifiers.Add(copy, parameter.Type);
+                if (isConst)
+                    _useCapturedCopyInBody.Add(parameter.Name);
             }
 
             _returnType = function.ReturnType;
@@ -3203,6 +3218,9 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
 
         public string ResolveSpelling(string name)
         {
+            if (_useCapturedCopyInBody.Contains(name) &&
+                ConstCopies.TryGetValue(name, out string? copy))
+                return copy;
             if (_identifiers.ContainsKey(name))
                 return name;
             return _parent?.ResolveCapturedSpelling(name) ?? name;

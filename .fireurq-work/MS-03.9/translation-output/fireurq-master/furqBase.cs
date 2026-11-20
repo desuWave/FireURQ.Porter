@@ -45,6 +45,7 @@ public static class furqBaseModule
     public static int ParseLocAndParams(in string aStr, ref string theLoc, ref IJclStringList Params, ref TFURQActionModifier theModifier)
     {
         var __captured0_aStr = aStr;
+        var __captured0_Params = Params;
         int l_BLevel;
         TfurqLexer l_Lex;
         int l_ParStart;
@@ -55,7 +56,7 @@ public static class furqBaseModule
             string l_ParStr;
         
             l_ParStr = Copy(__captured0_aStr, l_ParStart, (aEndPos - l_ParStart));
-            Params.Add(l_ParStr);
+            __captured0_Params.Add(l_ParStr);
         }
     
     

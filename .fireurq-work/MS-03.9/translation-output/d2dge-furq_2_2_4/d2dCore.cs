@@ -2705,7 +2705,8 @@ public partial class Td2dCore
                 return result;
             }
         }
-        l_Data = global::FireURQ.Runtime.DelphiGeometry.WithUInt32Address(ref l_Size, __fireurqSizeAddress => Resource_Load(aFileName, __fireurqSizeAddress, aPackOnly));
+        string __captured0_aFileName = aFileName;
+        l_Data = global::FireURQ.Runtime.DelphiGeometry.WithUInt32Address(ref l_Size, __fireurqSizeAddress => Resource_Load(__captured0_aFileName, __fireurqSizeAddress, aPackOnly));
         if (l_Data == IntPtr.Zero)
         {
             System_Log("Can't load texture (%s)", new object[] { aFilename });
