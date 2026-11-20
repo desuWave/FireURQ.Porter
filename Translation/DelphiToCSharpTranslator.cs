@@ -1949,20 +1949,7 @@ public sealed class DelphiToCSharpTranslator
                 return $"unchecked((ushort)((uint)({packed}) >> 16))";
         }
 
-        if (_resolver is not null && _unitName is not null &&
-        expression.Children.Count == 3 &&
-        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } formatTarget &&
-        formatTarget.Text.Equals("Format", StringComparison.OrdinalIgnoreCase) &&
-        !_resolver.HasVisibleValueDeclaration(formatTarget.Text, _unitName) &&
-        ResolveExpressionType(formatTarget) is null &&
-        expression.Children[2] is { Kind: ExpressionParser.ExpressionKind.Set } formatValues)
-    {
-        string format = TranslateExpression(expression.Children[1]);
-        string values = string.Join(", ", formatValues.Children.Select(TranslateExpression));
-        return $"Format({format}, new object[] {{ {values} }})";
-    }
-
-    if (string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
+        if (string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
             member.Equals("VType", StringComparison.OrdinalIgnoreCase) &&
             expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Call } cast &&
             cast.Children.Count == 2 &&
@@ -2457,6 +2444,19 @@ private bool TryTranslateStreamCall(
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
+    if (_resolver is not null && _unitName is not null &&
+        expression.Children.Count == 3 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } formatTarget &&
+        formatTarget.Text.Equals("Format", StringComparison.OrdinalIgnoreCase) &&
+        !_resolver.HasVisibleValueDeclaration(formatTarget.Text, _unitName) &&
+        ResolveExpressionType(formatTarget) is null &&
+        expression.Children[2] is { Kind: ExpressionParser.ExpressionKind.Set } formatValues)
+    {
+        string format = TranslateExpression(expression.Children[1]);
+        string values = string.Join(", ", formatValues.Children.Select(TranslateExpression));
+        return $"Format({format}, new object[] {{ {values} }})";
+    }
+
     if (_resolver is not null && _unitName is not null && expression.Children.Count == 2 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } pointerOperation &&
         expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Identifier } pointerVariable &&
