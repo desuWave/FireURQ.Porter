@@ -175,6 +175,10 @@ public sealed class ProjectTranslator
                 Encoding.UTF8);
         }
 
+        var moduleNames = inputs.Where(EmitsModule)
+            .Select(input => input.SemanticModel.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         foreach (ProjectTranslationInput input in inputs)
         {
             var unitTranslator = new ProjectTranslator(
@@ -182,7 +186,7 @@ public sealed class ProjectTranslator
                 units, usesStreamRuntime,
                 usesJclStringListRuntime, usesStringListRuntime);
 
-            results.Add(unitTranslator.TranslateUnit(input, outputDirectory));
+            results.Add(unitTranslator.TranslateUnit(input, outputDirectory, moduleNames));
         }
 
         return results;
@@ -351,9 +355,14 @@ public sealed class ProjectTranslator
              "TBINXMLREADER" or "TSTMXMLREADER" or "TSTRXMLREADER" or
              "TBINXMLWRITER" or "TSTMXMLWRITER" or "TSTRXMLWRITER");
 
+    private static bool EmitsModule(ProjectTranslationInput input) =>
+        input.SemanticModel.Variables.Count > 0 || input.SemanticModel.Constants.Count > 0 ||
+        input.Bodies.Any(body => body.Body.OwnerKind == BodyTokenAnalyzer.BodyOwnerKind.TopLevel &&
+            body.Body.BodyTokens.Count > 0);
+
     private TranslationResult TranslateUnit(
         ProjectTranslationInput input,
-        string outputDirectory)
+        string outputDirectory, IReadOnlySet<string> moduleNames)
     {
         string rootName = new DirectoryInfo(input.RootPath).Name;
         string relativePath = Path.GetRelativePath(input.RootPath, input.FilePath);
@@ -380,10 +389,7 @@ public sealed class ProjectTranslator
                     unit.Name.Equals(input.SemanticModel.Name, StringComparison.OrdinalIgnoreCase) ||
                     input.SemanticModel.Uses.Any(name =>
                         name.Equals(unit.Name, StringComparison.OrdinalIgnoreCase)))
-                .Where(unit =>
-                    unit.Variables.Count > 0 ||
-                    unit.Constants.Count > 0 ||
-                    unit.Functions.Count > 0)
+                .Where(unit => moduleNames.Contains(unit.Name))
                 .DistinctBy(unit => unit.Name, StringComparer.OrdinalIgnoreCase);
 
             foreach (SemanticUnit module in importedModules)
@@ -414,11 +420,7 @@ public sealed class ProjectTranslator
                 builder.AppendLine(declarations);
 
             string moduleMembers = _declarationTranslator.TranslateModuleMembers(input.SemanticModel);
-            bool hasTopLevelImplementation = input.Bodies.Any(body =>
-                body.Body.OwnerKind == BodyTokenAnalyzer.BodyOwnerKind.TopLevel &&
-                body.Body.BodyTokens.Count > 0);
-
-            if (!string.IsNullOrWhiteSpace(moduleMembers) || hasTopLevelImplementation)
+            if (moduleNames.Contains(input.SemanticModel.Name))
             {
                 builder.AppendLine($"public static class {input.SemanticModel.Name}Module");
                 builder.AppendLine("{");
