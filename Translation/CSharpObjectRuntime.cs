@@ -48,6 +48,16 @@ namespace FireURQ.Runtime
     {
         private int __fireurqDestructorDepth;
 
+        // Generated constructors call inherited Create on an already allocated CLR instance.
+        protected void Create() { }
+
+        public static void FreeAndNil<T>(ref T value) where T : TObject
+        {
+            T previous = value;
+            value = null!;
+            Free(previous);
+        }
+
         protected global::System.IDisposable __FireUrqEnterDestructor()
         {
             __fireurqDestructorDepth++;
