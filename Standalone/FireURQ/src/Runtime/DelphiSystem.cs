@@ -40,7 +40,7 @@ internal static class DelphiSystem
     public static void Assert(bool condition)
     {
         if (!condition)
-            throw new System.Diagnostics.Debug.AssertException();
+            throw new InvalidOperationException("Delphi assertion failed.");
     }
 
     public static bool Failed(int result) => result < 0;
