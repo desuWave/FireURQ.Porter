@@ -1,3 +1,4 @@
+global using static FireURQ.Runtime.DelphiRounding;
 using System;
 using System.Numerics;
 
@@ -126,6 +127,14 @@ public readonly partial struct Extended : IEquatable<Extended>, IComparable<Exte
             left.exponent - right.exponent, left.negative ^ right.negative);
     }
 
+    internal long ToIntegral(bool roundToEven)
+    {
+        BigInteger magnitude = roundToEven
+            ? RoundRatio(significand, BigInteger.One, exponent)
+            : (BigInteger)significand << exponent;
+        return (long)(negative ? -magnitude : magnitude);
+    }
+
     private BigInteger SignedAt(int unit)
     {
         BigInteger magnitude = (BigInteger)significand << (exponent - unit);
@@ -173,4 +182,10 @@ public readonly partial struct Extended : IEquatable<Extended>, IComparable<Exte
         int half = (remainder << 1).CompareTo(denominator);
         return half > 0 || (half == 0 && !quotient.IsEven) ? quotient + 1 : quotient;
     }
+}
+
+internal static class DelphiRounding
+{
+    public static long Trunc(Extended value) => value.ToIntegral(roundToEven: false);
+    public static long Round(Extended value) => value.ToIntegral(roundToEven: true);
 }
