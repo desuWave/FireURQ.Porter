@@ -74,9 +74,20 @@ internal static class DelphiSystem
     public static unsafe ref T Dereference<T>(IntPtr pointer) where T : struct =>
         ref System.Runtime.CompilerServices.Unsafe.AsRef<T>(pointer.ToPointer());
 
+    public const int MaxInt = int.MaxValue;
     public const int varDate = 7;
     public const int rfReplaceAll = 1;
     public const int rfIgnoreCase = 2;
+
+    public static Variant VarAsType(Variant value, int typeCode) =>
+        typeCode switch
+        {
+            3 => value.TryGetInteger(out int integer) ? integer : checked((int)(double)value),
+            5 => (double)value,
+            11 => value.TryGetBoolean(out bool boolean) ? boolean : (double)value != 0,
+            256 => (string)value,
+            _ => value
+        };
 
     public static int Abs(int value) => Math.Abs(value);
     public static long Abs(long value) => Math.Abs(value);
