@@ -3181,6 +3181,34 @@ private string TranslateCall(
         targetExpression.Children[0].Text.Equals("f_D3DDevice", StringComparison.OrdinalIgnoreCase))
     {
         string streamMethod = targetExpression.Children[1].Text;
+        if (streamMethod.Equals("SetRenderState", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children.Count == 3)
+        {
+            string state = TranslateExpression(expression.Children[1]);
+            string value = TranslateExpression(expression.Children[2]);
+            return "global::FireURQ.Runtime.D3D8.SetRenderState(f_D3DDevice, " +
+                $"{state}, unchecked((uint)({value})))";
+        }
+
+        if (streamMethod.Equals("SetTexture", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children.Count == 3)
+        {
+            string stage = TranslateExpression(expression.Children[1]);
+            string texture = TranslateExpression(expression.Children[2]);
+            return "global::FireURQ.Runtime.D3D8.SetTexture(f_D3DDevice, " +
+                $"unchecked((uint)({stage})), {texture})";
+        }
+
+        if (streamMethod.Equals("SetTextureStageState", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children.Count == 4)
+        {
+            string stage = TranslateExpression(expression.Children[1]);
+            string state = TranslateExpression(expression.Children[2]);
+            string value = TranslateExpression(expression.Children[3]);
+            return "global::FireURQ.Runtime.D3D8.SetTextureStageState(f_D3DDevice, " +
+                $"unchecked((uint)({stage})), {state}, unchecked((uint)({value})))";
+        }
+
         if (streamMethod.Equals("SetStreamSource", StringComparison.OrdinalIgnoreCase) &&
             expression.Children.Count == 4 &&
             TranslateExpression(expression.Children[3]) == "SizeOf(Td2dVertex)")
