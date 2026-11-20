@@ -219,4 +219,74 @@ internal static class DelphiText
             $"D{precision}", System.Globalization.CultureInfo.InvariantCulture);
         return sign + digits;
     }
+
+    public static string StringReplace(
+        string? source, string? oldValue, string? newValue, HashSet<int> flags)
+    {
+        source ??= string.Empty;
+        oldValue ??= string.Empty;
+        newValue ??= string.Empty;
+        if (oldValue.Length == 0)
+            return source;
+
+        StringComparison comparison = flags.Contains(rfIgnoreCase)
+            ? StringComparison.CurrentCultureIgnoreCase
+            : StringComparison.Ordinal;
+        int start = source.IndexOf(oldValue, comparison);
+        if (start < 0)
+            return source;
+
+        var result = new System.Text.StringBuilder();
+        int copied = 0;
+        do
+        {
+            result.Append(source, copied, start - copied);
+            result.Append(newValue);
+            copied = start + oldValue.Length;
+            if (!flags.Contains(rfReplaceAll))
+                break;
+            start = source.IndexOf(oldValue, copied, comparison);
+        }
+        while (start >= 0);
+
+        result.Append(source, copied, source.Length - copied);
+        return result.ToString();
+    }
+
+    public static bool StrMatches(string? value, string? pattern)
+    {
+        value ??= string.Empty;
+        pattern ??= string.Empty;
+        int valueIndex = 0;
+        int patternIndex = 0;
+        int star = -1;
+        int retry = 0;
+        while (valueIndex < value.Length)
+        {
+            if (patternIndex < pattern.Length &&
+                (pattern[patternIndex] == '?' || pattern[patternIndex] == value[valueIndex]))
+            {
+                patternIndex++;
+                valueIndex++;
+            }
+            else if (patternIndex < pattern.Length && pattern[patternIndex] == '*')
+            {
+                star = patternIndex++;
+                retry = valueIndex;
+            }
+            else if (star >= 0)
+            {
+                patternIndex = star + 1;
+                valueIndex = ++retry;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        while (patternIndex < pattern.Length && pattern[patternIndex] == '*')
+            patternIndex++;
+        return patternIndex == pattern.Length;
+    }
 }

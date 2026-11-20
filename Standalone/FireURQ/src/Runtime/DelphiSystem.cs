@@ -73,4 +73,27 @@ internal static class DelphiSystem
 
     public static unsafe ref T Dereference<T>(IntPtr pointer) where T : struct =>
         ref System.Runtime.CompilerServices.Unsafe.AsRef<T>(pointer.ToPointer());
+
+    public const int varDate = 7;
+    public const int rfReplaceAll = 1;
+    public const int rfIgnoreCase = 2;
+
+    public static int Abs(int value) => Math.Abs(value);
+    public static long Abs(long value) => Math.Abs(value);
+    public static float Abs(float value) => MathF.Abs(value);
+    public static double Abs(double value) => Math.Abs(value);
+
+    public static void Sleep(uint milliseconds) =>
+        System.Threading.Thread.Sleep(checked((int)milliseconds));
+
+    public static IntPtr GetMemory(int size) =>
+        System.Runtime.InteropServices.Marshal.AllocHGlobal(size);
+
+    public static void FreeMem(IntPtr pointer, int size = 0)
+    {
+        if (pointer != IntPtr.Zero)
+            System.Runtime.InteropServices.Marshal.FreeHGlobal(pointer);
+    }
+
+    public static void Dispose(IntPtr pointer) => FreeMem(pointer);
 }

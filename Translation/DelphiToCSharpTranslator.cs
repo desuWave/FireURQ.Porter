@@ -2522,6 +2522,26 @@ private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
     if (_resolver is not null && _unitName is not null &&
+        expression.Children.Count == 3 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } getMem &&
+        getMem.Text.Equals("GetMem", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Identifier } destination &&
+        ResolveExpressionType(destination) is string destinationType &&
+        _resolver.Resolve(destinationType, _unitName).IsPointer)
+    {
+        return $"{TranslateExpression(destination)} = global::FireURQ.Runtime.DelphiSystem.GetMemory(checked((int)({TranslateExpression(expression.Children[2])})))";
+    }
+
+    if (expression.Children.Count == 2 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } dispose &&
+        dispose.Text.Equals("Dispose", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Call } pointerValue &&
+        pointerValue.Children.Count == 2)
+    {
+        return $"global::FireURQ.Runtime.DelphiSystem.Dispose((IntPtr)({TranslateExpression(pointerValue.Children[1])}))";
+    }
+
+    if (_resolver is not null && _unitName is not null &&
         expression.Children.Count == 2 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } interlocked &&
         interlocked.Text.ToUpperInvariant() is "INTERLOCKEDINCREMENT" or "INTERLOCKEDDECREMENT" &&
