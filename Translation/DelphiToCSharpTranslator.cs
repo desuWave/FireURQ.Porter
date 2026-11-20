@@ -369,7 +369,9 @@ public sealed class DelphiToCSharpTranslator
         while (_currentTypeContext.ResolveIdentifier(alias) is not null)
             alias += "_";
         string target = TranslateValueOperand(receiver, out _);
-        bool recordVariable = receiver.Kind == ExpressionParser.ExpressionKind.Identifier && type is not null &&
+        bool recordVariable =
+            receiver.Kind is ExpressionParser.ExpressionKind.Identifier or ExpressionParser.ExpressionKind.IndexAccess &&
+            type is not null &&
             _resolver?.ResolveDeclarationKind(type, _unitName) != "Class" &&
             _resolver?.ResolveDeclarationKind(type, _unitName) != "Interface" &&
             (ResolveExpressionType(receiver) is not null ||
@@ -1885,6 +1887,9 @@ public sealed class DelphiToCSharpTranslator
             return null;
         }
 
+        if (expression.Kind == ExpressionParser.ExpressionKind.IndexAccess)
+            return ResolveArrayElement(expression);
+
         if (expression.Kind ==
             ExpressionParser.ExpressionKind.Identifier)
         {
@@ -2042,6 +2047,39 @@ public sealed class DelphiToCSharpTranslator
             $"{receiver}.{property.ReadAccessor}({arguments})";
 
         return true;
+    }
+
+    private string? ResolveArrayElement(ExpressionParser.ExpressionNode index)
+    {
+        if (_resolver is null ||
+            index.Kind != ExpressionParser.ExpressionKind.IndexAccess ||
+            index.Children.Count < 2)
+            return null;
+
+        ExpressionParser.ExpressionNode array = index.Children[0];
+        string? arrayType =
+            ResolveExpressionType(array) ??
+            ResolveUnaryMemberType(array)?.ResolvedName;
+        if (arrayType is null)
+            return null;
+
+        TypeResolution resolved = _resolver.Resolve(arrayType, _unitName);
+        if (!resolved.IsResolved || resolved.IsPointer)
+            return null;
+
+        string definition = resolved.ResolvedName;
+        if (_resolver.TryGetCompositeDefinition(
+                definition,
+                resolved.DeclaringUnitName ?? _unitName,
+                out string composite,
+                out _))
+            definition = composite;
+
+        var match = System.Text.RegularExpressions.Regex.Match(
+            definition,
+            @"^array\s*(?:\[[^\]]*\]\s*)?of\s+(.+)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return match.Success ? match.Groups[1].Value.Trim() : null;
     }
 
     private bool IsManagedString(ExpressionParser.ExpressionNode expression)

@@ -387,7 +387,10 @@ public sealed class TypeResolver
 
     internal TypeResolution? ResolveDataMemberType(string receiver, string memberName, string? unitName) =>
         FindMember(receiver, memberName, unitName, null) is { } data
-            ? Resolve(data.Member.Type, data.UnitName) : null;
+            ? Resolve(data.Member.Type, data.UnitName)
+            : FindRecordField(receiver, memberName, unitName) is { } field
+                ? Resolve(field.Type, Resolve(receiver, unitName).DeclaringUnitName)
+                : null;
 
     internal (string Name, TypeResolution Type)? ResolveFunctionMember(
         string receiver, string memberName, string? unitName, int argumentCount) =>
