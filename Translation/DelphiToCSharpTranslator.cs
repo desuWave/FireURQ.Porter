@@ -2525,11 +2525,11 @@ private string TranslateCall(
         expression.Children.Count == 3 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } getMem &&
         getMem.Text.Equals("GetMem", StringComparison.OrdinalIgnoreCase) &&
-        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Identifier } destination &&
-        ResolveExpressionType(destination) is string destinationType &&
+        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Identifier } allocationDestination &&
+        ResolveExpressionType(allocationDestination) is string destinationType &&
         _resolver.Resolve(destinationType, _unitName).IsPointer)
     {
-        return $"{TranslateExpression(destination)} = global::FireURQ.Runtime.DelphiSystem.GetMemory(checked((int)({TranslateExpression(expression.Children[2])})))";
+        return $"{TranslateExpression(allocationDestination)} = global::FireURQ.Runtime.DelphiSystem.GetMemory(checked((int)({TranslateExpression(expression.Children[2])})))";
     }
 
     if (expression.Children.Count == 2 &&
