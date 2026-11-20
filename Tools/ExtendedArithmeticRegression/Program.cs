@@ -19,6 +19,18 @@ Check("round directly to Single above a midpoint", (float)(singleMidpoint + ulp)
 if (!(large + one > large) || large + one == large)
     throw new InvalidOperationException("Extended comparison rounded to binary64 before comparing.");
 
+if (Trunc(-1.75) != -1 || Round(-1.5) != -2 || Round(2.5) != 2 ||
+    Round(-2.5) != -2 || Round(large + one) != 9007199254740993L ||
+    Trunc(Extended.FromInt64(long.MinValue)) != long.MinValue)
+    throw new InvalidOperationException("Trunc/Round lost precision or used the wrong rounding rule.");
+
+try
+{
+    Round(Extended.FromInt64(long.MaxValue) + one);
+    throw new InvalidOperationException("Round accepted a value outside Int64.");
+}
+catch (OverflowException) { }
+
 #if TEST_VARIANT
 Variant number = 9007199254740992.0;
 Extended numericInput = Extended.EnsureReal(number);

@@ -50,6 +50,11 @@ jobs:
           grep -Eq '^Translation succeeded: +58$' translation.log
           test -s translation-output/d2dge-furq_2_2_4/SimpleXML.cs
 
+      - name: Verify Extended arithmetic
+        env:
+          DOTNET_ROLL_FORWARD: LatestMajor
+        run: dotnet run -c Release --project Tools/ExtendedArithmeticRegression/ExtendedArithmeticRegression.csproj
+
       - name: Build generated standalone
         id: standalone
         shell: bash
