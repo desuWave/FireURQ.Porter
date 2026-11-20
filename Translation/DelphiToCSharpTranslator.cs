@@ -2036,6 +2036,17 @@ private bool TryTranslateStreamCall(
                 }
             }
 
+            if (target.Text.Equals("Delete", StringComparison.OrdinalIgnoreCase) &&
+                expression.Children.Count == 4 && value.Kind == ExpressionParser.ExpressionKind.Identifier &&
+                ResolveExpressionType(value) is string stringType && MapType(stringType) == "string")
+            {
+                string storage = TranslateExpression(value);
+                string index = TranslateValueOperand(expression.Children[2], out _);
+                string count = TranslateValueOperand(expression.Children[3], out _);
+                translated = $"global::FireURQ.Runtime.DelphiStorage.Delete(ref {storage}, {index}, {count})";
+                return true;
+            }
+
             if (target.Text.Equals("SetLength", StringComparison.OrdinalIgnoreCase) &&
                 expression.Children.Count == 3 &&
                 value.Kind is ExpressionParser.ExpressionKind.Identifier or ExpressionParser.ExpressionKind.MemberAccess)

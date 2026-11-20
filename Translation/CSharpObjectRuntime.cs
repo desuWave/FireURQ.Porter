@@ -46,6 +46,14 @@ namespace FireURQ.Runtime
 
     public static class DelphiStorage
     {
+        public static void Delete(ref string value, int index, int count)
+        {
+            if (string.IsNullOrEmpty(value) || index < 1 || index > value.Length || count <= 0)
+                return;
+            int start = index - 1;
+            value = value.Remove(start, global::System.Math.Min(count, value.Length - start));
+        }
+
         public static void SetLength(ref string value, int length)
         {
             if (length < 0)
