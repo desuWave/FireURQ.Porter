@@ -3395,13 +3395,25 @@ private string TranslateCall(
     }
 
     if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        expression.Children.Count == 2 &&
+        targetExpression.Text.Equals("VarClear", StringComparison.OrdinalIgnoreCase) &&
+        _resolver is not null && _unitName is not null &&
+        !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName) &&
+        ResolveExpressionType(targetExpression) is null)
+        return $"global::FireURQ.Runtime.DelphiVariants.VarClear(ref {TranslateExpression(expression.Children[1])})";
+
+    if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
         targetExpression.Text.Equals("FreeAndNil", StringComparison.OrdinalIgnoreCase) &&
         expression.Children.Count == 2 && _unitName is not null && _resolver is not null &&
         !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName) &&
         ResolveExpressionType(targetExpression) is null)
     {
         var variable = expression.Children[1];
-        if (variable.Kind is ExpressionParser.ExpressionKind.Identifier or ExpressionParser.ExpressionKind.MemberAccess)
+        bool arraySlot = variable.Kind == ExpressionParser.ExpressionKind.IndexAccess &&
+            variable.Children.Count >= 2 &&
+            MapType(ResolveExpressionType(variable.Children[0]) ??
+                ResolveUnaryMemberType(variable.Children[0])?.ResolvedName).EndsWith("]", StringComparison.Ordinal);
+        if (arraySlot || variable.Kind is ExpressionParser.ExpressionKind.Identifier or ExpressionParser.ExpressionKind.MemberAccess)
             return $"global::FireURQ.Runtime.TObject.FreeAndNil(ref {TranslateExpression(variable)})";
     }
 
