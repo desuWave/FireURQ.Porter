@@ -319,7 +319,7 @@ public partial class Td2dFramedButtonView
     
     public int CalcWidth(string aCaption)
     {
-        Td2dPoint l_TextSize;
+        Td2dPoint l_TextSize = default!;
         int result;
     
         f_Font.CalcSize(aCaption, l_TextSize);
@@ -339,7 +339,7 @@ public partial class Td2dFramedButtonView
     {
         int l_MaxTextWidth;
         string l_Str;
-        Td2dPoint l_Size;
+        Td2dPoint l_Size = default!;
         string result;
     
         l_MaxTextWidth = ((aWidth - f_StateFrames[bsNormal].LeftWidth) - f_StateFrames[bsNormal].RightWidth);
@@ -398,7 +398,7 @@ public partial class Td2dFramedButtonView
         float l_TextX;
         float l_TextY;
         int l_IntWidth;
-        Td2dPoint l_TextSize;
+        Td2dPoint l_TextSize = default!;
     
         if (aPrecalcWidth > 0)
         {

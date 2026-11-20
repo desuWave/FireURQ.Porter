@@ -542,7 +542,7 @@ public partial class Td2dCore
     
     private void MakeEvent(int aType, int aKey, int aScan, int aFlags, int aX, int aY)
     {
-        IntPtr l_Event;
+        IntPtr l_Event = default!;
         TPoint l_Pnt;
         TKeyboardState l_KbdState;
     
@@ -731,7 +731,7 @@ public partial class Td2dCore
         D3DADAPTER_IDENTIFIER8 l_AdID;
         ushort[] l_DVer;
         D3DDISPLAYMODE l_Mode;
-        TD3DMatrix l_Tmp;
+        TD3DMatrix l_Tmp = default!;
         float l_XScale;
         float l_YScale;
         bool result;
@@ -1278,7 +1278,7 @@ public partial class Td2dCore
         int l_Fmt2;
         int l_MipLevel;
         D3DXIMAGE_INFO l_Info;
-        IDirect3DTexture8 l_ResultTex;
+        IDirect3DTexture8 l_ResultTex = default!;
         Id2dTexture result;
     
         result = null;
@@ -1314,9 +1314,9 @@ public partial class Td2dCore
     public void Music_MIDIPlay(string aFileName, bool aLooped, bool aPackOnly)
     {
         TFileStream l_FS;
-        char[] TempPath;
-        char[] TempFile;
-        uint l_Size;
+        char[] TempPath = default!;
+        char[] TempFile = default!;
+        uint l_Size = default!;
         string l_Str;
         uint l_MidiVolume;
     
@@ -1367,7 +1367,7 @@ public partial class Td2dCore
     
     public void Music_MODPlay(string aFileName, bool aLooped, int aFadeinTime, bool aPackOnly)
     {
-        uint l_Size;
+        uint l_Size = default!;
         uint l_Flags;
     
         if (f_Music != mp_None)
@@ -1487,7 +1487,7 @@ public partial class Td2dCore
     
     public void Music_StreamPlay(string aFileName, bool aLooped, int aFadeinTime, bool aPackOnly)
     {
-        uint l_Size;
+        uint l_Size = default!;
         uint l_Flags;
     
         if (f_Music != mp_None)
@@ -1730,7 +1730,7 @@ public partial class Td2dCore
     
     public bool Resource_AttachPack(in string aName, in Id2dResourcePack aPack)
     {
-        int I;
+        int I = default!;
         bool result;
     
         result = false;
@@ -1748,7 +1748,7 @@ public partial class Td2dCore
     public TStream Resource_CreateStream(string aFilename, bool aPackOnly)
     {
         IntPtr l_Data;
-        uint l_Size;
+        uint l_Size = default!;
         TStream result;
     
         result = null;
@@ -1871,7 +1871,7 @@ public partial class Td2dCore
     
     public void Resource_RemovePack(in string aFileName)
     {
-        int I;
+        int I = default!;
     
         if (f_AttachedPacks.Find(aFileName, I))
         {
@@ -1983,7 +1983,7 @@ public partial class Td2dCore
         int l_Idx;
         uint l_Ch;
         IntPtr l_Data;
-        uint l_Size;
+        uint l_Size = default!;
     
         if (BASS_Handle != 0)
         {
@@ -2023,7 +2023,7 @@ public partial class Td2dCore
     public int Snd_PreLoadSample(string aFileName, bool aPackOnly)
     {
         IntPtr l_Data;
-        uint l_Size;
+        uint l_Size = default!;
         uint l_Handle;
         int result;
     
@@ -2112,7 +2112,7 @@ public partial class Td2dCore
     
     public bool Music_IsPlaying()
     {
-        AnsiChar[] l_Str;
+        AnsiChar[] l_Str = default!;
         bool result;
     
         result = false;
@@ -2369,7 +2369,7 @@ public partial class Td2dCore
     
     public bool System_Start()
     {
-        string l_Str;
+        string l_Str = default!;
         TWndClass l_WndClass;
         int l_Width;
         int l_Height;
@@ -2456,8 +2456,8 @@ public partial class Td2dCore
     public void System_Run()
     {
         TMsg l_Msg;
-        TPoint l_Point;
-        TRect l_Rect;
+        TPoint l_Point = default!;
+        TRect l_Rect = default!;
         bool l_Finish;
     
         if (f_WHandle == 0)
@@ -2633,7 +2633,7 @@ public partial class Td2dCore
     
     public Id2dTexture Texture_Create(in int aWidth, in int aHeight)
     {
-        IDirect3DTexture8 l_Res;
+        IDirect3DTexture8 l_Res = default!;
         Id2dTexture result;
     
         result = null;
@@ -2650,7 +2650,7 @@ public partial class Td2dCore
     
     public int Texture_GetWidth(IDirect3DTexture8 aTex)
     {
-        D3DSURFACE_DESC l_Desc;
+        D3DSURFACE_DESC l_Desc = default!;
         int result;
     
         if (Failed(aTex.GetLevelDesc(0, l_Desc)))
@@ -2666,7 +2666,7 @@ public partial class Td2dCore
     
     public int Texture_GetHeight(IDirect3DTexture8 aTex)
     {
-        D3DSURFACE_DESC l_Desc;
+        D3DSURFACE_DESC l_Desc = default!;
         int result;
     
         if (Failed(aTex.GetLevelDesc(0, l_Desc)))
@@ -2683,7 +2683,7 @@ public partial class Td2dCore
     public Id2dTexture Texture_Load(in string aFileName, bool aPackOnly = false, bool aUseCache = true, in bool aMipMap = false, IntPtr aPicSize = default)
     {
         IntPtr l_Data;
-        uint l_Size;
+        uint l_Size = default!;
         int l_Idx;
         TD3DXImageInfo l_ImgInfo;
         TPoint l_PicSize;

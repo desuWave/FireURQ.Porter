@@ -73,10 +73,10 @@ public partial class Tf2SaveLoadScene
         int I;
         Td2dBitButton l_BackButton;
         int l_ButtonHeight;
-        Id2dFramedButtonView l_Frame;
+        Id2dFramedButtonView l_Frame = default!;
         IXmlNode l_Root;
         IXmlNode l_Node;
-        Td2dFramedTextButton[] l_Buttons;
+        Td2dFramedTextButton[] l_Buttons = default!;
         int l_ButtonsNum;
         int l_ButtonX;
         int l_ButtonY;
@@ -84,10 +84,10 @@ public partial class Tf2SaveLoadScene
         float l_MaxWidth;
         int l_CaptionGap;
         int l_ButtonsGap;
-        string l_DTS;
+        string l_DTS = default!;
         int l_FullHeight;
         int l_MaxAllowedWidth;
-        Td2dPoint l_Size;
+        Td2dPoint l_Size = default!;
     
         l_Root = F2App.Skin.XML.DocumentElement.SelectSingleNode(c_sSaveload);
         if (l_Root != null)

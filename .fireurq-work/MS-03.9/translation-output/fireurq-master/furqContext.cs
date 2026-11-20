@@ -172,7 +172,7 @@ public static class furqContextModule
     public static string ActionDataHash(in IFURQActionData aData)
     {
         int I;
-        string l_Source;
+        string l_Source = default!;
         TMD5Digest l_MD5;
         string result;
     
@@ -340,7 +340,7 @@ public partial class TFURQCode
     private void CalcSourceHash()
     {
         int I;
-        TMD5Context l_MD5C;
+        TMD5Context l_MD5C = default!;
         string l_Str;
     
         MD5Init(l_MD5C);
@@ -1056,7 +1056,7 @@ public partial class TFURQContext
         string result;
     
         f_Inventory();
-        return result;
+        return result = default!;
     }
     
     protected virtual Variant GetVirtualVariable(in string aName)
@@ -1154,7 +1154,7 @@ public partial class TFURQContext
         string l_Signature;
         string l_Location;
         int I;
-        TMD5Digest l_Hash;
+        TMD5Digest l_Hash = default!;
     
         l_R = TFURQFiler.Create(aStream);
         try

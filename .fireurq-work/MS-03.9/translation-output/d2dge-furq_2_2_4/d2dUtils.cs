@@ -108,7 +108,7 @@ public static class d2dUtilsModule
     public static Td2dQuad D2DMakeFilledRectQuad(in Td2dRect aRect, uint aColor)
     {
         int I;
-        Td2dQuad result;
+        Td2dQuad result = default!;
     
         FillChar(result, SizeOf(Td2dQuad), 0);
         result();
@@ -186,14 +186,14 @@ public partial class Td2dColorBlender
 {
     public void Create(in float aTime, in uint aStartColor, in uint aTargetColor)
     {
-        byte l_SA;
-        byte l_SR;
-        byte l_SG;
-        byte l_SB;
-        byte l_TA;
-        byte l_TR;
-        byte l_TG;
-        byte l_TB;
+        byte l_SA = default!;
+        byte l_SR = default!;
+        byte l_SG = default!;
+        byte l_SB = default!;
+        byte l_TA = default!;
+        byte l_TR = default!;
+        byte l_TG = default!;
+        byte l_TB = default!;
     
         base.Create();
         f_Current = aStartColor;
@@ -357,56 +357,56 @@ public partial class Td2dFiler
     
     public bool ReadBoolean()
     {
-        bool result;
+        bool result = default!;
         f_Stream.ReadBuffer(result, SizeOf(Boolean));
         return result;
     }
     
     public byte ReadByte()
     {
-        byte result;
+        byte result = default!;
         f_Stream.ReadBuffer(result, SizeOf(Byte));
         return result;
     }
     
     public uint ReadColor()
     {
-        uint result;
+        uint result = default!;
         f_Stream.ReadBuffer(result, SizeOf(Td2dColor));
         return result;
     }
     
     public int ReadInteger()
     {
-        int result;
+        int result = default!;
         f_Stream.ReadBuffer(result, SizeOf(Integer));
         return result;
     }
     
     public double ReadDouble()
     {
-        double result;
+        double result = default!;
         f_Stream.ReadBuffer(result, SizeOf(Double));
         return result;
     }
     
     public Td2dPoint ReadPoint()
     {
-        Td2dPoint result;
+        Td2dPoint result = default!;
         f_Stream.ReadBuffer(result, SizeOf(Td2dPoint));
         return result;
     }
     
     public float ReadSingle()
     {
-        float result;
+        float result = default!;
         f_Stream.ReadBuffer(result, SizeOf(Single));
         return result;
     }
     
     public string ReadString()
     {
-        uint l_Len;
+        uint l_Len = default!;
         string result;
     
         result = "";

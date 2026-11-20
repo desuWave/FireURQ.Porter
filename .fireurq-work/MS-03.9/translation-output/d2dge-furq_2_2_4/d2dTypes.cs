@@ -344,7 +344,7 @@ public static class d2dTypesModule
     
     public static Td2dMusicRec D2DMusicRec(in string aFilename, bool aLooped, int aFadeinTime, bool aPackOnly)
     {
-        Td2dMusicRec result;
+        Td2dMusicRec result = default!;
         result();
         return result;
     }

@@ -32,9 +32,9 @@ public static class f2LinkParserModule
     {
         int l_Start;
         IFURQActionData l_AData;
-        string l_Loc;
+        string l_Loc = default!;
         IJclStringList l_Params;
-        TFURQActionModifier l_AM;
+        TFURQActionModifier l_AM = default!;
         string l_ActionID;
         int l_LIdx;
         string l_LinkTarget;

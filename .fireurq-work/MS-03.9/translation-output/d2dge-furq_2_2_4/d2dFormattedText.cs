@@ -821,7 +821,7 @@ public partial class Td2dFormatter
     {
         int I;
         Td2dUnionSlice l_Para;
-        float l_CurTop;
+        float l_CurTop = default!;
     
         f_Document.DeleteFrom(aParaIndex);
         if (f_Document.ChildrenCount == 0)
@@ -858,12 +858,12 @@ public partial class Td2dFormatter
         int J;
         float l_LWidth;
         Td2dLinkChunk l_LastLinkChunk;
-        Td2dLinkSlice l_LastLinkSlice;
+        Td2dLinkSlice l_LastLinkSlice = default!;
         Td2dUnionSlice result;
         float CalcTextWidth(int aChunk, int aFrom, int aTo)
         {
             string l_Str;
-            Td2dPoint l_Size;
+            Td2dPoint l_Size = default!;
             float __localResult1;
         
             Assert(((l_Para.pm_GetChunks(aChunk).ChunkType == ctText) || (l_Para.pm_GetChunks(aChunk).ChunkType == ctLink)));

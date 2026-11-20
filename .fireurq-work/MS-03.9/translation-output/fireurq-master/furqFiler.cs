@@ -28,7 +28,7 @@ public partial class TFURQFiler
 {
     public Variant ReadVarValue()
     {
-        byte l_Type;
+        byte l_Type = default!;
         Variant result;
     
         f_Stream.ReadBuffer(l_Type, 1);
@@ -41,7 +41,7 @@ public partial class TFURQFiler
                 result = ReadDouble;
                 break;
         }
-        return result;
+        return result = default!;
     }
     
     public void WriteVarValue(Variant aValue)

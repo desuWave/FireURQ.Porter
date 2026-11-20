@@ -59,7 +59,7 @@ public partial class Tf2Interpreter
     private void DH_Col(in Tf2BaseDecorator aDecor, in Tf2DecorParams aParams)
     {
         Tf2ColoredDecorator l_CDec;
-        Tf2TextDecorator l_TDec;
+        Tf2TextDecorator l_TDec = default!;
         float l_Time;
     
         if (aDecor is Tf2ColoredDecorator)
@@ -208,7 +208,7 @@ public partial class Tf2Interpreter
     {
         var __captured0_aOperand = aOperand;
         int I;
-        uint[] l_SpecifiedColors;
+        uint[] l_SpecifiedColors = default!;
         TfurqLexer l_Lexer;
         string l_DName;
         int l_BCount;
@@ -220,7 +220,7 @@ public partial class Tf2Interpreter
         float l_Z;
         Tf2DecorType l_CurDType;
         Tf2DecorType l_DType;
-        Tf2DecorParams l_DParams;
+        Tf2DecorParams l_DParams = default!;
         string l_FontName;
         uint l_Color;
         int l_ColorsSpecified;
@@ -615,8 +615,8 @@ public partial class Tf2Interpreter
     
     private void HandleDecorPrim(in string aOperand, Tf2DecorHandleProc aProc)
     {
-        string l_DName;
-        Tf2DecorParams l_DParams;
+        string l_DName = default!;
+        Tf2DecorParams l_DParams = default!;
         Tf2BaseDecorator l_Decor;
         bool l_Found;
         int I;
@@ -830,10 +830,10 @@ public partial class Tf2Interpreter
     private void HandleImage(string aArgs)
     {
         string l_Filename;
-        int[] l_Params;
+        int[] l_Params = default!;
         int l_PCount;
         TfurqLexer l_Lex;
-        int l_LastParPos;
+        int l_LastParPos = default!;
         string l_ParStr;
     
         NotAvailableWhileMenuBuild();

@@ -546,7 +546,7 @@ public partial class Td2dMenu
     {
         int I;
         float l_ItemWidth;
-        Td2dPoint l_LineSize;
+        Td2dPoint l_LineSize = default!;
     
         f_Height = (ItemHeight * f_Root.ChildrenCount);
         f_Width = 0;
@@ -573,7 +573,7 @@ public partial class Td2dMenu
         float l_CheckLeft;
         void RenderTriangle()
         {
-            Td2dTriple l_Tri;
+            Td2dTriple l_Tri = default!;
         
             FillChar(l_Tri, SizeOf(l_Tri), 0);
             l_Tri.Blend = BLEND_DEFAULT;

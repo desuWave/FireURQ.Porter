@@ -111,7 +111,7 @@ public partial class Td2dStaticText
     
     private void CheckAutowidth()
     {
-        Td2dPoint l_Size;
+        Td2dPoint l_Size = default!;
     
         if (f_AutoWidth)
         {

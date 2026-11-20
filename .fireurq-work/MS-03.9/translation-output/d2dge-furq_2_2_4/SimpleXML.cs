@@ -540,7 +540,7 @@ public static class SimpleXMLModule
     {
         int i;
         int j;
-        string result;
+        string result = default!;
     
         j = 0;
         for (i = 1; i <= Length(aText); i++)
@@ -700,13 +700,13 @@ public static class SimpleXMLModule
     
     public static string DateTimeToXSTR(double v)
     {
-        ushort y;
-        ushort m;
-        ushort d;
-        ushort h;
-        ushort n;
-        ushort s;
-        ushort ms;
+        ushort y = default!;
+        ushort m = default!;
+        ushort d = default!;
+        ushort h = default!;
+        ushort n = default!;
+        ushort s = default!;
+        ushort ms = default!;
         string result;
     
         DecodeDateTime(v, y, m, d, h, n, s, ms);
@@ -852,7 +852,7 @@ public static class SimpleXMLModule
         IntPtr c;
         int aCount;
         int i;
-        string result;
+        string result = default!;
     
         o = /* TODO: Delphi address-of */ aBin;
         aCount = aSize;
@@ -954,7 +954,7 @@ public static class SimpleXMLModule
         string s;
         int i;
         int j;
-        string result;
+        string result = default!;
     
         s = aBase64;
         i = 1;
@@ -1022,7 +1022,7 @@ public static class SimpleXMLModule
         string anAttrValue;
         string s;
         int i;
-        int result;
+        int result = default!;
     
         anAttrValue = anAttrData.Value;
         for (Result = 0; Result <= (Length(aValues) - 1); Result++)
@@ -1096,7 +1096,7 @@ public static class SimpleXMLModule
     public static string GetIndentStr()
     {
         int i;
-        string result;
+        string result = default!;
     
         SetLength(result, (FGetXMLIntend * Length(DefaultIndentText)));
         for (i = 0; i <= (FGetXMLIntend - 1); i++)
@@ -3638,7 +3638,7 @@ public partial class TXmlDocument
     protected void Load(TStream aStream)
     {
         TXmlStmSource aXml;
-        string aBinarySign;
+        string aBinarySign = default!;
         TBinXmlReader aReader;
     
         RemoveAllChilds();
@@ -4008,7 +4008,7 @@ public partial class TXmlSource
     
     public string AcceptToken()
     {
-        string result;
+        string result = default!;
         SetLength(result, (FToken.FValuePtr - FToken.ValueStart));
         if (Length(result) > 0)
         {
@@ -4046,8 +4046,8 @@ public partial class TXmlSource
     public int ExpectDecimalInteger()
     {
         string s;
-        int e;
-        int result;
+        int e = default!;
+        int result = default!;
     
         NewToken();
         while ((CurChar >= "0") & (CurChar <= "9"))
@@ -4067,8 +4067,8 @@ public partial class TXmlSource
     public int ExpectHexInteger()
     {
         string s;
-        int e;
-        int result;
+        int e = default!;
+        int result = default!;
     
         NewToken();
         while ((CurChar >= "0" && CurChar <= "9") || (CurChar >= "A" && CurChar <= "F") || (CurChar >= "a" && CurChar <= "f"))

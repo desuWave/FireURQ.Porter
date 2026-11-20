@@ -33,7 +33,7 @@ public static class furqLoaderModule
     public static string FURQLoadQS2(TStream aStream)
     {
         byte l_B;
-        TQS2Header l_Header;
+        TQS2Header l_Header = default!;
         uint l_BFLength;
         IntPtr l_P1;
         IntPtr l_P2;

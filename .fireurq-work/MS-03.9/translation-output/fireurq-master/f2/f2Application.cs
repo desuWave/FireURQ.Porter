@@ -76,7 +76,7 @@ public partial class Tf2Application
     public void Create(string aQuest, bool aLogToFile, bool aDebugMode)
     {
         string l_Dir;
-        char[] l_Path;
+        char[] l_Path = default!;
     
         base.Create(800, 600, true, "FireURQ");
         gD2DE.FixedFPS = 120;
@@ -243,7 +243,7 @@ public partial class Tf2Application
     private AnsiString pm_GetSavePath()
     {
         AnsiString l_FileName = default;
-        char[] l_Path;
+        char[] l_Path = default!;
         AnsiString result = default;
     
         if (f_SavePath == "")

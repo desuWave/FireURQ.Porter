@@ -34,8 +34,8 @@ public static class furqDecodersModule
     
     public static void BlowfishDecryptECB(IntPtr InData, IntPtr OutData)
     {
-        uint xL;
-        uint xR;
+        uint xL = default!;
+        uint xR = default!;
     
         Move(InData, xL, 4);
         Move(Pointer(((int)(InData) + 4)), xR, 4);

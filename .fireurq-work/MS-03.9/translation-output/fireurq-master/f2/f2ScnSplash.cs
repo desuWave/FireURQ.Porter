@@ -31,7 +31,7 @@ public partial class Tf2SplashScene
     protected override void DoLoad()
     {
         TJclFileVersionInfo l_VI;
-        Td2dPoint l_Size;
+        Td2dPoint l_Size = default!;
         IXmlNode l_Root;
         IXmlNode l_Node;
         uint l_VColor;

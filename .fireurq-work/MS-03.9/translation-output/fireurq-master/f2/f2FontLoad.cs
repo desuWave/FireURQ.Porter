@@ -29,7 +29,7 @@ public static class f2FontLoadModule
 
     public static string GetFontsFolder()
     {
-        char[] path;
+        char[] path = default!;
         string result;
     
         if (SUCCEEDED(SHGetFolderPath(0, CSIDL_FONTS, 0, SHGFP_TYPE_CURRENT, /* TODO: Delphi address-of */ path[0])))
@@ -67,15 +67,15 @@ public static class f2FontLoadModule
         int l_Pos;
         string l_Params;
         string l_FN;
-        TMemoryStream l_MS;
+        TMemoryStream l_MS = default!;
         IntPtr l_FMem;
-        uint l_FMemSize;
+        uint l_FMemSize = default!;
         double l_FontGamma;
         int l_FontSize;
         double l_FontWeight;
         uint l_FontBGColor;
         bool l_FromFontsFolder;
-        string l_OneParam;
+        string l_OneParam = default!;
         IXmlDocument l_XML;
         TfgFont l_FG;
         Id2dFont result;

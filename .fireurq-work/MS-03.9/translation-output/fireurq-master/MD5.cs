@@ -179,7 +179,7 @@ public static class md5Module
         uint b;
         uint c;
         uint d;
-        uint[] x;
+        uint[] x = default!;
     
         a = State[0];
         b = State[1];
@@ -301,7 +301,7 @@ public static class md5Module
     
     public static void MD5Final(ref TMD5Digest Digest, ref TMD5Context Context)
     {
-        byte[] bits;
+        byte[] bits = default!;
         uint index;
         uint padLen;
     

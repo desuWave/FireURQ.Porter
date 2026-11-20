@@ -276,7 +276,7 @@ public partial class TfurqLexer
     public void NextToken(HashSet<char> aCustomCharset)
     {
         int l_SSPos;
-        string l_SubStr;
+        string l_SubStr = default!;
         void LoadFromSet(HashSet<char> aSet)
         {
             while (aSet.Contains((int)(CurChar)))

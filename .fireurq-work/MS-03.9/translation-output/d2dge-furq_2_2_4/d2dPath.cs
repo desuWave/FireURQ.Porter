@@ -61,7 +61,7 @@ public partial class Td2dCommonPath
     
     public int AddPoint(in float aX, in float aY)
     {
-        IntPtr l_New;
+        IntPtr l_New = default!;
         int result;
     
         GetMem(l_New, SizeOf(Td2dPoint));
@@ -72,7 +72,7 @@ public partial class Td2dCommonPath
     
     protected void AddSegment(float aX1, float aY1, float aX2, float aY2)
     {
-        IntPtr l_Seg;
+        IntPtr l_Seg = default!;
     
         GetMem(l_Seg, SizeOf(Td2dPathSegment));
         l_Seg;

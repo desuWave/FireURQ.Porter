@@ -107,7 +107,7 @@ public static class f2DecorScriptModule
     {
         int I;
         int l_Count;
-        If2DSParameter l_Param;
+        If2DSParameter l_Param = default!;
         byte l_Type;
         IInterfaceList result;
     

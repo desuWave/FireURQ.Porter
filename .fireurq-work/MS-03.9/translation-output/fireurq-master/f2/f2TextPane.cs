@@ -394,7 +394,7 @@ public partial class Tf2TextPane
     {
         int I;
         Tf2ButtonSlice l_BS;
-        float l_Left;
+        float l_Left = default!;
     
         if (f_ButtonCount > 0)
         {

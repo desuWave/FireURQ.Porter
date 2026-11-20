@@ -119,9 +119,9 @@ public partial class Td2dHGEFont
     public void Create(string aFontFileName, bool aPackOnly)
     {
         IntPtr l_Temp;
-        uint l_DescSize;
+        uint l_DescSize = default!;
         int l_CurPos;
-        string l_FontDesc;
+        string l_FontDesc = default!;
         Id2dTexture l_Tex;
         string l_TempStr;
         char l_Char;
@@ -681,8 +681,8 @@ public partial class Td2dBMFont
     
     private void Load(string aFilename, bool aFromPack)
     {
-        string l_XML;
-        uint l_XMLLen;
+        string l_XML = default!;
+        uint l_XMLLen = default!;
         IntPtr l_Temp;
         IXmlDocument l_Doc;
     

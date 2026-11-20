@@ -480,7 +480,7 @@ public partial class TfgFont
     public IXmlDocument GetXML()
     {
         IStream l_Adapter;
-        global::System.Guid l_PNGGUID;
+        global::System.Guid l_PNGGUID = default;
         TStatus l_Status;
         IXmlElement l_CurSection;
         IXmlElement l_CurItem;

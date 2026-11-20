@@ -16,7 +16,7 @@ public static class f2UtilsModule
     public static string OpenFileDlg(IntPtr aHandle, IntPtr aTitle, IntPtr aFilter)
     {
         TOpenFilename l_OFN;
-        string l_Buf;
+        string l_Buf = default!;
         string result;
     
         result = "";
@@ -41,7 +41,7 @@ public static class f2UtilsModule
     public static string SaveFileDlg(IntPtr aHandle, IntPtr aTitle, IntPtr aFilter, IntPtr aDefExt)
     {
         TOpenFilename l_OFN;
-        string l_Buf;
+        string l_Buf = default!;
         string result;
     
         result = "";

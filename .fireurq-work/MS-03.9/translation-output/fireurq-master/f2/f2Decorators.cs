@@ -2037,9 +2037,9 @@ public partial class Tf2SingleTargetProcessor
     
     public void pm_SetTarget(in string aTarget)
     {
-        TFURQActionModifier l_AM;
+        TFURQActionModifier l_AM = default!;
         int l_LIdx;
-        string l_Loc;
+        string l_Loc = default!;
         IJclStringList l_Params;
     
         f_Target = aTarget;

@@ -583,7 +583,7 @@ public partial class Tf2MainScene
                 l_Num = aNode.GetIntAttr(aName);
                 __localResult1 = IntToAlign(l_Num);
             }
-            return __localResult1;
+            return __localResult1 = default!;
         }
     
     
@@ -800,7 +800,7 @@ public partial class Tf2MainScene
         {
             OutError(Format("Файл %s не найден", new HashSet<int>(new int[] { (int)(ExtractFileName(aFilename)) })));
         }
-        return result;
+        return result = default!;
     }
     
     private void DoOpenQuest()
@@ -1599,8 +1599,8 @@ public partial class Tf2MainScene
     public void LoadSavegameNames()
     {
         int I;
-        string l_Caption;
-        double l_DT;
+        string l_Caption = default!;
+        double l_DT = default!;
     
         f_SaveLoadManager.SetSaveBase(Context);
         for (I = 0; I <= cMaxSlotsNum; I++)

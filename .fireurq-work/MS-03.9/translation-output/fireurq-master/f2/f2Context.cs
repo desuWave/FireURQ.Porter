@@ -459,10 +459,10 @@ public partial class Tf2Context
     {
         var __captured0_aName = aName;
         If2ActionDecorator l_AD;
-        string l_DName;
-        string l_DVar;
+        string l_DName = default!;
+        string l_DVar = default!;
         Tf2BaseDecorator l_Decor;
-        If2TargetProvider l_TP;
+        If2TargetProvider l_TP = default!;
         Variant result;
         Variant BoolToVar(in bool aBool)
         {
@@ -1160,11 +1160,11 @@ public partial class Tf2Context
     protected override bool SetVirtualVariables(in string aName, in Variant aValue)
     {
         If2ActionDecorator l_AD;
-        string l_DName;
-        string l_DVar;
+        string l_DName = default!;
+        string l_DVar = default!;
         Tf2BaseDecorator l_Decor;
         Td2dTextAlignType l_Align;
-        If2TargetProvider l_TP;
+        If2TargetProvider l_TP = default!;
         bool result;
     
         result = SetVirtualVariables;
@@ -1492,7 +1492,7 @@ public partial class Tf2Context
     {
         int I;
         Variant l_Col;
-        bool result;
+        bool result = default!;
     
         if (AnsiSameText(aProcName, cs__color) & (aParams.Count > 2))
         {

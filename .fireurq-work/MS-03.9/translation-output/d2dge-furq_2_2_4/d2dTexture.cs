@@ -87,7 +87,7 @@ public partial class Td2dTexture
         {
             result = f_DXTexture;
         }
-        return result;
+        return result = default!;
     }
     
     protected int pm_GetSrcPicHeight()

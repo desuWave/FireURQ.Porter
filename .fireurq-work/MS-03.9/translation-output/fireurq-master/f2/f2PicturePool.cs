@@ -91,7 +91,7 @@ public partial class Tf2PicturePool
             }
             if ((l_W < 0) | (l_H < 0))
             {
-                return result;
+                return result = default!;
             }
             result = Td2dSimplePicture.Make(aPictureName, l_Tex, l_X, l_Y, l_W, l_H, l_Color);
         }

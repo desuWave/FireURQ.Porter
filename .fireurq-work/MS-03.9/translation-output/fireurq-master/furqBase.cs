@@ -48,7 +48,7 @@ public static class furqBaseModule
         var __captured0_Params = Params;
         int l_BLevel;
         TfurqLexer l_Lex;
-        int l_ParStart;
+        int l_ParStart = default!;
         bool l_HasPar;
         int result;
         void AddParam(int aEndPos)
@@ -304,7 +304,7 @@ public partial class TFURQInterpreter
         string l_Op;
         bool l_IsOperator;
         string l_Operand;
-        string l_VarName;
+        string l_VarName = default!;
         TfurqExprEvaluator l_Eval;
         TFURQCondition l_Cond;
         bool l_DoNext;
@@ -595,10 +595,10 @@ public partial class TFURQInterpreter
     private void HandleBtn(string aArgs)
     {
         int l_Pos;
-        string l_Loc;
+        string l_Loc = default!;
         string l_Txt;
         IJclStringList l_Params;
-        TFURQActionModifier l_AM;
+        TFURQActionModifier l_AM = default!;
     
         l_Params = JclStringList;
         l_Pos = ParseLocAndParams(aArgs, l_Loc, l_Params, l_AM);
@@ -656,10 +656,10 @@ public partial class TFURQInterpreter
     
     private void HandleGoto(string aLocation)
     {
-        string l_Label;
+        string l_Label = default!;
         IJclStringList l_Params;
         int l_LabelIdx;
-        TFURQActionModifier l_AM;
+        TFURQActionModifier l_AM = default!;
     
         l_Params = JclStringList;
         if (ParseLocAndParams(aLocation, l_Label, l_Params, l_AM) != ( - 1))
@@ -750,8 +750,8 @@ public partial class TFURQInterpreter
     
     private void HandleInstr(string aOperand)
     {
-        string l_VarName;
-        string l_Value;
+        string l_VarName = default!;
+        string l_Value = default!;
     
         ParseAssigment(aOperand, l_VarName, l_Value);
         f_CurContext.Variables[l_VarName] = l_Value;
@@ -992,10 +992,10 @@ public partial class TFURQInterpreter
     
     private void HandleProc(string aLabel)
     {
-        string l_Loc;
+        string l_Loc = default!;
         int l_Idx;
         IJclStringList l_Params;
-        TFURQActionModifier l_AM;
+        TFURQActionModifier l_AM = default!;
     
         l_Params = JclStringList;
         if (ParseLocAndParams(aLabel, l_Loc, l_Params, l_AM) != ( - 1))
@@ -1246,10 +1246,10 @@ public partial class TFURQInterpreter
         {
             var __captured1_aSrc = aSrc;
             TFURQOperator l_ResOp;
-            TFURQOperator l_Op;
+            TFURQOperator l_Op = default!;
             TfurqLexer l_Lexer;
             int l_IFCount;
-            string l_Cond;
+            string l_Cond = default!;
             string l_Then;
             string l_Else;
             int l_Start;
