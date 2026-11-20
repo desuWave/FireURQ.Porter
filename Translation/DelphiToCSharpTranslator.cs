@@ -569,12 +569,10 @@ public sealed class DelphiToCSharpTranslator
         StringBuilder builder,
         int indent)
     {
-        string condition =
-            TranslateExpression(
-                statement.Expression);
+        string condition = TranslateCondition(statement.Expression);
 
-        if (condition.StartsWith("(") &&
-            condition.EndsWith(")"))
+        if (statement.Expression?.Kind == ExpressionParser.ExpressionKind.Binary &&
+            condition.StartsWith("(") && condition.EndsWith(")"))
         {
             condition =
                 condition[1..^1];
@@ -674,8 +672,7 @@ public sealed class DelphiToCSharpTranslator
             statement.Expression.Kind ==
                 ExpressionParser.ExpressionKind.Empty
                 ? "false"
-                : TranslateExpression(
-                    statement.Expression);
+                : TranslateCondition(statement.Expression);
 
         AppendLine(
             builder,
@@ -806,12 +803,10 @@ public sealed class DelphiToCSharpTranslator
         StringBuilder builder,
         int indent)
     {
-        string condition =
-            TranslateExpression(
-                statement.Expression);
+        string condition = TranslateCondition(statement.Expression);
 
-        if (condition.StartsWith("(") &&
-            condition.EndsWith(")"))
+        if (statement.Expression?.Kind == ExpressionParser.ExpressionKind.Binary &&
+            condition.StartsWith("(") && condition.EndsWith(")"))
         {
             condition =
                 condition[1..^1];
@@ -1438,6 +1433,9 @@ public sealed class DelphiToCSharpTranslator
 
         return $"({left} {op} {right})";
     }
+
+    private string TranslateCondition(ExpressionParser.ExpressionNode? operand) =>
+        operand is null ? string.Empty : TranslateValueOperand(operand, out _);
 
     private string TranslateValueOperand(ExpressionParser.ExpressionNode operand, out bool isBoolean)
     {
