@@ -122,6 +122,7 @@ public static class CSharpTypeMapper
             "real" or "double" or "tdatetime" => "double",
             "single" => "float",
             "char" => "char",
+            "tcharset" => "HashSet<char>",
             "byte" => "byte",
             "word" => "ushort",
             "cardinal" or "longword" or "dword" => "uint",

@@ -1568,6 +1568,10 @@ public sealed class DelphiToCSharpTranslator
 
     private string TranslateExpectedValue(ExpressionParser.ExpressionNode value, string? expectedType)
     {
+        if (MapType(expectedType) == "HashSet<char>" &&
+            value.Kind == ExpressionParser.ExpressionKind.Set)
+            return TranslateCharacterSet(value);
+
         if (MapType(expectedType) == "char" && value.Kind == ExpressionParser.ExpressionKind.Literal &&
             TryTranslatePascalStringLiteral(value.Text, out string character, preferChar: true))
             return character;
@@ -3408,6 +3412,33 @@ private static bool IsBuiltInDelphiType(
                 expression.Children[1]);
 
         return $"({left} as {right})";
+    }
+
+    private string TranslateCharacterSet(ExpressionParser.ExpressionNode expression)
+    {
+        var scalar = new List<string>();
+        var ranges = new List<string>();
+        foreach (ExpressionParser.ExpressionNode element in expression.Children)
+        {
+            if (element.Kind == ExpressionParser.ExpressionKind.Binary &&
+                element.Text == ".." && element.Children.Count == 2)
+            {
+                string lower = TranslateExpectedValue(element.Children[0], "Char");
+                string upper = TranslateExpectedValue(element.Children[1], "Char");
+                ranges.Add($"Enumerable.Range((int)({lower}), (int)({upper}) - (int)({lower}) + 1).Select(code => (char)code)");
+            }
+            else
+            {
+                scalar.Add(TranslateExpectedValue(element, "Char"));
+            }
+        }
+
+        string values = scalar.Count == 0
+            ? "Enumerable.Empty<char>()"
+            : $"new char[] {{ {string.Join(", ", scalar)} }}";
+        foreach (string range in ranges)
+            values += $".Concat({range})";
+        return $"new HashSet<char>({values})";
     }
 
     private string TranslateSet(
