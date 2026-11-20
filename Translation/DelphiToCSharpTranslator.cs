@@ -3436,6 +3436,13 @@ private string TranslateCall(
         : null;
 
     IReadOnlyList<SemanticParameter>? formals = signature?.Parameters;
+    if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        _currentTypeContext?.ResolveLocalFunction(targetExpression.Text,
+            expression.Children.Count - 1, valueOnly: false).Function is { } nestedRoutine)
+    {
+        formals = SemanticModelBuilder.BuildFunction(nestedRoutine).Parameters;
+        target = nestedRoutine.Name;
+    }
     if (TryGetConstructorFactory(targetExpression, expression.Children.Count - 1, out string constructorFactory, out var constructorParameters))
     {
         target = constructorFactory;
@@ -4030,7 +4037,7 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
         public void AddWithAlias(string name, string type) => _identifiers.Add(name, (name, type));
         public void RemoveWithAlias(string name) => _identifiers.Remove(name);
 
-        public (bool Found, DelphiFunction? Function) ResolveLocalFunction(string name, int argumentCount)
+        public (bool Found, DelphiFunction? Function) ResolveLocalFunction(string name, int argumentCount, bool valueOnly = true)
         {
             if (_identifiers.ContainsKey(name))
                 return (true, null);
@@ -4038,11 +4045,13 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
             var named = _localFunctions.Where(function =>
                 function.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
             if (named.Length == 0)
-                return _parent?.ResolveLocalFunction(name, argumentCount) ?? (false, null);
+                return _parent?.ResolveLocalFunction(name, argumentCount, valueOnly) ?? (false, null);
 
-            var matching = named.Where(function => !function.IsProcedure &&
-                !string.IsNullOrWhiteSpace(function.ReturnType) &&
-                function.Parameters.Count == argumentCount).ToArray();
+            var matching = named.Where(function =>
+                (!valueOnly || !function.IsProcedure && !string.IsNullOrWhiteSpace(function.ReturnType)) &&
+                function.Parameters.Count >= argumentCount &&
+                function.Parameters.Skip(argumentCount).All(parameter =>
+                    !string.IsNullOrWhiteSpace(parameter.DefaultValue))).ToArray();
             return (true, matching.Length == 1 ? matching[0] : null);
         }
 
