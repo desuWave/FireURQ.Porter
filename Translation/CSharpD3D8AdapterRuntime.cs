@@ -3,6 +3,8 @@ namespace FireURQ.Porter.Translation;
 public static class CSharpD3D8AdapterRuntime
 {
     public const string Source = """
+global using static FireURQ.Runtime.D3D8;
+
 using System;
 using System.Runtime.InteropServices;
 
@@ -375,6 +377,44 @@ public static class D3D8
         }
         finally { Marshal.Release(self); }
     }
+
+    public const int D3DSWAPEFFECT_DISCARD = 1;
+    public const int D3DSWAPEFFECT_FLIP = 2;
+    public const int D3DSWAPEFFECT_COPY = 3;
+    public const int D3DSWAPEFFECT_COPY_VSYNC = 4;
+    public const uint D3DPRESENT_RATE_DEFAULT = 0;
+    public const uint D3DPRESENT_INTERVAL_DEFAULT = 0;
+    public const uint D3DPRESENT_INTERVAL_ONE = 1;
+    public const uint D3DPRESENT_INTERVAL_IMMEDIATE = 0x80000000;
+    public const int D3DPOOL_DEFAULT = 0;
+    public const int D3DPOOL_MANAGED = 1;
+    public const uint D3DUSAGE_WRITEONLY = 0x00000008;
+    public const int D3DTSS_COLOROP = 1;
+    public const int D3DTSS_COLORARG1 = 2;
+    public const int D3DTSS_COLORARG2 = 3;
+    public const int D3DTSS_ALPHAOP = 4;
+    public const int D3DTSS_ALPHAARG1 = 5;
+    public const int D3DTSS_ALPHAARG2 = 6;
+    public const int D3DTSS_MAGFILTER = 16;
+    public const int D3DTSS_MINFILTER = 17;
+    public const int D3DTSS_MIPFILTER = 18;
+    public const uint D3DTOP_MODULATE = 4;
+    public const uint D3DTOP_ADD = 7;
+    public const uint D3DTEXF_POINT = 1;
+    public const uint D3DTEXF_LINEAR = 2;
+    public const int D3DRS_ALPHATESTENABLE = 15;
+    public const int D3DRS_SRCBLEND = 19;
+    public const int D3DRS_DESTBLEND = 20;
+    public const int D3DRS_CULLMODE = 22;
+    public const int D3DRS_ALPHAREF = 24;
+    public const int D3DRS_ALPHAFUNC = 25;
+    public const int D3DRS_ALPHABLENDENABLE = 27;
+    public const int D3DRS_LIGHTING = 137;
+    public const uint D3DBLEND_ONE = 2;
+    public const uint D3DBLEND_SRCALPHA = 5;
+    public const uint D3DBLEND_INVSRCALPHA = 6;
+    public const uint D3DCULL_NONE = 1;
+    public const uint D3DCMP_GREATEREQUAL = 7;
 
     public const uint D3DADAPTER_DEFAULT = 0;
     public const uint D3DENUM_NO_WHQL_LEVEL = 2;
