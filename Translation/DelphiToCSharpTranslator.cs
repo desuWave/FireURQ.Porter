@@ -2521,6 +2521,24 @@ private bool TryTranslateStreamCall(
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
+    if (expression.Children.Count == 3 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } setLength &&
+        setLength.Text.Equals("SetLength", StringComparison.OrdinalIgnoreCase) &&
+        (_resolver is null || _unitName is null ||
+         !_resolver.HasVisibleValueDeclaration(setLength.Text, _unitName)))
+    {
+        ExpressionParser.ExpressionNode value = expression.Children[1];
+        string translatedValue = TranslateExpression(value);
+        string valueType = MapType(ResolveExpressionType(value));
+        string length = $"checked((int)({TranslateExpression(expression.Children[2])}))";
+        if (valueType == "string")
+            return $"{translatedValue} = global::FireURQ.Runtime.DelphiText.SetStringLength({translatedValue}, {length})";
+        if (valueType == "AnsiString")
+            return $"{translatedValue} = {translatedValue}.WithLength({length})";
+        if (valueType.EndsWith("[]", StringComparison.Ordinal))
+            return $"global::System.Array.Resize(ref {translatedValue}, {length})";
+    }
+
     if (expression.Children.Count == 4 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } memoryOperation &&
         memoryOperation.Text.ToUpperInvariant() is "FILLCHAR" or "MOVE" &&
