@@ -56,6 +56,29 @@ internal static class DelphiText
             ? 0
             : value.IndexOf(needle, StringComparison.Ordinal) + 1;
 
+    public static string AnsiUpperCase(string? value) =>
+        (value ?? string.Empty).ToUpper(System.Globalization.CultureInfo.CurrentCulture);
+
+    public static bool AnsiStartsStr(string? prefix, string? value) =>
+        (value ?? string.Empty).StartsWith(prefix ?? string.Empty, StringComparison.Ordinal);
+
+    public static int PosEx(string? needle, string? value, int offset = 1)
+    {
+        if (string.IsNullOrEmpty(needle) || string.IsNullOrEmpty(value) || offset < 1 || offset > value.Length)
+            return 0;
+        return value.IndexOf(needle, offset - 1, StringComparison.Ordinal) + 1;
+    }
+
+    public static string TrimLeft(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return string.Empty;
+        int start = 0;
+        while (start < value.Length && value[start] <= ' ')
+            start++;
+        return value[start..];
+    }
+
     public static string Trim(string? value)
     {
         if (string.IsNullOrEmpty(value))
