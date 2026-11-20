@@ -393,6 +393,17 @@ public sealed class TypeResolver
             "D3DPRESENT_PARAMETERS" when name.ToUpperInvariant() is
                 "BACKBUFFERFORMAT" or "MULTISAMPLETYPE" or "SWAPEFFECT" or
                 "AUTODEPTHSTENCILFORMAT" => "Integer",
+            "D3DVIEWPORT8" when name.ToUpperInvariant() is
+                "X" or "Y" or "WIDTH" or "HEIGHT" => "Cardinal",
+            "D3DVIEWPORT8" when name.ToUpperInvariant() is "MINZ" or "MAXZ" => "Single",
+            "TLOGFONT" when name.ToUpperInvariant() is
+                "LFHEIGHT" or "LFWIDTH" or "LFESCAPEMENT" or "LFORIENTATION" or
+                "LFWEIGHT" => "Integer",
+            "TLOGFONT" when name.ToUpperInvariant() is
+                "LFITALIC" or "LFUNDERLINE" or "LFSTRIKEOUT" or "LFCHARSET" or
+                "LFOUTPRECISION" or "LFCLIPPRECISION" or "LFQUALITY" or
+                "LFPITCHANDFAMILY" => "Byte",
+            "TLOGFONT" when name.Equals("lfFaceName", StringComparison.OrdinalIgnoreCase) => "String",
             _ => null
         };
         if (runtimeFieldType is not null)
