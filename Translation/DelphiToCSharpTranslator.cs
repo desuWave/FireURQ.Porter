@@ -2174,6 +2174,32 @@ private bool TryTranslateStreamCall(
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
+    if (_resolver is not null && _unitName is not null && expression.Children.Count == 2 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } intrinsic &&
+        intrinsic.Text.Equals("SizeOf", StringComparison.OrdinalIgnoreCase) &&
+        !_resolver.HasVisibleValueDeclaration(intrinsic.Text, _unitName) &&
+        ResolveExpressionType(intrinsic) is null &&
+        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Identifier } operand)
+    {
+        // SizeOf uses the declared Delphi storage type and does not evaluate its operand.
+        string typeName = ResolveExpressionType(operand) ?? operand.Text;
+        var type = _resolver.Resolve(typeName, _unitName);
+        if (type.IsResolved && !type.IsPointer && type.DeclaringUnitName is null)
+        {
+            string? size = type.ResolvedName.ToLowerInvariant() switch
+            {
+                "boolean" or "bytebool" or "byte" or "shortint" or "ansichar" or "char" => "1",
+                "wordbool" or "word" or "smallint" or "widechar" => "2",
+                "longbool" or "integer" or "longint" or "cardinal" or "longword" or "single" => "4",
+                "int64" or "uint64" or "double" or "currency" or "comp" => "8",
+                "extended" => "10",
+                _ => null
+            };
+            if (size is not null)
+                return size;
+        }
+    }
+
     if (string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
         expression.Children.Count == 2 &&
         expression.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
