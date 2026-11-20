@@ -1588,8 +1588,9 @@ public sealed class CSharpDeclarationTranslator
         string returnType = string.IsNullOrWhiteSpace(member.Type)
             ? "void"
             : MapType(member.Type);
-        string parameters = string.Join(", ", member.Parameters.Select(parameter =>
-            $"{MapParameterKind(parameter.Kind)}{MapType(parameter.Type)} {parameter.Name}"));
+        string parameters = string.Join(", ", member.Parameters.Select((parameter, index) =>
+            $"{MapParameterKind(parameter.Kind)}{MapType(parameter.Type)} {parameter.Name}" +
+            DelphiToCSharpTranslator.DefaultParameterSuffix(member.Parameters, index, t => MapType(t))));
         builder.AppendLine($"    {visibility}{returnType} {member.Name}({parameters});");
     }
 

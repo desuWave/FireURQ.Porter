@@ -121,4 +121,7 @@ public sealed record SemanticParameter(
     string Name,
     string Type,
     string Kind
-);
+)
+{
+    public string? DefaultValue { get; init; }
+}

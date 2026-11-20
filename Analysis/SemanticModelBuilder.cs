@@ -244,6 +244,6 @@ public static class SemanticModelBuilder
         return new SemanticParameter(
             parameter.Name,
             parameter.Type,
-            parameter.Kind.ToString());
+            parameter.Kind.ToString()) { DefaultValue = parameter.DefaultValue };
     }
 }
