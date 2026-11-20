@@ -2537,6 +2537,10 @@ private string TranslateCall(
             return $"{translatedValue} = {translatedValue}.WithLength({length})";
         if (valueType.EndsWith("[]", StringComparison.Ordinal))
             return $"global::System.Array.Resize(ref {translatedValue}, {length})";
+
+        // Delphi SetLength's remaining legal target is a dynamic array. Let C#
+        // infer its element type when an imported alias obscures it here.
+        return $"global::System.Array.Resize(ref {translatedValue}, {length})";
     }
 
     if (expression.Children.Count == 4 &&
