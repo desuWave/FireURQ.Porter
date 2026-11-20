@@ -352,6 +352,13 @@ public static class D3D8
     [UnmanagedFunctionPointer(CallingConvention.StdCall)]
     private delegate int RenderStateCall(IntPtr self, int state, uint value);
 
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int TextureCall(IntPtr self, uint stage, IntPtr texture);
+
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+    private delegate int TextureStageStateCall(
+        IntPtr self, uint stage, int state, uint value);
+
     public const int D3DRS_ZENABLE = 7;
     public const uint D3DZB_FALSE = 0;
     public const uint D3DZB_TRUE = 1;
@@ -360,6 +367,38 @@ public static class D3D8
     {
         IntPtr self = Marshal.GetComInterfaceForObject(device, typeof(IDirect3DDevice8));
         try { return DrawMethod<RenderStateCall>(self, 50)(self, state, value); }
+        finally { Marshal.Release(self); }
+    }
+
+    public static int SetTexture(
+        IDirect3DDevice8 device, uint stage, IDirect3DTexture8? texture)
+    {
+        IntPtr self = Marshal.GetComInterfaceForObject(device, typeof(IDirect3DDevice8));
+        IntPtr nativeTexture = IntPtr.Zero;
+        try
+        {
+            if (texture != null)
+                nativeTexture = Marshal.GetComInterfaceForObject(
+                    texture, typeof(IDirect3DTexture8));
+            return DrawMethod<TextureCall>(self, 61)(self, stage, nativeTexture);
+        }
+        finally
+        {
+            if (nativeTexture != IntPtr.Zero)
+                Marshal.Release(nativeTexture);
+            Marshal.Release(self);
+        }
+    }
+
+    public static int SetTextureStageState(
+        IDirect3DDevice8 device, uint stage, int state, uint value)
+    {
+        IntPtr self = Marshal.GetComInterfaceForObject(device, typeof(IDirect3DDevice8));
+        try
+        {
+            return DrawMethod<TextureStageStateCall>(self, 63)(
+                self, stage, state, value);
+        }
         finally { Marshal.Release(self); }
     }
 
