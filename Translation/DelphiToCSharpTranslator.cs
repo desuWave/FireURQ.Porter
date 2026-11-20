@@ -958,6 +958,14 @@ public sealed class DelphiToCSharpTranslator
                 return "global::FireURQ.Runtime.D3D8." + constant;
         }
 
+        if (text.Equals("MaxInt", StringComparison.OrdinalIgnoreCase) &&
+            _resolver is not null && _unitName is not null &&
+            _currentTypeContext?.ResolveIdentifier(text) is null &&
+            (_currentTypeContext?.OwnerClass is not { } owner ||
+                _resolver.ResolveDataMemberType(owner, text, _unitName) is null) &&
+            !_resolver.HasVisibleValueDeclaration(text, _unitName))
+            return "int.MaxValue";
+
         if (text.Equals("Self", StringComparison.OrdinalIgnoreCase) &&
             _currentTypeContext?.OwnerClass is not null)
             return "this";
@@ -2073,9 +2081,11 @@ private bool TryTranslateStreamCall(
             return false;
 
         TypeResolution resolution = _resolver.Resolve(target.Text, _unitName);
-        if (!resolution.IsResolved || resolution.IsPointer ||
-            (resolution.Chain.Count == 0 &&
-             resolution.DeclaringUnitName is null))
+        if (!resolution.IsResolved || resolution.IsPointer)
+            return false;
+        if (resolution.Chain.Count == 0 && resolution.DeclaringUnitName is null &&
+            !target.Text.Equals("SmallInt", StringComparison.OrdinalIgnoreCase) &&
+            !target.Text.Equals("ShortInt", StringComparison.OrdinalIgnoreCase))
             return false;
 
         string type = MapType(target.Text);
