@@ -681,15 +681,20 @@ public sealed class TypeResolver
 
         return constant is not null;
     }
-    internal bool IsZeroBasedEnumeration(string name, string? unitName)
+    internal bool IsZeroBasedEnumeration(string name, string? unitName) =>
+        GetEnumerationLength(name, unitName) > 0;
+
+    internal int GetEnumerationLength(string name, string? unitName)
     {
         TypeResolution resolved = Resolve(name, unitName);
         if (!resolved.IsResolved || resolved.IsPointer || resolved.DeclaringUnitName is null)
-            return false;
+            return 0;
         Declaration? declaration = Find(resolved.ResolvedName, resolved.DeclaringUnitName, out _);
-        // A list of names without explicit ordinal assignments starts at zero.
-        return declaration is not null && System.Text.RegularExpressions.Regex.IsMatch(
-            declaration.Type.Definition, @"^\s*\(\s*\w+(?:\s*,\s*\w+)*\s*\)\s*$");
+        if (declaration is null || !declaration.Type.Kind.Equals("Enum", StringComparison.OrdinalIgnoreCase))
+            return 0;
+        string[] values = declaration.Type.Definition.Split(',', StringSplitOptions.TrimEntries);
+        return values.All(value => System.Text.RegularExpressions.Regex.IsMatch(value, @"^\w+$"))
+            ? values.Length : 0;
     }
 
     public bool TryGetCompositeDefinition(
