@@ -551,14 +551,14 @@ f_matProj = new TD3DMatrix
                 "if (l_Target.Tex.GetLevelDesc(0, out l_Desc) < 0) { ReleaseTargetResources(l_Target); return null; }")
             .Replace("l_Target.Width = l_Desc.Width;", "l_Target.Width = unchecked((int)l_Desc.Width);")
             .Replace("l_Target.Height = l_Desc.Height;", "l_Target.Height = unchecked((int)l_Desc.Height);")
-            .Replace("private void ClearTargets()", """
-private static void ReleaseTargetResources(Td2dRenderTarget target)
+            .Replace("void ClearTargets()", """
+static void ReleaseTargetResources(Td2dRenderTarget target)
     {
         target.Depth = null;
         target.Tex = null;
     }
 
-    private void ClearTargets()
+    internal void ClearTargets()
 """);
     }
 
