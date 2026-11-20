@@ -1946,11 +1946,25 @@ private bool TryTranslateStreamCall(
                     translated = $"{name} = {name}.WithLength(checked((int)({length})))";
                     return true;
                 }
+            }
 
-                if (target.Text.Equals("Length", StringComparison.OrdinalIgnoreCase) &&
-                    expression.Children.Count == 2)
+            if (target.Text.Equals("Length", StringComparison.OrdinalIgnoreCase) &&
+                expression.Children.Count == 2 &&
+                ResolveExpressionType(value) is string valueType)
+            {
+                string mapped = MapType(valueType);
+                if (IsStandardAnsiStringValue(value))
                 {
-                    translated = $"{name}.Length";
+                    string operand = TranslateExpression(value);
+                    translated = value.Kind == ExpressionParser.ExpressionKind.Identifier
+                        ? $"{operand}.Length" : $"({operand}).Length";
+                    return true;
+                }
+
+                // A Delphi nil dynamic array or empty string has length zero.
+                if (mapped == "string" || mapped.EndsWith("[]", StringComparison.Ordinal))
+                {
+                    translated = $"(({TranslateExpression(value)})?.Length ?? 0)";
                     return true;
                 }
             }
