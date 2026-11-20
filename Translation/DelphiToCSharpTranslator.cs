@@ -882,8 +882,7 @@ public sealed class DelphiToCSharpTranslator
         string to =
             TranslateValueOperand(loop.To, out _);
 
-        string variable =
-            loop.Variable;
+        string variable = TranslateIdentifier(loop.Variable);
 
         bool descending = loop.Direction.Equals("downto", StringComparison.OrdinalIgnoreCase);
         string comparison = descending ? ">=" : "<=";
@@ -1733,9 +1732,7 @@ public sealed class DelphiToCSharpTranslator
             TranslateExpression(
                 expression.Children[0]);
 
-        string member =
-            TranslateExpression(
-                expression.Children[1]);
+        string member = expression.Children[1].Text;
 
         // A read of LongRec exposes the low or high Word of a 32-bit value.
         // Keep address-taking and writes on the separate lvalue path.
@@ -3242,7 +3239,7 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
 
     private sealed class FunctionTypeContext
     {
-        private readonly Dictionary<string, string> _identifiers =
+        private readonly Dictionary<string, (string Name, string Type)> _identifiers =
             new(StringComparer.OrdinalIgnoreCase);
 
         private readonly string _returnType;
@@ -3266,16 +3263,14 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
                 SemanticParameter parameter
                 in function.Parameters)
             {
-                _identifiers[parameter.Name] =
-                    parameter.Type;
+                _identifiers[parameter.Name] = (parameter.Name, parameter.Type);
             }
 
             foreach (
                 SemanticVariable variable
                 in function.LocalVariables)
             {
-                _identifiers[variable.Name] =
-                    variable.Type;
+                _identifiers[variable.Name] = (variable.Name, variable.Type);
             }
 
             foreach (var parameter in function.Parameters)
@@ -3301,7 +3296,7 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
                 while (_identifiers.ContainsKey(copy) || parent?.ResolveIdentifier(copy) is not null)
                     copy += "_";
                 ConstCopies.Add(parameter.Name, copy);
-                _identifiers.Add(copy, parameter.Type);
+                _identifiers.Add(copy, (copy, parameter.Type));
                 if (isConst)
                     _useCapturedCopyInBody.Add(parameter.Name);
             }
@@ -3335,10 +3330,8 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
                 return _returnType;
             }
 
-            return _identifiers.TryGetValue(
-                name,
-                out string? type)
-                ? type
+            return _identifiers.TryGetValue(name, out var symbol)
+                ? symbol.Type
                 : _parent?.ResolveIdentifier(name);
         }
 
@@ -3347,8 +3340,8 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
             if (_useCapturedCopyInBody.Contains(name) &&
                 ConstCopies.TryGetValue(name, out string? copy))
                 return copy;
-            if (_identifiers.ContainsKey(name))
-                return name;
+            if (_identifiers.TryGetValue(name, out var symbol))
+                return symbol.Name;
             return _parent?.ResolveCapturedSpelling(name) ?? name;
         }
 
