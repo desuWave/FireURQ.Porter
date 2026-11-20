@@ -79,15 +79,24 @@ internal static class DelphiSystem
     public const int rfReplaceAll = 1;
     public const int rfIgnoreCase = 2;
 
-    public static Variant VarAsType(Variant value, int typeCode) =>
-        typeCode switch
+    public static Variant VarAsType(Variant value, int typeCode)
+    {
+        if (value.TypeCode == typeCode)
+            return value;
+
+        return typeCode switch
         {
-            3 => value.TryGetInteger(out int integer) ? integer : checked((int)(double)value),
+            3 => Convert.ToInt32((double)value),
             5 => (double)value,
-            11 => value.TryGetBoolean(out bool boolean) ? boolean : (double)value != 0,
+            7 when value.BoxedValue is string text => Variant.FromAutomationDate(
+                DateTime.Parse(text, System.Globalization.CultureInfo.CurrentCulture).ToOADate()),
+            7 => Variant.FromAutomationDate((double)value),
+            11 => (double)value != 0,
             256 => (string)value,
-            _ => value
+            _ => throw new InvalidCastException(
+                $"Cannot convert Delphi Variant type {value.TypeCode} to {typeCode}.")
         };
+    }
 
     public static int Abs(int value) => Math.Abs(value);
     public static long Abs(long value) => Math.Abs(value);
