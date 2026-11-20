@@ -44,6 +44,34 @@ namespace FireURQ.Runtime
         }
     }
 
+    public static class DelphiStorage
+    {
+        public static void SetLength(ref string value, int length)
+        {
+            if (length < 0)
+                throw new global::System.ArgumentOutOfRangeException(nameof(length));
+            string previous = value ?? string.Empty;
+            value = length <= previous.Length
+                ? previous.Substring(0, length)
+                : previous.PadRight(length, '\0');
+        }
+
+        public static void SetLength<T>(ref T[] value, int length)
+        {
+            if (length == 0)
+            {
+                value = null!;
+                return;
+            }
+
+            // Delphi SetLength detaches shared dynamic array storage, even at equal length.
+            var resized = new T[length];
+            if (value is not null)
+                global::System.Array.Copy(value, resized, global::System.Math.Min(value.Length, length));
+            value = resized;
+        }
+    }
+
     public class TObject
     {
         private int __fireurqDestructorDepth;

@@ -1989,6 +1989,30 @@ private bool TryTranslateStreamCall(
                 }
             }
 
+            if (target.Text.Equals("SetLength", StringComparison.OrdinalIgnoreCase) &&
+                expression.Children.Count == 3 &&
+                value.Kind is ExpressionParser.ExpressionKind.Identifier or ExpressionParser.ExpressionKind.MemberAccess)
+            {
+                string? local = ResolveExpressionType(value);
+                var type = local is null ? ResolveUnaryMemberType(value) : _resolver.Resolve(local, _unitName);
+                if (type is { IsResolved: true, IsPointer: false })
+                {
+                    string definition = type.ResolvedName;
+                    if (_resolver.TryGetCompositeDefinition(definition, type.DeclaringUnitName ?? _unitName,
+                        out string composite, out _))
+                        definition = composite;
+
+                    if (MapType(type.ResolvedName) == "string" ||
+                        definition.StartsWith("array of ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string storage = TranslateExpression(value);
+                        string length = TranslateValueOperand(expression.Children[2], out _);
+                        translated = $"global::FireURQ.Runtime.DelphiStorage.SetLength(ref {storage}, checked((int)({length})))";
+                        return true;
+                    }
+                }
+            }
+
             if (target.Text.Equals("Length", StringComparison.OrdinalIgnoreCase) &&
                 expression.Children.Count == 2 &&
                 ResolveExpressionType(value) is string valueType)
