@@ -69,7 +69,7 @@ public partial class Tf2PicturePool
         uint l_Color;
         Id2dTexture l_Tex;
         TPoint l_PicSize = default;
-        Id2dPicture result;
+        Id2dPicture result = default!;
     
         l_Params = CutByColon(aPictureName);
         Assert((l_Params.Count == 6));
