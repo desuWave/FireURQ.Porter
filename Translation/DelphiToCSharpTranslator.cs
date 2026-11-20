@@ -877,10 +877,10 @@ public sealed class DelphiToCSharpTranslator
             statement.ForLoop;
 
         string from =
-            TranslateExpression(loop.From);
+            TranslateValueOperand(loop.From, out _);
 
         string to =
-            TranslateExpression(loop.To);
+            TranslateValueOperand(loop.To, out _);
 
         string variable =
             loop.Variable;
@@ -1408,13 +1408,8 @@ public sealed class DelphiToCSharpTranslator
         if (TryTranslateNilComparison(expression, out string nilComparison))
             return nilComparison;
 
-        string left =
-            TranslateExpression(
-                expression.Children[0]);
-
-        string right =
-            TranslateExpression(
-                expression.Children[1]);
+        string left = TranslateValueOperand(expression.Children[0], out bool leftBoolean);
+        string right = TranslateValueOperand(expression.Children[1], out bool rightBoolean);
 
         if (string.Equals(
                 expression.Text,
@@ -1433,7 +1428,7 @@ public sealed class DelphiToCSharpTranslator
                 expression.Children[1]);
 
         bool isBoolean =
-            IsBooleanType(leftType) || IsBooleanType(rightType);
+            leftBoolean || rightBoolean || IsBooleanType(leftType) || IsBooleanType(rightType);
 
         string op =
             expression.Text.ToLowerInvariant() switch
@@ -1451,6 +1446,13 @@ public sealed class DelphiToCSharpTranslator
             };
 
         return $"({left} {op} {right})";
+    }
+
+    private string TranslateValueOperand(ExpressionParser.ExpressionNode operand, out bool isBoolean)
+    {
+        if (TryTranslateBareUnaryFunction(operand, out string invocation, out isBoolean))
+            return invocation;
+        return TranslateExpression(operand);
     }
 
     private bool TryTranslateNilComparison(
