@@ -810,12 +810,7 @@ private static void ReleaseTargetResources(Td2dRenderTarget target)
         if (function.IsClassMethod)
             return "public ";
 
-        string visibility = function.Visibility?.ToLowerInvariant() switch
-        {
-            "private" or "strict private" => "private ",
-            "protected" or "strict protected" => "protected ",
-            _ => "public "
-        };
+        string visibility = CSharpDeclarationTranslator.MapVisibility(function.Visibility);
 
         bool Has(string modifier) => function.Modifiers.Contains(
             modifier, StringComparer.OrdinalIgnoreCase);

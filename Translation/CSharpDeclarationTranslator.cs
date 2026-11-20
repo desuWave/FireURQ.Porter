@@ -1657,16 +1657,17 @@ public sealed class CSharpDeclarationTranslator
         return isGetter ? $"get => {name}({parameters});" : $"set => {name}({parameters});";
     }
 
-    private string MapVisibility(string? visibility)
+    internal static string MapVisibility(string? visibility)
     {
         if (string.IsNullOrWhiteSpace(visibility))
             return "public ";
 
         return visibility.Trim().ToLowerInvariant() switch
         {
-            "private" => "private ",
+            // Ordinary Delphi access includes other declarations in the same unit.
+            "private" => "internal ",
             "internal" => "internal ",
-            "protected" => "protected ",
+            "protected" => "protected internal ",
             "public" => "public ",
             "published" => "public ",
             "strict private" => "private ",
