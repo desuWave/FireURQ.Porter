@@ -3441,11 +3441,6 @@ private string TranslateCall(
         target = constructorFactory;
         formals = constructorParameters;
     }
-    if (formals is null && targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
-        _currentTypeContext?.OwnerClass is null && ResolveExpressionType(targetExpression) is null &&
-        _currentTypeContext?.ResolveLocalFunction(targetExpression.Text, expression.Children.Count - 1).Found != true)
-        formals = _resolver?.FindUnitRoutineParameters(targetExpression.Text, _unitName, expression.Children.Count - 1);
-
     if (formals is null && _resolver is not null)
     {
         string? receiver = null;
@@ -3475,6 +3470,12 @@ private string TranslateCall(
                 : binding.Member.Name;
         }
     }
+
+    if (formals is null && targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        ResolveExpressionType(targetExpression) is null &&
+        ResolveUnaryMemberType(targetExpression) is null &&
+        _currentTypeContext?.ResolveLocalFunction(targetExpression.Text, expression.Children.Count - 1).Found != true)
+        formals = _resolver?.FindUnitRoutineParameters(targetExpression.Text, _unitName, expression.Children.Count - 1);
 
     var arguments = new List<string>();
     for (int i = 1; i < expression.Children.Count; i++)
