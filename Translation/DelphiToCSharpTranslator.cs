@@ -2746,15 +2746,27 @@ private string TranslateCall(
         TranslateCallTarget(
             targetExpression);
 
-    var arguments = new List<string>();
+    var signature = targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        _currentTypeContext?.OwnerClass is null && ResolveExpressionType(targetExpression) is null
+        ? _resolver?.FindUnitProcedureVariable(targetExpression.Text, _unitName)
+        : null;
 
-    for (int i = 1;
-         i < expression.Children.Count;
-         i++)
+    var arguments = new List<string>();
+    for (int i = 1; i < expression.Children.Count; i++)
     {
-        arguments.Add(
-            TranslateExpression(
-                expression.Children[i]));
+        var argument = expression.Children[i];
+        string value = TranslateExpression(argument);
+        // Delphi types a real literal from its formal parameter. An unsuffixed
+        // fractional C# literal would instead be a double.
+        if (signature?.Parameters.Count == expression.Children.Count - 1 &&
+            MapType(signature.Parameters[i - 1].Type) == "float" &&
+            argument.Kind == ExpressionParser.ExpressionKind.Literal &&
+            (value.Contains('.') || value.Contains('e', StringComparison.OrdinalIgnoreCase)) &&
+            float.TryParse(value, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out _))
+            value += "f";
+
+        arguments.Add(value);
     }
 
     // Delphi Assigned(P) is a null/non-null test, including the common

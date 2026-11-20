@@ -493,6 +493,15 @@ public sealed class TypeResolver
                 unit.Functions.Any(value => value.Name.Equals(
                     name, StringComparison.OrdinalIgnoreCase)));
     }
+    internal SemanticProcedureType? FindUnitProcedureVariable(string name, string? unitName)
+    {
+        if (unitName is null || !_units.TryGetValue(unitName, out var unit))
+            return null;
+
+        return unit.Variables.FirstOrDefault(variable =>
+            variable.Name.Equals(name, StringComparison.OrdinalIgnoreCase))?.ProcedureType;
+    }
+
     public bool HasVisibleValueDeclaration(string name, string unitName)
     {
         if (!_units.TryGetValue(unitName, out SemanticUnit? context))
