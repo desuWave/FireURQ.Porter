@@ -2521,6 +2521,39 @@ private bool TryTranslateStreamCall(
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
+    if (expression.Children.Count == 4 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } memoryOperation &&
+        memoryOperation.Text.ToUpperInvariant() is "FILLCHAR" or "MOVE" &&
+        (_resolver is null || _unitName is null ||
+         !_resolver.HasVisibleValueDeclaration(memoryOperation.Text, _unitName)))
+    {
+        if (memoryOperation.Text.Equals("FillChar", StringComparison.OrdinalIgnoreCase))
+        {
+            ExpressionParser.ExpressionNode destination = expression.Children[1];
+            string destinationType = MapType(ResolveExpressionType(destination));
+            string destinationArgument = destinationType.EndsWith("[]", StringComparison.Ordinal)
+                ? TranslateExpression(destination)
+                : "ref " + TranslateExpression(destination);
+            return "global::FireURQ.Runtime.DelphiSystem.FillChar(" +
+                $"{destinationArgument}, checked((int)({TranslateExpression(expression.Children[2])})), " +
+                $"checked((int)({TranslateExpression(expression.Children[3])})))";
+        }
+
+        ExpressionParser.ExpressionNode source = expression.Children[1];
+        ExpressionParser.ExpressionNode destinationMove = expression.Children[2];
+        string sourceType = MapType(ResolveExpressionType(source));
+        string destinationTypeMove = MapType(ResolveExpressionType(destinationMove));
+        string sourceArgument = sourceType.EndsWith("[]", StringComparison.Ordinal)
+            ? TranslateExpression(source)
+            : "ref " + TranslateExpression(source);
+        string destinationArgumentMove = destinationTypeMove.EndsWith("[]", StringComparison.Ordinal)
+            ? TranslateExpression(destinationMove)
+            : "ref " + TranslateExpression(destinationMove);
+        return "global::FireURQ.Runtime.DelphiSystem.Move(" +
+            $"{sourceArgument}, {destinationArgumentMove}, " +
+            $"checked((int)({TranslateExpression(expression.Children[3])})))";
+    }
+
     if (_resolver is not null && _unitName is not null &&
         expression.Children.Count == 3 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } getMem &&
