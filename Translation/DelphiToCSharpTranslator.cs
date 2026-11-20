@@ -1572,15 +1572,38 @@ public sealed class DelphiToCSharpTranslator
             TryTranslatePascalStringLiteral(value.Text, out string character, preferChar: true))
             return character;
 
+        string mappedExpected = MapType(expectedType);
         if (expectedType is not null && _resolver is not null &&
-            (MapType(expectedType) is "bool" or "char" or "string" or "AnsiString" or "byte" or "sbyte"
+            (mappedExpected is "bool" or "char" or "string" or "AnsiString" or "byte" or "sbyte"
                 or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "float" or "double"
-                or "Extended" or "Variant" ||
+                or "Extended" or "Variant" or "IntPtr" or "UIntPtr" ||
              _resolver.ResolveDeclarationKind(expectedType, _unitName) is "Class" or "Interface") &&
             TryTranslateBareUnaryFunction(value, out string invocation, out _))
             return invocation;
 
-        return TranslateExpression(value);
+        string translated = TranslateExpression(value);
+        if (mappedExpected == "float" &&
+            value.Kind == ExpressionParser.ExpressionKind.Literal &&
+            (translated.Contains('.') || translated.Contains('e', StringComparison.OrdinalIgnoreCase)) &&
+            float.TryParse(translated, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out _))
+            return translated + "f";
+
+        if (mappedExpected is "char" or "byte" or "sbyte" or "short" or "ushort" or
+            "int" or "uint" or "long" or "ulong" or "float" or "double")
+        {
+            string? sourceType = ResolveExpressionType(value) ?? ResolveUnaryMemberType(value)?.ResolvedName;
+            string mappedSource = MapType(sourceType);
+            bool numericSource = mappedSource is "char" or "byte" or "sbyte" or "short" or "ushort" or
+                "int" or "uint" or "long" or "ulong" or "float" or "double" ||
+                value.Kind == ExpressionParser.ExpressionKind.Literal &&
+                double.TryParse(translated, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out _);
+            if (numericSource && mappedSource != mappedExpected)
+                return $"unchecked(({mappedExpected})({translated}))";
+        }
+
+        return translated;
     }
 
     internal static string DefaultParameterSuffix(IReadOnlyList<SemanticParameter> parameters,
