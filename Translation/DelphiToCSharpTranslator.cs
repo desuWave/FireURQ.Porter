@@ -2579,6 +2579,11 @@ private string TranslateCall(
         {
             foreach (int index in new[] { 2, 3, 4, 5, 6, 9, 10, 11 })
                 factoryArguments[index] = $"unchecked((uint)({factoryArguments[index]}))";
+            if (expression.Children[13] is { Kind: ExpressionParser.ExpressionKind.AddressOf } infoAddress &&
+                infoAddress.Children.Count == 1)
+                factoryArguments[12] = TranslateExpression(infoAddress.Children[0]);
+            if (IsNilLiteral(expression.Children[14]))
+                factoryArguments[13] = "global::System.IntPtr.Zero";
             factoryArguments[12] = "out " + factoryArguments[12];
             factoryArguments[14] = "out " + factoryArguments[14];
             return "global::FireURQ.Runtime.D3DX8.CreateTextureFromFileInMemoryEx(" +
