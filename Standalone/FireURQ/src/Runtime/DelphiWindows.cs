@@ -101,4 +101,25 @@ internal static class DelphiWindows
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool ReleaseCapture();
+
+    [DllImport("winmm.dll", EntryPoint = "timeGetTime")]
+    public static extern uint timeGetTime();
+
+    [DllImport("winmm.dll", EntryPoint = "mciSendStringW")]
+    private static extern int MciSendStringNative(
+        IntPtr command, IntPtr returnText, uint returnLength, IntPtr callback);
+
+    public static int mciSendString(
+        IntPtr command, object? returnText, int returnLength, int callback) =>
+        MciSendStringNative(command, IntPtr.Zero, unchecked((uint)returnLength),
+            new IntPtr(callback));
+
+    [DllImport("winmm.dll", EntryPoint = "midiOutSetVolume")]
+    public static extern int midiOutSetVolume(IntPtr device, uint volume);
+
+    [DllImport("winmm.dll", EntryPoint = "PlaySoundW")]
+    private static extern bool PlaySoundNative(IntPtr sound, IntPtr module, uint flags);
+
+    public static bool PlaySound(IntPtr sound, object? module, int flags) =>
+        PlaySoundNative(sound, IntPtr.Zero, unchecked((uint)flags));
 }
