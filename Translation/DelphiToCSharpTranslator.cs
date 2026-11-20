@@ -1022,6 +1022,31 @@ public sealed class DelphiToCSharpTranslator
                 statement.Assignment.Value))
         {
             targetExpression = targetExpression.Children[0];
+            // Dynamic_Bass declares each BASS export as a procedural variable.
+            // The declaration generator names its delegate after the variable.
+            var args = statement.Assignment.Value.Children;
+            if (string.Equals(_unitName, "Dynamic_Bass", StringComparison.OrdinalIgnoreCase) &&
+                function.Name.Equals("Load_BASSDLL", StringComparison.OrdinalIgnoreCase) &&
+                args.Count == 3 && args[1].Kind == ExpressionParser.ExpressionKind.Identifier &&
+                args[1].Text.Equals("BASS_Handle", StringComparison.OrdinalIgnoreCase) &&
+                args[2].Kind == ExpressionParser.ExpressionKind.Call &&
+                args[2].Children.Count == 2 &&
+                args[2].Children[0].Text.Equals("PAnsiChar", StringComparison.OrdinalIgnoreCase) &&
+                args[2].Children[1].Kind == ExpressionParser.ExpressionKind.Literal)
+            {
+                string export = TranslateExpression(args[2].Children[1]);
+                string field = targetExpression.Text;
+                if (export == $"\"{field}\"")
+                {
+                    AppendLine(builder, indent, "{");
+                    AppendLine(builder, indent + 1,
+                        $"{field} = NativeLibrary.TryGetExport(BASS_Handle, {export}, out var address)");
+                    AppendLine(builder, indent + 2,
+                        $"? Marshal.GetDelegateForFunctionPointer<{field}Delegate>(address) : null!;");
+                    AppendLine(builder, indent, "}");
+                    return;
+                }
+            }
         }
 
         if (_resolver is not null &&
