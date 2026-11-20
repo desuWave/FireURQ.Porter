@@ -83,6 +83,7 @@ jobs:
           path: |
             standalone-build.log
             .fireurq-work/translation.log
+            .fireurq-work/translation-output/**/*.cs
           include-hidden-files: true
           if-no-files-found: warn
           retention-days: 14
