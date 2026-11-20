@@ -2521,6 +2521,21 @@ private bool TryTranslateStreamCall(
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
+    // The Delphi PChar cast borrows the command string for this call only.
+    if (expression.Children.Count == 5 && _unitName is not null && _resolver is not null &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } mci &&
+        mci.Text.Equals("mciSendString", StringComparison.OrdinalIgnoreCase) &&
+        !_resolver.HasVisibleValueDeclaration(mci.Text, _unitName) &&
+        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Call } mciCast &&
+        mciCast.Children.Count == 2 &&
+        mciCast.Children[0].Text.Equals("PChar", StringComparison.OrdinalIgnoreCase) &&
+        MapType(ResolveExpressionType(mciCast.Children[1])) == "string")
+    {
+        return "global::FireURQ.Runtime.DelphiWindows.mciSendString(" +
+            TranslateExpression(mciCast.Children[1]) + ", " +
+            string.Join(", ", expression.Children.Skip(2).Select(TranslateExpression)) + ")";
+    }
+
     if (expression.Children.Count > 1 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } d3dxFactory &&
         (_resolver is null || _unitName is null ||
