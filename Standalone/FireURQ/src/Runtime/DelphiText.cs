@@ -4,6 +4,16 @@ namespace FireURQ.Runtime;
 
 internal static class DelphiText
 {
+    public static unsafe string FromAnsiCharArray(byte[] buffer)
+    {
+        int end = Array.IndexOf(buffer, (byte)0);
+        int length = end < 0 ? buffer.Length : end;
+        if (length == 0)
+            return string.Empty;
+        fixed (byte* start = buffer)
+            return System.Runtime.InteropServices.Marshal.PtrToStringAnsi((IntPtr)start, length)!;
+    }
+
     // Delphi SysUtils uses the current locale for case-insensitive comparisons.
     public static bool AnsiSameText(string? left, string? right) =>
         string.Equals(left ?? string.Empty, right ?? string.Empty,
