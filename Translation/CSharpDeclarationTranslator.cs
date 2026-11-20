@@ -1041,6 +1041,18 @@ public sealed class CSharpDeclarationTranslator
         string abstractModifier = hasAbstractMethods ? "abstract " : string.Empty;
         builder.AppendLine($"public {abstractModifier}partial class {@class.Name}{baseType}");
         builder.AppendLine("{");
+        bool isDelphiException = emittedAncestors.Any(ancestor =>
+            ancestor.Equals("Exception", StringComparison.Ordinal) ||
+            ancestor.Equals("System.Exception", StringComparison.Ordinal) ||
+            ancestor.Equals("global::System.Exception", StringComparison.Ordinal));
+        if (isDelphiException)
+        {
+            builder.AppendLine($"    public {@class.Name}() {{ }}");
+            builder.AppendLine($"    public {@class.Name}(string message) : base(message) {{ }}");
+            builder.AppendLine($"    public static {@class.Name} CreateFmt(string format, object?[] values) =>");
+            builder.AppendLine($"        new {@class.Name}(global::FireURQ.Runtime.DelphiText.Format(format, values));");
+        }
+
         var members = @class.Members;
         if (string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
             (@class.Name.Equals("TXmlElement", StringComparison.OrdinalIgnoreCase) ||

@@ -2545,6 +2545,18 @@ private string TranslateCall(
         return $"Format({format}, new object[] {{ {values} }})";
     }
 
+    if (expression.Children.Count == 3 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.MemberAccess } formatFactory &&
+        formatFactory.Children.Count == 2 &&
+        formatFactory.Children[1].Text.Equals("CreateFmt", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children[2] is { Kind: ExpressionParser.ExpressionKind.Set } factoryValues)
+    {
+        string target = TranslateExpression(formatFactory);
+        string format = TranslateExpression(expression.Children[1]);
+        string values = string.Join(", ", factoryValues.Children.Select(TranslateExpression));
+        return $"{target}({format}, new object[] {{ {values} }})";
+    }
+
     if (_resolver is not null && _unitName is not null && expression.Children.Count == 2 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } pointerOperation &&
         expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Identifier } pointerVariable &&
