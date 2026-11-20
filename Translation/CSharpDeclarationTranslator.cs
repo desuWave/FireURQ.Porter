@@ -1535,6 +1535,23 @@ public sealed class CSharpDeclarationTranslator
         builder.AppendLine("    }");
     }
 
+    private string EnumArrayInitializer(string declaration)
+    {
+        if (_resolver is null)
+            return string.Empty;
+        var match = System.Text.RegularExpressions.Regex.Match(declaration,
+            @"^array\s*\[([^\]]+)\]\s*of\s+(.+)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!match.Success)
+            return string.Empty;
+        var dimensions = match.Groups[1].Value.Split(',')
+            .Select(domain => _resolver.GetEnumerationLength(domain.Trim(), _unitName)).ToArray();
+        string elementType = MapType(match.Groups[2].Value);
+        if (dimensions.Any(length => length == 0) || elementType.Contains('['))
+            return string.Empty;
+        return $" = new {elementType}[{string.Join(", ", dimensions)}]";
+    }
+
     private void AppendMembers(StringBuilder builder, IReadOnlyList<SemanticMember> members, string ownerName, bool isInterface)
     {
         foreach (SemanticMember member in members)
@@ -1546,7 +1563,7 @@ public sealed class CSharpDeclarationTranslator
                     {
                         string visibility = MapVisibility(member.Visibility);
                         builder.AppendLine(
-                            $"    {visibility}{MapType(member.Type)} {member.Name};");
+                            $"    {visibility}{MapType(member.Type)} {member.Name}{EnumArrayInitializer(member.Type)};");
                     }
                     break;
 
