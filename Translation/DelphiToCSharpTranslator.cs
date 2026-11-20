@@ -2551,10 +2551,10 @@ private string TranslateCall(
         formatFactory.Children[1].Text.Equals("CreateFmt", StringComparison.OrdinalIgnoreCase) &&
         expression.Children[2] is { Kind: ExpressionParser.ExpressionKind.Set } factoryValues)
     {
-        string target = TranslateExpression(formatFactory);
+        string factory = TranslateExpression(formatFactory);
         string format = TranslateExpression(expression.Children[1]);
         string values = string.Join(", ", factoryValues.Children.Select(TranslateExpression));
-        return $"{target}({format}, new object[] {{ {values} }})";
+        return $"{factory}({format}, new object[] {{ {values} }})";
     }
 
     if (_resolver is not null && _unitName is not null && expression.Children.Count == 2 &&
