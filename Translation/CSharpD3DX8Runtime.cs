@@ -97,27 +97,19 @@ public static class D3DX8
         result = value;
     }
 
-    public static int D3DXCreateTexture(
-        IDirect3DDevice8 device, uint width, uint height, uint levels,
-        uint usage, int format, int pool, out IDirect3DTexture8 texture) =>
-        device.CreateTexture(width, height, levels, usage, format, pool, out texture);
-
     [DllImport("D3DX81ab.dll", ExactSpelling = true,
         CallingConvention = CallingConvention.StdCall)]
-    private static extern int D3DXCreateTextureFromFileInMemoryEx(
+    public static extern int D3DXCreateTexture(
+        IDirect3DDevice8 device, uint width, uint height, uint levels,
+        uint usage, int format, int pool, out IDirect3DTexture8 texture);
+
+    [DllImport("D3DX81ab.dll", EntryPoint = "D3DXCreateTextureFromFileInMemoryEx",
+        ExactSpelling = true, CallingConvention = CallingConvention.StdCall)]
+    public static extern int CreateTextureFromFileInMemoryEx(
         IDirect3DDevice8 device, IntPtr data, uint size, uint width, uint height,
         uint levels, uint usage, int format, int pool, uint filter, uint mipFilter,
         uint colorKey, out TD3DXImageInfo sourceInfo, IntPtr palette,
         out IDirect3DTexture8 texture);
-
-    public static int CreateTextureFromFileInMemoryEx(
-        IDirect3DDevice8 device, IntPtr data, uint size, uint width, uint height,
-        uint levels, uint usage, int format, int pool, uint filter, uint mipFilter,
-        uint colorKey, out TD3DXImageInfo sourceInfo, object? palette,
-        out IDirect3DTexture8 texture) =>
-        D3DXCreateTextureFromFileInMemoryEx(device, data, size, width, height,
-            levels, usage, format, pool, filter, mipFilter, colorKey,
-            out sourceInfo, IntPtr.Zero, out texture);
 
     [DllImport("D3DX81ab.dll", ExactSpelling = true,
         CallingConvention = CallingConvention.StdCall)]
