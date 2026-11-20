@@ -555,6 +555,18 @@ public sealed class TypeResolver
         if (unitName is null || !_units.TryGetValue(unitName, out var unit))
             return null;
 
+        bool DeclaresRoutine(SemanticUnit candidate) => candidate.Functions.Any(function =>
+            function.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (!DeclaresRoutine(unit))
+        {
+            var owners = unit.Uses.Distinct(StringComparer.OrdinalIgnoreCase)
+                .Where(_units.ContainsKey).Select(key => _units[key])
+                .Where(DeclaresRoutine).Take(2).ToArray();
+            if (owners.Length != 1)
+                return null;
+            unit = owners[0];
+        }
+
         var matches = unit.Functions.Where(function =>
             AcceptsArity(function.Parameters, arity) &&
             function.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
@@ -565,7 +577,7 @@ public sealed class TypeResolver
                 !string.IsNullOrWhiteSpace(parameter.DefaultValue)))
             .First().Parameters;
         // The interface declaration and implementation may both be present.
-        return matches.All(match => match.Parameters.Zip(parameters).All(pair =>
+        return matches.All(match => match.Parameters.Count == parameters.Count && match.Parameters.Zip(parameters).All(pair =>
             pair.First.Kind.Equals(pair.Second.Kind, StringComparison.OrdinalIgnoreCase) &&
             pair.First.Type.Equals(pair.Second.Type, StringComparison.OrdinalIgnoreCase)))
             ? parameters : null;
