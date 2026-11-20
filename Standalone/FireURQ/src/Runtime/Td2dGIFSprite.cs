@@ -121,7 +121,7 @@ public sealed class Td2dGIFSprite : Td2dSprite
         frame = index;
     }
 
-    protected override void Cleanup()
+    protected internal override void Cleanup()
     {
         frames?.Dispose();
         frames = null;

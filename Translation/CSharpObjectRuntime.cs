@@ -80,7 +80,7 @@ namespace FireURQ.Runtime
                 value.Destroy();
         }
 
-        protected virtual void FreeInstance()
+        protected internal virtual void FreeInstance()
         {
             // Managed object storage is reclaimed by the CLR.
             // Descendants release their owned resources in Destroy.
