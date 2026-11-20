@@ -46,6 +46,13 @@ namespace FireURQ.Runtime
 
     public static class DelphiStorage
     {
+        public static void SetChar(ref string value, int index, char replacement)
+        {
+            char[] characters = value.ToCharArray();
+            characters[index - 1] = replacement;
+            value = new string(characters);
+        }
+
         public static void Delete(ref string value, int index, int count)
         {
             if (string.IsNullOrEmpty(value) || index < 1 || index > value.Length || count <= 0)

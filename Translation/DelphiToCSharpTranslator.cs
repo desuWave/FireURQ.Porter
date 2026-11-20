@@ -1076,6 +1076,16 @@ public sealed class DelphiToCSharpTranslator
             return;
         }
 
+        if (statement.Assignment.Target is { Kind: ExpressionParser.ExpressionKind.IndexAccess } character &&
+            character.Children.Count == 2 && IsManagedString(character.Children[0]))
+        {
+            string storage = TranslateExpression(character.Children[0]);
+            string index = TranslateValueOperand(character.Children[1], out _);
+            string replacement = TranslateExpectedValue(statement.Assignment.Value, "Char");
+            AppendLine(builder, indent, $"global::FireURQ.Runtime.DelphiStorage.SetChar(ref {storage}, {index}, {replacement});");
+            return;
+        }
+
         if (TryTranslateIndexedPropertyWrite(
             statement.Assignment.Target,
             statement.Assignment.Value,
@@ -2034,6 +2044,12 @@ public sealed class DelphiToCSharpTranslator
         return true;
     }
 
+    private bool IsManagedString(ExpressionParser.ExpressionNode expression)
+    {
+        string? type = ResolveExpressionType(expression) ?? ResolveUnaryMemberType(expression)?.ResolvedName;
+        return type is not null && MapType(type) == "string";
+    }
+
     private string TranslateIndexAccess(
         ExpressionParser.ExpressionNode expression)
     {
@@ -2044,6 +2060,9 @@ public sealed class DelphiToCSharpTranslator
             return translated;
 
         string target = TranslateExpression(expression.Children[0]);
+        if (expression.Children.Count == 2 && IsManagedString(expression.Children[0]))
+            return $"{target}[({TranslateValueOperand(expression.Children[1], out _)}) - 1]";
+
         string indices = string.Join(", ",
             expression.Children.Skip(1).Select(TranslateExpression));
 
