@@ -2179,10 +2179,10 @@ private string TranslateCall(
         intrinsic.Text.Equals("SizeOf", StringComparison.OrdinalIgnoreCase) &&
         !_resolver.HasVisibleValueDeclaration(intrinsic.Text, _unitName) &&
         ResolveExpressionType(intrinsic) is null &&
-        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Identifier } operand)
+        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Identifier } sizeOperand)
     {
         // SizeOf uses the declared Delphi storage type and does not evaluate its operand.
-        string typeName = ResolveExpressionType(operand) ?? operand.Text;
+        string typeName = ResolveExpressionType(sizeOperand) ?? sizeOperand.Text;
         var type = _resolver.Resolve(typeName, _unitName);
         if (type.IsResolved && !type.IsPointer && type.DeclaringUnitName is null)
         {
