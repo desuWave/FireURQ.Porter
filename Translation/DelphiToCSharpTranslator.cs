@@ -2961,6 +2961,12 @@ private string TranslateCall(
             return $"f_D3DDevice.Reset(ref {TranslateExpression(expression.Children[1])})";
         }
 
+        if (method.Equals("SetViewport", StringComparison.OrdinalIgnoreCase) &&
+            expression.Children.Count == 2)
+        {
+            return $"f_D3DDevice.SetViewport(ref {TranslateExpression(expression.Children[1])})";
+        }
+
         if (method.Equals("Present", StringComparison.OrdinalIgnoreCase) &&
             expression.Children.Count == 5)
         {
