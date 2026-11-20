@@ -121,6 +121,59 @@ internal static class DelphiText
         return negative ? unchecked(-result) : result;
     }
 
+    public static int StrToInt(string? value)
+    {
+        string text = (value ?? string.Empty).Trim();
+        bool negative = text.StartsWith("-", StringComparison.Ordinal);
+        if (negative || text.StartsWith("+", StringComparison.Ordinal))
+            text = text[1..];
+
+        if (text.StartsWith("$", StringComparison.Ordinal))
+        {
+            uint parsed = uint.Parse(text[1..],
+                System.Globalization.NumberStyles.AllowHexSpecifier,
+                System.Globalization.CultureInfo.InvariantCulture);
+            int result = unchecked((int)parsed);
+            return negative ? unchecked(-result) : result;
+        }
+
+        int decimalValue = int.Parse(text,
+            System.Globalization.NumberStyles.Integer,
+            System.Globalization.CultureInfo.InvariantCulture);
+        return negative ? unchecked(-decimalValue) : decimalValue;
+    }
+
+    public static long StrToInt64Def(string? value, long defaultValue)
+    {
+        string text = (value ?? string.Empty).Trim();
+        bool negative = text.StartsWith("-", StringComparison.Ordinal);
+        if (negative || text.StartsWith("+", StringComparison.Ordinal))
+            text = text[1..];
+
+        System.Globalization.NumberStyles style = System.Globalization.NumberStyles.Integer;
+        if (text.StartsWith("$", StringComparison.Ordinal))
+        {
+            text = text[1..];
+            style = System.Globalization.NumberStyles.AllowHexSpecifier;
+        }
+
+        if (!long.TryParse(text, style, System.Globalization.CultureInfo.InvariantCulture,
+            out long result))
+            return defaultValue;
+        return negative ? unchecked(-result) : result;
+    }
+
+    public static string SetStringLength(string? value, int length)
+    {
+        length = Math.Max(length, 0);
+        value ??= string.Empty;
+        if (value.Length == length)
+            return value;
+        if (value.Length > length)
+            return value[..length];
+        return value.PadRight(length, '\0');
+    }
+
     public static double StrToFloatDef(string? value, double defaultValue)
     {
         string text = value ?? string.Empty;
