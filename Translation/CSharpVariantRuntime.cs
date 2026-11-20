@@ -29,6 +29,7 @@ namespace FireURQ.Runtime
         internal object? BoxedValue => value;
 
         public ushort TypeCode => typeCode;
+        public static Variant FromAutomationDate(double serial) => new Variant(7, serial);
         public static Variant Unassigned => default;
         public static Variant Null => new Variant(1, null);
 
