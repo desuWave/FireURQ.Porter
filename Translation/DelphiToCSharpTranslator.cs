@@ -1745,6 +1745,25 @@ public sealed class DelphiToCSharpTranslator
             TranslateExpression(
                 expression.Children[1]);
 
+        // A read of LongRec exposes the low or high Word of a 32-bit value.
+        // Keep address-taking and writes on the separate lvalue path.
+        if (!_translatingAssignmentTarget && _resolver is not null && _unitName is not null &&
+            expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Call } recordCast &&
+            recordCast.Children.Count == 2 &&
+            recordCast.Children[0].Kind == ExpressionParser.ExpressionKind.Identifier &&
+            recordCast.Children[0].Text.Equals("LongRec", StringComparison.OrdinalIgnoreCase) &&
+            !_resolver.HasVisibleValueDeclaration("LongRec", _unitName) &&
+            ResolveExpressionType(recordCast.Children[0]) is null &&
+            ResolveExpressionType(recordCast.Children[1]) is string packedType &&
+            MapType(packedType) is "int" or "uint" or "IntPtr" or "UIntPtr")
+        {
+            string packed = TranslateExpression(recordCast.Children[1]);
+            if (member.Equals("Lo", StringComparison.OrdinalIgnoreCase))
+                return $"unchecked((ushort)(uint)({packed}))";
+            if (member.Equals("Hi", StringComparison.OrdinalIgnoreCase))
+                return $"unchecked((ushort)((uint)({packed}) >> 16))";
+        }
+
         if (string.Equals(_unitName, "SimpleXML", StringComparison.OrdinalIgnoreCase) &&
             member.Equals("VType", StringComparison.OrdinalIgnoreCase) &&
             expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Call } cast &&
