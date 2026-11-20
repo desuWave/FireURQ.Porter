@@ -2783,6 +2783,22 @@ private string TranslateCall(
         return $"({assignedValue} != {nullValue})";
     }
 
+    if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Text.Equals("Dec", StringComparison.OrdinalIgnoreCase) &&
+        arguments.Count is 1 or 2 && _resolver is not null && _unitName is not null &&
+        ResolveExpressionType(targetExpression) is null &&
+        !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName))
+    {
+        var operand = expression.Children[1];
+        string? operandType = ResolveExpressionType(operand) ??
+            ResolveUnaryMemberType(operand)?.ResolvedName;
+        if (operandType is not null && MapType(operandType) is
+            "sbyte" or "byte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong")
+            return arguments.Count == 1
+                ? $"{arguments[0]}--"
+                : $"{arguments[0]} -= {arguments[1]}";
+    }
+
 if (targetExpression.Kind ==
         ExpressionParser.ExpressionKind.Identifier &&
     targetExpression.Text.Equals(
