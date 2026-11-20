@@ -25,6 +25,62 @@ jobs:
       - name: Build translator
         run: dotnet build FireURQ.Porter.csproj --configuration Release --nologo
 
+      - name: Checkout FireURQ sources
+        uses: actions/checkout@v4
+        with:
+          repository: fireton/fireurq
+          ref: 62b8a45f205c92a014c7144c8b59d4c75caa5973
+          path: .fireurq-work/fireurq-master
+          persist-credentials: false
+
+      - name: Checkout D2D sources (furq_2_2_4)
+        uses: actions/checkout@v4
+        with:
+          repository: fireton/d2dge
+          ref: 46708bd8cf22a8a22e22a0eae89c539fdee244c8
+          path: .fireurq-work/d2dge-furq_2_2_4
+          persist-credentials: false
+
+      - name: Translate both projects
+        working-directory: .fireurq-work
+        env:
+          DOTNET_ROLL_FORWARD: LatestMajor
+        run: |
+          dotnet ../bin/Release/net8.0/FireURQ.Porter.dll --analyze "$PWD/fireurq-master" "$PWD/d2dge-furq_2_2_4" | tee translation.log
+          grep -Eq '^Translation succeeded: +58
+        id: standalone
+        shell: bash
+        run: |
+          set +e
+          dotnet build Standalone/FireURQ/FireURQ.csproj --configuration Release --nologo -p:FireURQSourceRoot="$GITHUB_WORKSPACE/.fireurq-work/translation-output" > standalone-build.log 2>&1
+          result=$?
+          set -e
+          echo "Standalone build exit code: $result"
+          echo "Compiler error counts by code:"
+          grep -Eo 'error (CS|MSB)[0-9]+' standalone-build.log | sort | uniq -c | sort -nr || true
+          echo "Most frequent unresolved identifiers:"
+          grep -Eo "error CS0103: The name '[^']+'" standalone-build.log | sort | uniq -c | sort -nr | head -n 40 || true
+          echo "CS0165 / CS1628 diagnostics:"
+          grep -E 'error CS(0165|1628):' standalone-build.log || true
+          echo "First compiler diagnostics:"
+          grep -m 80 -E 'error (CS|MSB)[0-9]+' standalone-build.log || true
+          tail -n 12 standalone-build.log
+          exit "$result"
+
+      - name: Publish standalone build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standalone-build-log
+          path: |
+            standalone-build.log
+            .fireurq-work/translation.log
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 14
+ translation.log
+          test -s translation-output/d2dge-furq_2_2_4/SimpleXML.cs
+
       - name: Build generated standalone
         id: standalone
         shell: bash
