@@ -540,13 +540,14 @@ if (args.Length >= 1 &&
 {
     string testFile =
         Path.Combine(
-            "tests",
+            "Tests",
             "TranslationTest.pas");
 
     if (!File.Exists(testFile))
     {
         Console.WriteLine(
             $"ERROR: Translation test file not found: {testFile}");
+        Environment.ExitCode = 1;
 
         return;
     }
