@@ -59,4 +59,15 @@ internal static class DelphiSystem
 
     public static int InterlockedDecrement(ref int value) =>
         System.Threading.Interlocked.Decrement(ref value);
+
+    public static IntPtr Allocate<T>() where T : struct
+    {
+        IntPtr pointer = System.Runtime.InteropServices.Marshal.AllocHGlobal(
+            System.Runtime.InteropServices.Marshal.SizeOf<T>());
+        System.Runtime.InteropServices.Marshal.StructureToPtr(default(T), pointer, false);
+        return pointer;
+    }
+
+    public static unsafe ref T Dereference<T>(IntPtr pointer) where T : struct =>
+        ref System.Runtime.CompilerServices.Unsafe.AsRef<T>(pointer.ToPointer());
 }

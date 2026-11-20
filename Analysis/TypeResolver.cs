@@ -376,7 +376,7 @@ public sealed class TypeResolver
     internal SemanticField? FindRecordField(string receiver, string name, string? unitName)
     {
         var type = Resolve(receiver, unitName);
-        if (type.IsPointer || type.DeclaringUnitName is null)
+        if (type.DeclaringUnitName is null)
             return null;
         var declaration = Find(type.ResolvedName, type.DeclaringUnitName, out _);
         var record = declaration?.Type;

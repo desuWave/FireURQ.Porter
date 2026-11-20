@@ -1907,12 +1907,9 @@ public sealed class DelphiToCSharpTranslator
         if (expression.Children.Count < 2)
             return expression.Text;
 
-        string target =
-            TranslateExpression(
-                expression.Children[0]);
-
-        string member = expression.Children[1].Text;
         var instance = expression.Children[0];
+        string target = TranslateExpression(instance);
+        string member = expression.Children[1].Text;
         string? receiver = ResolveExpressionType(instance);
         string? receiverUnit = _unitName;
         if (receiver is null && ResolveUnaryMemberType(instance) is { IsResolved: true, IsPointer: false } field)
@@ -1920,8 +1917,18 @@ public sealed class DelphiToCSharpTranslator
             receiver = field.ResolvedName;
             receiverUnit = field.DeclaringUnitName ?? _unitName;
         }
-        if (receiver is not null && _resolver?.FindMember(receiver, member, receiverUnit, null) is { } binding)
-            member = binding.Member.Name;
+        if (receiver is not null && _resolver is not null)
+        {
+            TypeResolution receiverResolution = _resolver.Resolve(receiver, receiverUnit);
+            if (receiverResolution.IsPointer && receiverResolution.DeclaringUnitName is not null &&
+                _resolver.FindRecordField(receiver, member, receiverUnit) is { } pointerField)
+            {
+                target = $"global::FireURQ.Runtime.DelphiSystem.Dereference<{receiverResolution.ResolvedName}>({target})";
+                member = pointerField.Name;
+            }
+            else if (_resolver.FindMember(receiver, member, receiverUnit, null) is { } binding)
+                member = binding.Member.Name;
+        }
 
         // A read of LongRec exposes the low or high Word of a 32-bit value.
         // Keep address-taking and writes on the separate lvalue path.
@@ -2450,6 +2457,30 @@ private bool TryTranslateStreamCall(
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
+    if (_resolver is not null && _unitName is not null && expression.Children.Count == 2 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } pointerOperation &&
+        expression.Children[1] is { Kind: ExpressionParser.ExpressionKind.Identifier } pointerVariable &&
+        ResolveExpressionType(pointerVariable) is string pointerType)
+    {
+        TypeResolution pointer = _resolver.Resolve(pointerType, _unitName);
+        if (pointer.IsPointer && pointer.DeclaringUnitName is not null)
+        {
+            string variable = TranslateExpression(pointerVariable);
+            if (pointerOperation.Text.Equals("New", StringComparison.OrdinalIgnoreCase) &&
+                !_resolver.HasVisibleValueDeclaration(pointerOperation.Text, _unitName))
+                return $"{variable} = global::FireURQ.Runtime.DelphiSystem.Allocate<{pointer.ResolvedName}>()";
+        }
+    }
+
+    if (_resolver is not null && _unitName is not null && expression.Children.Count == 2 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } pointerCast)
+    {
+        TypeResolution pointer = _resolver.Resolve(pointerCast.Text, _unitName);
+        if (pointer.IsPointer && pointer.DeclaringUnitName is not null &&
+            ResolveExpressionType(pointerCast) is null)
+            return $"global::FireURQ.Runtime.DelphiSystem.Dereference<{pointer.ResolvedName}>({TranslateExpression(expression.Children[1])})";
+    }
+
     if (_resolver is not null && _unitName is not null && expression.Children.Count == 2 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } intrinsic &&
         intrinsic.Text.Equals("SizeOf", StringComparison.OrdinalIgnoreCase) &&
