@@ -86,6 +86,67 @@ internal static class DelphiSystem
     public static void Sleep(uint milliseconds) =>
         System.Threading.Thread.Sleep(checked((int)milliseconds));
 
+    public static void FillChar<T>(ref T value, int count, int fill) where T : struct
+    {
+        Span<byte> bytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes(
+            System.Runtime.InteropServices.MemoryMarshal.CreateSpan(ref value, 1));
+        bytes[..Math.Min(Math.Max(count, 0), bytes.Length)].Fill(unchecked((byte)fill));
+    }
+
+    public static void FillChar<T>(T[] value, int count, int fill) where T : struct
+    {
+        Span<byte> bytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes(value.AsSpan());
+        bytes[..Math.Min(Math.Max(count, 0), bytes.Length)].Fill(unchecked((byte)fill));
+    }
+
+    public static void Move<TSource, TDestination>(
+        ref TSource source, ref TDestination destination, int count)
+        where TSource : struct where TDestination : struct
+    {
+        ReadOnlySpan<byte> sourceBytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes(
+            System.Runtime.InteropServices.MemoryMarshal.CreateReadOnlySpan(ref source, 1));
+        Span<byte> destinationBytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes(
+            System.Runtime.InteropServices.MemoryMarshal.CreateSpan(ref destination, 1));
+        sourceBytes[..Math.Min(Math.Max(count, 0), Math.Min(sourceBytes.Length, destinationBytes.Length))]
+            .CopyTo(destinationBytes);
+    }
+
+    public static void Move<TSource, TDestination>(
+        TSource[] source, TDestination[] destination, int count)
+        where TSource : struct where TDestination : struct
+    {
+        ReadOnlySpan<byte> sourceBytes =
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(source.AsSpan());
+        Span<byte> destinationBytes =
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(destination.AsSpan());
+        sourceBytes[..Math.Min(Math.Max(count, 0), Math.Min(sourceBytes.Length, destinationBytes.Length))]
+            .CopyTo(destinationBytes);
+    }
+
+    public static void Move<TSource, TDestination>(
+        ref TSource source, TDestination[] destination, int count)
+        where TSource : struct where TDestination : struct
+    {
+        ReadOnlySpan<byte> sourceBytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes(
+            System.Runtime.InteropServices.MemoryMarshal.CreateReadOnlySpan(ref source, 1));
+        Span<byte> destinationBytes =
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(destination.AsSpan());
+        sourceBytes[..Math.Min(Math.Max(count, 0), Math.Min(sourceBytes.Length, destinationBytes.Length))]
+            .CopyTo(destinationBytes);
+    }
+
+    public static void Move<TSource, TDestination>(
+        TSource[] source, ref TDestination destination, int count)
+        where TSource : struct where TDestination : struct
+    {
+        ReadOnlySpan<byte> sourceBytes =
+            System.Runtime.InteropServices.MemoryMarshal.AsBytes(source.AsSpan());
+        Span<byte> destinationBytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes(
+            System.Runtime.InteropServices.MemoryMarshal.CreateSpan(ref destination, 1));
+        sourceBytes[..Math.Min(Math.Max(count, 0), Math.Min(sourceBytes.Length, destinationBytes.Length))]
+            .CopyTo(destinationBytes);
+    }
+
     public static IntPtr GetMemory(int size) =>
         System.Runtime.InteropServices.Marshal.AllocHGlobal(size);
 
