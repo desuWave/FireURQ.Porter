@@ -1430,13 +1430,17 @@ public sealed class DelphiToCSharpTranslator
             return TranslateSetMembership(expression);
         }
 
-        string? leftType =
-            ResolveExpressionType(
-                expression.Children[0]);
-
-        string? rightType =
-            ResolveExpressionType(
-                expression.Children[1]);
+        var lhs = expression.Children[0];
+        var rhs = expression.Children[1];
+        string? leftType = ResolveExpressionType(lhs) ?? ResolveUnaryMemberType(lhs)?.ResolvedName;
+        string? rightType = ResolveExpressionType(rhs) ?? ResolveUnaryMemberType(rhs)?.ResolvedName;
+        if (expression.Text is "=" or "<>" or "<" or ">" or "<=" or ">=")
+        {
+            if (lhs.Kind == ExpressionParser.ExpressionKind.Literal && MapType(rightType) == "char")
+                left = TranslateExpectedValue(lhs, "Char");
+            if (rhs.Kind == ExpressionParser.ExpressionKind.Literal && MapType(leftType) == "char")
+                right = TranslateExpectedValue(rhs, "Char");
+        }
 
         bool isBoolean =
             leftBoolean || rightBoolean || IsBooleanType(leftType) || IsBooleanType(rightType);
@@ -1461,6 +1465,10 @@ public sealed class DelphiToCSharpTranslator
 
     private string TranslateExpectedValue(ExpressionParser.ExpressionNode value, string? expectedType)
     {
+        if (MapType(expectedType) == "char" && value.Kind == ExpressionParser.ExpressionKind.Literal &&
+            TryTranslatePascalStringLiteral(value.Text, out string character, preferChar: true))
+            return character;
+
         if (expectedType is not null && _resolver is not null &&
             (MapType(expectedType) is "bool" or "char" or "string" or "AnsiString" or "byte" or "sbyte"
                 or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "float" or "double"
@@ -3087,15 +3095,15 @@ private static bool IsBuiltInDelphiType(
                 string.Equals(element.Text, "..", StringComparison.Ordinal) &&
                 element.Children.Count >= 2)
             {
-                string lower = TranslateExpression(element.Children[0]);
-                string upper = TranslateExpression(element.Children[1]);
+                string lower = TranslateExpectedValue(element.Children[0], "Char");
+                string upper = TranslateExpectedValue(element.Children[1], "Char");
 
                 ranges.Add(
                     $"Enumerable.Range((int)({lower}), (int)({upper}) - (int)({lower}) + 1)");
                 continue;
             }
 
-            string value = TranslateExpression(element);
+            string value = TranslateExpectedValue(element, "Char");
             scalarElements.Add($"(int)({value})");
         }
 
@@ -3149,12 +3157,10 @@ private static bool IsBuiltInDelphiType(
                 if (element.Children.Count >= 2)
                 {
                     string lower =
-                        TranslateExpression(
-                            element.Children[0]);
+                        TranslateExpectedValue(element.Children[0], "Char");
 
                     string upper =
-                        TranslateExpression(
-                            element.Children[1]);
+                        TranslateExpectedValue(element.Children[1], "Char");
 
                     conditions.Add(
                         $"({value} >= {lower} && {value} <= {upper})");
@@ -3164,7 +3170,7 @@ private static bool IsBuiltInDelphiType(
             }
 
             string translatedElement =
-                TranslateExpression(element);
+                TranslateExpectedValue(element, "Char");
 
             conditions.Add(
                 $"({value} == {translatedElement})");
@@ -3200,7 +3206,7 @@ private string TranslateLiteral(
     return value;
 }
 
-private static bool TryTranslatePascalStringLiteral(string text, out string result)
+private static bool TryTranslatePascalStringLiteral(string text, out string result, bool preferChar = false)
 {
     result = string.Empty;
     if (text.Length == 0 || (text[0] != '#' && text[0] != '\''))
@@ -3263,7 +3269,7 @@ private static bool TryTranslatePascalStringLiteral(string text, out string resu
         return false;
     }
 
-    if (text[0] == '#' && characters.Count == 1)
+    if ((preferChar || text[0] == '#') && characters.Count == 1)
     {
         result = "'" + EscapeCSharpCharacter(characters[0]) + "'";
         return true;
