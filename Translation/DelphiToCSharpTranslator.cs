@@ -1647,9 +1647,39 @@ public sealed class DelphiToCSharpTranslator
 
     private string TranslateValueOperand(ExpressionParser.ExpressionNode operand, out bool isBoolean)
     {
-        if (TryTranslateBareUnaryFunction(operand, out string invocation, out isBoolean))
+        if (TryTranslateBareUnaryFunction(operand, out string invocation, out isBoolean) ||
+            TryTranslateProcedureValueInvocation(operand, out invocation, out isBoolean))
             return invocation;
         return TranslateExpression(operand);
+    }
+
+    private bool TryTranslateProcedureValueInvocation(
+        ExpressionParser.ExpressionNode expression, out string invocation, out bool returnsBoolean)
+    {
+        invocation = string.Empty;
+        returnsBoolean = false;
+        if (_resolver is null || _unitName is null)
+            return false;
+
+        SemanticProcedureType? procedure = null;
+        if (expression.Kind == ExpressionParser.ExpressionKind.Identifier)
+            procedure = _resolver.FindUnitProcedureVariable(expression.Text, _unitName);
+        else if (expression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+            expression.Children.Count == 2)
+        {
+            ExpressionParser.ExpressionNode instance = expression.Children[0];
+            string? receiver = ResolveExpressionType(instance) ?? ResolveUnaryMemberType(instance)?.ResolvedName;
+            if (receiver is not null &&
+                _resolver.FindMember(receiver, expression.Children[1].Text, _unitName, null) is { } member)
+                procedure = _resolver.ResolveProcedureType(member.Member.Type, member.UnitName);
+        }
+
+        if (procedure is null || procedure.Parameters.Count != 0 || procedure.IsProcedure)
+            return false;
+
+        invocation = TranslateExpression(expression) + "()";
+        returnsBoolean = MapType(procedure.ReturnType) == "bool";
+        return true;
     }
 
     private bool TryTranslateNilComparison(

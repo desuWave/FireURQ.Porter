@@ -560,6 +560,14 @@ public sealed class TypeResolver
             ? parameters : null;
     }
 
+    internal SemanticProcedureType? ResolveProcedureType(string typeName, string? unitName)
+    {
+        TypeResolution resolution = Resolve(typeName, unitName);
+        string context = resolution.DeclaringUnitName ?? unitName ?? string.Empty;
+        Declaration? declaration = Find(resolution.ResolvedName, context, out bool ambiguous);
+        return ambiguous ? null : declaration?.Type.ProcedureType;
+    }
+
     internal SemanticProcedureType? FindUnitProcedureVariable(string name, string? unitName)
     {
         if (unitName is null || !_units.TryGetValue(unitName, out var unit))
