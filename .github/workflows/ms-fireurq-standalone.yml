@@ -36,6 +36,8 @@ jobs:
           echo "Standalone build exit code: $result"
           echo "Compiler error counts by code:"
           grep -Eo 'error (CS|MSB)[0-9]+' standalone-build.log | sort | uniq -c | sort -nr || true
+          echo "Most frequent unresolved identifiers:"
+          grep -Eo "error CS0103: The name '[^']+'" standalone-build.log | sort | uniq -c | sort -nr | head -n 40 || true
           echo "CS0165 / CS1628 diagnostics:"
           grep -E 'error CS(0165|1628):' standalone-build.log || true
           echo "First compiler diagnostics:"
