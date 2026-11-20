@@ -92,4 +92,45 @@ internal static class DelphiText
             end--;
         return value.Substring(start, end - start);
     }
+
+    public static char DecimalSeparator { get; set; } =
+        System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator[0];
+
+    public static string IntToStr(long value) =>
+        value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    public static string IntToHex(long value, int digits) =>
+        unchecked((ulong)value).ToString($"X{digits}", System.Globalization.CultureInfo.InvariantCulture);
+
+    public static int StrToIntDef(string? value, int defaultValue)
+    {
+        string text = (value ?? string.Empty).Trim();
+        bool negative = text.StartsWith("-", StringComparison.Ordinal);
+        if (negative || text.StartsWith("+", StringComparison.Ordinal))
+            text = text[1..];
+
+        System.Globalization.NumberStyles style = System.Globalization.NumberStyles.Integer;
+        if (text.StartsWith("$", StringComparison.Ordinal))
+        {
+            text = text[1..];
+            style = System.Globalization.NumberStyles.AllowHexSpecifier;
+        }
+
+        if (!int.TryParse(text, style, System.Globalization.CultureInfo.InvariantCulture, out int result))
+            return defaultValue;
+        return negative ? unchecked(-result) : result;
+    }
+
+    public static double StrToFloatDef(string? value, double defaultValue)
+    {
+        string text = value ?? string.Empty;
+        if (DecimalSeparator != '.')
+            text = text.Replace(DecimalSeparator, '.');
+        return double.TryParse(text, System.Globalization.NumberStyles.Float,
+            System.Globalization.CultureInfo.InvariantCulture, out double result)
+            ? result : defaultValue;
+    }
+
+    public static string UpperCase(string? value) =>
+        (value ?? string.Empty).ToUpperInvariant();
 }
