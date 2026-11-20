@@ -1955,14 +1955,15 @@ private bool TryTranslateStreamCall(
                 string mapped = MapType(valueType);
                 if (IsStandardAnsiStringValue(value))
                 {
-                    string operand = TranslateExpression(value);
-                    translated = value.Kind == ExpressionParser.ExpressionKind.Identifier
-                        ? $"{operand}.Length" : $"({operand}).Length";
+                    translated = $"{TranslateExpression(value)}.Length";
                     return true;
                 }
 
                 // A Delphi nil dynamic array or empty string has length zero.
-                if (mapped == "string" || mapped.EndsWith("[]", StringComparison.Ordinal))
+                bool dynamicArray = mapped.EndsWith("[]", StringComparison.Ordinal) &&
+                    _resolver.Resolve(valueType, _unitName).ResolvedName
+                        .StartsWith("array of ", StringComparison.OrdinalIgnoreCase);
+                if (mapped == "string" || dynamicArray)
                 {
                     translated = $"(({TranslateExpression(value)})?.Length ?? 0)";
                     return true;
