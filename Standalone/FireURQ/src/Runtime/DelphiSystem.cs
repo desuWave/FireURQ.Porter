@@ -37,10 +37,13 @@ internal static class DelphiSystem
     public static int High<T>(T[] value) => (value?.Length ?? 0) - 1;
     public static int Low<T>(T[] value) => 0;
 
-    public static void Assert(bool condition)
+    public static void Assert(bool condition) =>
+        Assert(condition, "Delphi assertion failed.");
+
+    public static void Assert(bool condition, string message)
     {
         if (!condition)
-            throw new InvalidOperationException("Delphi assertion failed.");
+            throw new InvalidOperationException(message);
     }
 
     public static bool Failed(int result) => result < 0;
