@@ -376,6 +376,26 @@ public sealed class TypeResolver
     internal SemanticField? FindRecordField(string receiver, string name, string? unitName)
     {
         var type = Resolve(receiver, unitName);
+        string recordName = type.ResolvedName;
+        string? runtimeFieldType = recordName.ToUpperInvariant() switch
+        {
+            "TPOINT" when name.Equals("X", StringComparison.OrdinalIgnoreCase) ||
+                           name.Equals("Y", StringComparison.OrdinalIgnoreCase) => "Integer",
+            "TRECT" when name.ToUpperInvariant() is "LEFT" or "TOP" or "RIGHT" or "BOTTOM" => "Integer",
+            "TRECT" when name.Equals("TopLeft", StringComparison.OrdinalIgnoreCase) ||
+                         name.Equals("BottomRight", StringComparison.OrdinalIgnoreCase) => "TPoint",
+            "D3DPRESENT_PARAMETERS" when name.ToUpperInvariant() is
+                "BACKBUFFERWIDTH" or "BACKBUFFERHEIGHT" or "BACKBUFFERCOUNT" or "FLAGS" or
+                "FULLSCREEN_REFRESHRATEINHZ" or "FULLSCREEN_PRESENTATIONINTERVAL" => "Cardinal",
+            "D3DPRESENT_PARAMETERS" when name.ToUpperInvariant() is
+                "WINDOWED" or "ENABLEAUTODEPTHSTENCIL" => "Boolean",
+            "D3DPRESENT_PARAMETERS" when name.Equals("hDeviceWindow", StringComparison.OrdinalIgnoreCase) => "HWND",
+            "D3DPRESENT_PARAMETERS" => "Integer",
+            _ => null
+        };
+        if (runtimeFieldType is not null)
+            return new SemanticField(name, runtimeFieldType);
+
         if (type.DeclaringUnitName is null)
             return null;
         var declaration = Find(type.ResolvedName, type.DeclaringUnitName, out _);
