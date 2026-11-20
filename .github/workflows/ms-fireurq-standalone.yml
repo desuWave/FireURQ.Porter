@@ -25,16 +25,17 @@ jobs:
       - name: Build translator
         run: dotnet build FireURQ.Porter.csproj --configuration Release --nologo
 
-      - name: Build generated standalone (diagnostic; failures expected)
+      - name: Build generated standalone
         id: standalone
-        continue-on-error: true
         shell: bash
         run: |
-          set -o pipefail
+          set +e
           dotnet build Standalone/FireURQ/FireURQ.csproj --configuration Release --nologo -p:FireURQSourceRoot="$GITHUB_WORKSPACE/.fireurq-work/MS-03.9/translation-output" > standalone-build.log 2>&1
           result=$?
+          set -e
           echo "Standalone build exit code: $result"
-          grep -m 15 -E 'error CS[0-9]+' standalone-build.log || true
+          grep -m 80 -E 'error (CS|MSB)[0-9]+' standalone-build.log || true
+          tail -n 12 standalone-build.log
           exit "$result"
 
       - name: Publish standalone build log
