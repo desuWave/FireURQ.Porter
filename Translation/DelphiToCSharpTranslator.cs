@@ -2042,8 +2042,8 @@ private bool TryTranslateStreamCall(
             {
                 string storage = TranslateExpression(value);
                 string index = TranslateValueOperand(expression.Children[2], out _);
-                string count = TranslateValueOperand(expression.Children[3], out _);
-                translated = $"global::FireURQ.Runtime.DelphiStorage.Delete(ref {storage}, {index}, {count})";
+                string deleteCount = TranslateValueOperand(expression.Children[3], out _);
+                translated = $"global::FireURQ.Runtime.DelphiStorage.Delete(ref {storage}, {index}, {deleteCount})";
                 return true;
             }
 
