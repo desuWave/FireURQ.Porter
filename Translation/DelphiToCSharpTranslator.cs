@@ -1548,6 +1548,19 @@ public sealed class DelphiToCSharpTranslator
         string? rightType = ResolveExpressionType(rhs) ?? ResolveUnaryMemberType(rhs)?.ResolvedName;
         if (expression.Text is "=" or "<>" or "<" or ">" or "<=" or ">=")
         {
+            if (expression.Text is "=" or "<>")
+            {
+                static bool IsAnsiBuffer(string? type) =>
+                    type is not null && System.Text.RegularExpressions.Regex.IsMatch(type,
+                        @"^array\s*\[\s*0\s*\.\.[^\]]+\]\s*of\s+AnsiChar$",
+                        System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                if (IsAnsiBuffer(leftType) && (MapType(rightType) == "string" ||
+                    rhs.Kind == ExpressionParser.ExpressionKind.Literal && right.StartsWith('"')))
+                    left = $"global::FireURQ.Runtime.DelphiText.FromAnsiCharArray({left})";
+                if (IsAnsiBuffer(rightType) && (MapType(leftType) == "string" ||
+                    lhs.Kind == ExpressionParser.ExpressionKind.Literal && left.StartsWith('"')))
+                    right = $"global::FireURQ.Runtime.DelphiText.FromAnsiCharArray({right})";
+            }
             if (lhs.Kind == ExpressionParser.ExpressionKind.Literal && MapType(rightType) == "char")
                 left = TranslateExpectedValue(lhs, "Char");
             if (rhs.Kind == ExpressionParser.ExpressionKind.Literal && MapType(leftType) == "char")
