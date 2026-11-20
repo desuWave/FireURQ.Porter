@@ -1093,7 +1093,8 @@ public sealed class DelphiToCSharpTranslator
             IsNilLiteral(statement.Assignment.Value) &&
             IsIntPtrBackedExpression(targetExpression)
                 ? "IntPtr.Zero"
-                : TranslateExpression(statement.Assignment.Value);
+                : TranslateExpectedValue(statement.Assignment.Value, ResolveExpressionType(targetExpression)
+                    ?? ResolveUnaryMemberType(targetExpression)?.ResolvedName);
 
         if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
             string.Equals(_currentTypeContext?.ResolveIdentifier("l_Index"), "PWord",
@@ -1456,6 +1457,19 @@ public sealed class DelphiToCSharpTranslator
             };
 
         return $"({left} {op} {right})";
+    }
+
+    private string TranslateExpectedValue(ExpressionParser.ExpressionNode value, string? expectedType)
+    {
+        if (expectedType is not null && _resolver is not null &&
+            (MapType(expectedType) is "bool" or "char" or "string" or "AnsiString" or "byte" or "sbyte"
+                or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "float" or "double"
+                or "Extended" or "Variant" ||
+             _resolver.ResolveDeclarationKind(expectedType, _unitName) is "Class" or "Interface") &&
+            TryTranslateBareUnaryFunction(value, out string invocation, out _))
+            return invocation;
+
+        return TranslateExpression(value);
     }
 
     private string TranslateCondition(ExpressionParser.ExpressionNode? operand) =>
@@ -2889,7 +2903,10 @@ private string TranslateCall(
     for (int i = 1; i < expression.Children.Count; i++)
     {
         var argument = expression.Children[i];
-        string value = TranslateExpression(argument);
+        var formal = formals?.Count == expression.Children.Count - 1 ? formals[i - 1] : null;
+        string value = formal is not null && !formal.Kind.Equals("var", StringComparison.OrdinalIgnoreCase) &&
+            !formal.Kind.Equals("out", StringComparison.OrdinalIgnoreCase)
+            ? TranslateExpectedValue(argument, formal.Type) : TranslateExpression(argument);
         // Delphi types a real literal from its formal parameter. An unsuffixed
         // fractional C# literal would instead be a double.
         if (formals?.Count == expression.Children.Count - 1 &&
