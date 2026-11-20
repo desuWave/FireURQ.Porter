@@ -738,47 +738,34 @@ public sealed class DelphiToCSharpTranslator
                     "EXCEPT",
                     StringComparison.OrdinalIgnoreCase))
             {
-                AppendLine(
-                    builder,
-                    indent,
-                    "catch (Exception)");
-
-                AppendLine(
-                    builder,
-                    indent,
-                    "{");
-
-                foreach (
-                    BehaviorAnalyzer.BehaviorStatement handler
-                    in clause.Statements)
+                var fallback = new List<BehaviorAnalyzer.BehaviorStatement>();
+                foreach (var handler in clause.Statements)
                 {
-                    // Delphi "on E: TException do ..." handlers are
-                    // represented as wrapper statements. Until typed
-                    // exception dispatch is implemented, emit their
-                    // bodies inside a compilable catch-all block.
-                    IReadOnlyList<BehaviorAnalyzer.BehaviorStatement> children =
-                        handler.Text.StartsWith(
-                            "on ",
-                            StringComparison.OrdinalIgnoreCase)
-                            ? handler.Children
-                            : new[] { handler };
-
-                    foreach (
-                        BehaviorAnalyzer.BehaviorStatement child
-                        in children)
+                    if (!handler.Text.StartsWith("on ", StringComparison.OrdinalIgnoreCase))
                     {
-                        TranslateStatement(
-                            child,
-                            function,
-                            builder,
-                            indent + 1);
+                        fallback.Add(handler);
+                        continue;
                     }
+
+                    string header = handler.Text[3..].Trim();
+                    int separator = header.IndexOf(':');
+                    string type = handler.SecondaryText ?? header;
+                    string binding = separator < 0 ? "" : " " + header[..separator].Trim();
+                    AppendLine(builder, indent, $"catch ({MapType(type)}{binding})");
+                    AppendLine(builder, indent, "{");
+                    foreach (var child in handler.Children)
+                        TranslateStatement(child, function, builder, indent + 1);
+                    AppendLine(builder, indent, "}");
                 }
 
-                AppendLine(
-                    builder,
-                    indent,
-                    "}");
+                if (fallback.Count > 0 || clause.Statements.Count == 0)
+                {
+                    AppendLine(builder, indent, "catch");
+                    AppendLine(builder, indent, "{");
+                    foreach (var child in fallback)
+                        TranslateStatement(child, function, builder, indent + 1);
+                    AppendLine(builder, indent, "}");
+                }
             }
             else if (clause.Kind.Equals(
                          "FINALLY",

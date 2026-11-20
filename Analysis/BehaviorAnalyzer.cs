@@ -1132,6 +1132,14 @@ private bool IsNextCaseLabel()
                     continue;
                 }
 
+                if (MatchText("else"))
+                {
+                    int line = Current().Line;
+                    handlers.Add(new BehaviorStatement(StatementKind.Block, "else", line,
+                        ParseStatementsUntil("finally", "end")));
+                    break;
+                }
+
                 if (PeekText("on"))
                 {
                     handlers.Add(
