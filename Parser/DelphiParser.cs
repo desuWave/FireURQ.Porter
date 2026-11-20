@@ -1094,23 +1094,18 @@ if (MatchKeyword("interface"))
 
                     if (IsIdentifier())
                     {
-                        string fieldName =
-                            ExpectIdentifier();
+                        var fieldNames = new List<string> { ExpectIdentifier() };
+                        while (MatchSymbol(","))
+                            fieldNames.Add(ExpectIdentifier());
 
                         if (MatchSymbol(":"))
                         {
-                            string fieldType =
-                                ReadTypeExpression();
-
+                            string fieldType = ReadTypeExpression();
                             MatchSymbol(";");
 
-                            members.Add(
-                                new DelphiClassMember(
-                                    visibility,
-                                    DelphiClassMemberKind.Field,
-                                    new DelphiField(
-                                        fieldName,
-                                        fieldType)));
+                            foreach (string fieldName in fieldNames)
+                                members.Add(new DelphiClassMember(visibility,
+                                    DelphiClassMemberKind.Field, new DelphiField(fieldName, fieldType)));
 
                             continue;
                         }
