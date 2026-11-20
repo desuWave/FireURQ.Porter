@@ -5,6 +5,17 @@ using System.Runtime.InteropServices;
 
 namespace FireURQ.Runtime;
 
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+internal struct TLogFont
+{
+    public int lfHeight, lfWidth, lfEscapement, lfOrientation, lfWeight;
+    public byte lfItalic, lfUnderline, lfStrikeOut, lfCharSet;
+    public byte lfOutPrecision, lfClipPrecision, lfQuality, lfPitchAndFamily;
+
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+    public string lfFaceName;
+}
+
 internal static class DelphiWindows
 {
     public const uint WM_CREATE = 0x0001;
@@ -43,6 +54,14 @@ internal static class DelphiWindows
     public const int VK_NUMLOCK = 0x90;
     public const int VK_SCROLL = 0x91;
 
+    public const int FW_BOLD = 700;
+    public const byte DEFAULT_CHARSET = 1;
+    public const byte OUT_DEFAULT_PRECIS = 0;
+    public const byte CLIP_DEFAULT_PRECIS = 0;
+    public const byte PROOF_QUALITY = 2;
+    public const byte DEFAULT_PITCH = 0;
+    public const byte FF_DONTCARE = 0;
+
     public const int HTCLIENT = 1;
     public const int GWL_STYLE = -16;
     public const int GWL_EXSTYLE = -20;
@@ -51,6 +70,9 @@ internal static class DelphiWindows
     public static readonly IntPtr HWND_TOPMOST = new(-1);
     public static readonly IntPtr HWND_NOTOPMOST = new(-2);
     public static readonly IntPtr IDC_ARROW = new(32512);
+
+    public static TRect Rect(int left, int top, int right, int bottom) =>
+        new() { Left = left, Top = top, Right = right, Bottom = bottom };
 
     [DllImport("user32.dll", EntryPoint = "DefWindowProcW")]
     public static extern IntPtr DefWindowProc(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
