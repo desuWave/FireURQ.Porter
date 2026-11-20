@@ -2445,6 +2445,17 @@ private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
     if (_resolver is not null && _unitName is not null &&
+        expression.Children.Count == 2 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } interlocked &&
+        interlocked.Text.ToUpperInvariant() is "INTERLOCKEDINCREMENT" or "INTERLOCKEDDECREMENT" &&
+        !_resolver.HasVisibleValueDeclaration(interlocked.Text, _unitName))
+    {
+        string operation = interlocked.Text.Equals("InterlockedIncrement", StringComparison.OrdinalIgnoreCase)
+            ? "Increment" : "Decrement";
+        return $"global::System.Threading.Interlocked.{operation}(ref {TranslateExpression(expression.Children[1])})";
+    }
+
+    if (_resolver is not null && _unitName is not null &&
         expression.Children.Count == 3 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } formatTarget &&
         formatTarget.Text.Equals("Format", StringComparison.OrdinalIgnoreCase) &&
