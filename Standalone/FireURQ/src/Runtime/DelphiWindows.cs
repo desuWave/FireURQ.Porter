@@ -127,14 +127,17 @@ internal static class DelphiWindows
     [DllImport("winmm.dll", EntryPoint = "timeGetTime")]
     public static extern uint timeGetTime();
 
-    [DllImport("winmm.dll", EntryPoint = "mciSendStringW")]
-    private static extern int MciSendStringNative(
-        IntPtr command, IntPtr returnText, uint returnLength, IntPtr callback);
+    [DllImport("winmm.dll", EntryPoint = "mciSendStringA", ExactSpelling = true,
+        CharSet = CharSet.Ansi)]
+    private static extern int SendMciCommand(string command, [Out] byte[]? reply,
+        uint capacity, IntPtr callback);
 
-    public static int mciSendString(
-        IntPtr command, object? returnText, int returnLength, int callback) =>
-        MciSendStringNative(command, IntPtr.Zero, unchecked((uint)returnLength),
-            new IntPtr(callback));
+    public static int mciSendString(string command, byte[]? reply, int capacity, IntPtr callback)
+    {
+        if ((uint)capacity > (uint)(reply?.Length ?? 0))
+            throw new ArgumentOutOfRangeException(nameof(capacity));
+        return SendMciCommand(command, reply, (uint)capacity, callback);
+    }
 
     [DllImport("winmm.dll", EntryPoint = "midiOutSetVolume")]
     public static extern int midiOutSetVolume(IntPtr device, uint volume);
