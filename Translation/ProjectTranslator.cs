@@ -384,16 +384,20 @@ public sealed class ProjectTranslator
             builder.AppendLine("using System.Linq;");
             builder.AppendLine("using System.Runtime.InteropServices;");
             builder.AppendLine("using FireURQ.Runtime;");
-            IEnumerable<SemanticUnit> importedModules = _units
+            var visibleUnits = _units
                 .Where(unit =>
                     unit.Name.Equals(input.SemanticModel.Name, StringComparison.OrdinalIgnoreCase) ||
                     input.SemanticModel.Uses.Any(name =>
                         name.Equals(unit.Name, StringComparison.OrdinalIgnoreCase)))
-                .Where(unit => moduleNames.Contains(unit.Name))
-                .DistinctBy(unit => unit.Name, StringComparer.OrdinalIgnoreCase);
+                .DistinctBy(unit => unit.Name, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 
-            foreach (SemanticUnit module in importedModules)
+            foreach (SemanticUnit module in visibleUnits.Where(unit => moduleNames.Contains(unit.Name)))
                 builder.AppendLine($"using static global::{module.Name}Module;");
+            foreach (string enumName in visibleUnits.SelectMany(unit => unit.Types)
+                .Where(type => type.Kind.Equals("Enum", StringComparison.OrdinalIgnoreCase))
+                .Select(type => type.Name).Distinct(StringComparer.OrdinalIgnoreCase))
+                builder.AppendLine($"using static global::{enumName};");
             builder.AppendLine("using static global::FireURQ.Runtime.DelphiVariants;");
             if (input.SemanticModel.Name.Equals("f2FontGen", StringComparison.OrdinalIgnoreCase))
             {
