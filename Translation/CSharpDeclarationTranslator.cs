@@ -1052,7 +1052,7 @@ public sealed class CSharpDeclarationTranslator
                     ? member with { Visibility = "internal" }
                     : member).ToArray();
         }
-        AppendMembers(builder, members, isInterface: false);
+        AppendMembers(builder, members, @class.Name, isInterface: false);
         AppendDirectInterfaceAdapters(builder, @class);
         AppendRuntimeIInterfaceAdapter(builder, @class);
         builder.Append('}');
@@ -1070,7 +1070,7 @@ public sealed class CSharpDeclarationTranslator
 
         builder.AppendLine($"public interface {@interface.Name}{baseType}");
         builder.AppendLine("{");
-        AppendMembers(builder, @interface.Members, isInterface: true);
+        AppendMembers(builder, @interface.Members, @interface.Name, isInterface: true);
         builder.Append('}');
         return builder.ToString();
     }
@@ -1498,7 +1498,7 @@ public sealed class CSharpDeclarationTranslator
         builder.AppendLine("    }");
     }
 
-    private void AppendMembers(StringBuilder builder, IReadOnlyList<SemanticMember> members, bool isInterface)
+    private void AppendMembers(StringBuilder builder, IReadOnlyList<SemanticMember> members, string ownerName, bool isInterface)
     {
         foreach (SemanticMember member in members)
         {
@@ -1524,7 +1524,10 @@ public sealed class CSharpDeclarationTranslator
                     break;
 
                 case SemanticMemberKind.Property:
-                    AppendProperty(builder, member, members, isInterface);
+                    if (member.Parameters.Count == 0)
+                        AppendProperty(builder, member, members, isInterface);
+                    else if (!isInterface)
+                        AppendIndexedProperty(builder, member, members, ownerName);
                     break;
 
                 case SemanticMemberKind.MethodResolution:
@@ -1565,13 +1568,42 @@ public sealed class CSharpDeclarationTranslator
         builder.AppendLine($"    {visibility}{returnType} {member.Name}({parameters});");
     }
 
-    private void AppendProperty(StringBuilder builder, SemanticMember member, IReadOnlyList<SemanticMember> members, bool isInterface)
+    private void AppendIndexedProperty(StringBuilder builder, SemanticMember property,
+        IReadOnlyList<SemanticMember> members, string ownerName)
     {
-        // Indexed Delphi properties retain their accessor methods.
-        // Expression-level property rewriting is handled separately.
-        if (member.Parameters.Count > 0)
+        SemanticMember? FindMethod(string? name, int parameterCount) =>
+            members.FirstOrDefault(member => member.Kind == SemanticMemberKind.Method &&
+                member.Name.Equals(name, StringComparison.OrdinalIgnoreCase) &&
+                member.Parameters.Count == parameterCount);
+
+        var getter = FindMethod(property.ReadAccessor, property.Parameters.Count);
+        var setter = FindMethod(property.WriteAccessor, property.Parameters.Count + 1);
+        if ((getter is null && setter is null) ||
+            (getter is null && !string.IsNullOrWhiteSpace(property.ReadAccessor)) ||
+            (setter is null && !string.IsNullOrWhiteSpace(property.WriteAccessor)))
             return;
 
+        string visibility = MapVisibility(property.Visibility);
+        string view = property.Name + "IndexedProperty";
+        string parameters = string.Join(", ", property.Parameters.Select((p, i) => $"{MapType(p.Type)} index{i}"));
+        string indices = string.Join(", ", property.Parameters.Select((_, i) => $"index{i}"));
+        builder.AppendLine($"    {visibility}{view} {property.Name} => new {view}(this);");
+        builder.AppendLine($"    {visibility}sealed class {view}");
+        builder.AppendLine("    {");
+        builder.AppendLine($"        private readonly {ownerName} owner;");
+        builder.AppendLine($"        internal {view}({ownerName} owner) => this.owner = owner;");
+        builder.AppendLine($"        public {MapType(property.Type)} this[{parameters}]");
+        builder.AppendLine("        {");
+        if (getter is not null)
+            builder.AppendLine($"            get => owner.{getter.Name}({indices});");
+        if (setter is not null)
+            builder.AppendLine($"            set => owner.{setter.Name}({indices}, value);");
+        builder.AppendLine("        }");
+        builder.AppendLine("    }");
+    }
+
+    private void AppendProperty(StringBuilder builder, SemanticMember member, IReadOnlyList<SemanticMember> members, bool isInterface)
+    {
         string visibility = isInterface ? string.Empty : MapVisibility(member.Visibility);
         string propertyType = MapType(member.Type);
 
