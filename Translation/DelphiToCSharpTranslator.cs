@@ -3174,6 +3174,19 @@ private string TranslateCall(
         }
     }
 
+    if (targetExpression.Kind == ExpressionParser.ExpressionKind.Identifier &&
+        targetExpression.Text.Equals("GetWindowRect", StringComparison.OrdinalIgnoreCase) &&
+        expression.Children.Count == 3 &&
+        _resolver is not null && !string.IsNullOrEmpty(_unitName) &&
+        !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName) &&
+        ResolveExpressionType(targetExpression) is null &&
+        string.Equals(MapType(ResolveExpressionType(expression.Children[2])), "TRect", StringComparison.OrdinalIgnoreCase))
+    {
+        string window = TranslateExpression(expression.Children[1]);
+        string rectangle = TranslateExpression(expression.Children[2]);
+        return $"GetWindowRect({window}, out {rectangle})";
+    }
+
     // IDirect3DTexture8.GetLevelDesc writes the descriptor through its second parameter.
     if (expression.Children.Count == 3 &&
         targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
@@ -3222,11 +3235,10 @@ private string TranslateCall(
 
         if (method.Equals("CreateIndexBuffer", StringComparison.OrdinalIgnoreCase) &&
             destination.Equals("f_IB", StringComparison.OrdinalIgnoreCase) &&
-            bufferCall.Children[3].Text.Equals("D3DFMT_INDEX16", StringComparison.OrdinalIgnoreCase) &&
-            length == "((VertexBufferSize * (6 / 4)) * SizeOf(Word))")
+            bufferCall.Children[3].Text.Equals("D3DFMT_INDEX16", StringComparison.OrdinalIgnoreCase))
         {
             return "(f_D3DDevice.CreateIndexBuffer(" +
-                "checked((uint)((VertexBufferSize * 6 / 4) * sizeof(ushort))), " +
+                $"checked((uint)({length})), " +
                 "0x08u, 101, 0, out f_IB) < 0)";
         }
     }

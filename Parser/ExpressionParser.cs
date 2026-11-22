@@ -849,116 +849,41 @@ public static class ExpressionParser
         return false;
     }
 
-private static int FindTopLevelBinaryOperator(
-    IReadOnlyList<LexerToken> tokens,
-    int start,
-    int end)
-{
-    /*
-     * Lowest precedence first.
-     *
-     * Operators are grouped by precedence.
-     * For each precedence level we select the RIGHTMOST
-     * top-level operator. This gives left-associative
-     * parsing for operators such as:
-     *
-     *   A - B - C
-     *   A / B / C
-     *   A + B - C
-     *
-     * Parentheses and brackets are ignored while searching
-     * for top-level operators.
-     */
-
-    string[] operators =
+    private static int BinaryPrecedence(string token) => token.ToLowerInvariant() switch
     {
-        "or",
-        "xor",
-        "and",
-        "in",
-        "is",
-        "as",
-        "=",
-        "<>",
-        "<",
-        ">",
-        "<=",
-        ">=",
-        "..",
-        "+",
-        "-",
-        "*",
-        "/",
-        "div",
-        "mod",
-        "shl",
-        "shr"
+        ".." => 0,
+        "=" or "<>" or "<" or ">" or "<=" or ">=" or "in" or "is" => 1,
+        "+" or "-" or "or" or "xor" => 2,
+        "*" or "/" or "div" or "mod" or "and" or "shl" or "shr" or "as" => 3,
+        _ => -1
     };
 
-    foreach (string op in operators)
+    private static int FindTopLevelBinaryOperator(
+        IReadOnlyList<LexerToken> tokens, int start, int end)
     {
-        int roundDepth = 0;
-        int squareDepth = 0;
-        int lastIndex = -1;
-
-        for (int i = start;
-             i < end;
-             i++)
+        int depth = 0;
+        int weakest = int.MaxValue;
+        int split = -1;
+        for (int i = start; i < end; i++)
         {
-            string text =
-                tokens[i].Text;
-
-            if (text == "(")
+            string token = tokens[i].Text;
+            if (token is "(" or "[") { depth++; continue; }
+            if (token is ")" or "]") { depth--; continue; }
+            if (depth != 0 || i == start) continue;
+            int precedence = BinaryPrecedence(token);
+            if (precedence < 0 || precedence > weakest) continue;
+            if (token is "+" or "-")
             {
-                roundDepth++;
-                continue;
+                string previous = tokens[i - 1].Text;
+                if (BinaryPrecedence(previous) >= 0 || IsUnaryOperator(previous) || previous == "@")
+                    continue;
             }
-
-            if (text == ")")
-            {
-                if (roundDepth > 0)
-                {
-                    roundDepth--;
-                }
-
-                continue;
-            }
-
-            if (text == "[")
-            {
-                squareDepth++;
-                continue;
-            }
-
-            if (text == "]")
-            {
-                if (squareDepth > 0)
-                {
-                    squareDepth--;
-                }
-
-                continue;
-            }
-
-            if (roundDepth == 0 &&
-                squareDepth == 0 &&
-                string.Equals(
-                    text,
-                    op,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                lastIndex = i;
-            }
+            // Split at the rightmost operator in a group for left associativity.
+            weakest = precedence;
+            split = i;
         }
-
-        if (lastIndex >= 0)
-        {
-            return lastIndex;
-        }
+        return split;
     }
-
-    return -1;
-}
 
     private static int FindTopLevelOperator(
         IReadOnlyList<LexerToken> tokens,
