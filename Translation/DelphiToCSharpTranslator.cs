@@ -3174,6 +3174,20 @@ private string TranslateCall(
         }
     }
 
+    // IDirect3DTexture8.GetLevelDesc writes the descriptor through its second parameter.
+    if (expression.Children.Count == 3 &&
+        targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess &&
+        targetExpression.Children.Count == 2 &&
+        targetExpression.Children[1].Text.Equals("GetLevelDesc", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(MapType(ResolveExpressionType(targetExpression.Children[0])), "IDirect3DTexture8", StringComparison.OrdinalIgnoreCase) &&
+        string.Equals(MapType(ResolveExpressionType(expression.Children[2])), "D3DSURFACE_DESC", StringComparison.OrdinalIgnoreCase))
+    {
+        string receiver = TranslateExpression(targetExpression.Children[0]);
+        string level = TranslateExpression(expression.Children[1]);
+        string descriptor = TranslateExpression(expression.Children[2]);
+        return $"{receiver}.GetLevelDesc({level}, out {descriptor})";
+    }
+
     // Bind the two buffer allocations in Td2dCore.
     if (string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
         _resolver is not null &&
