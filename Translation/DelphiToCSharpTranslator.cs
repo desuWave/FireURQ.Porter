@@ -2963,7 +2963,20 @@ private string TranslateCall(
         numericHelper.Text.Equals("EnsureReal", StringComparison.OrdinalIgnoreCase) &&
         _unitName?.ToUpperInvariant() is "FURQTYPES" or "FURQBASE" or "FURQCONTEXT" or
             "FURQEXPREVAL" or "F2CONTEXT" or "F2INTERPRETER" or "F2SCNMAIN")
-        return $"global::furqTypesModule.EnsureReal({TranslateExpression(expression.Children[1])})";
+        return $"global::furqTypesModule.EnsureReal({TranslateValueOperand(expression.Children[1], out _)})";
+
+    if (_resolver is not null && _unitName is not null && expression.Children.Count == 2 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } rounding &&
+        rounding.Text.ToUpperInvariant() is "ROUND" or "TRUNC" &&
+        ResolveExpressionType(rounding) is null && ResolveUnaryMemberType(rounding) is null &&
+        _currentTypeContext?.ResolveLocalFunction(rounding.Text, 1, valueOnly: false).Found != true &&
+        (_currentTypeContext?.OwnerClass is not { } roundingOwner ||
+            _resolver.FindMember(roundingOwner, rounding.Text, _unitName, 1) is null) &&
+        !_resolver.HasVisibleValueDeclaration(rounding.Text, _unitName))
+    {
+        string operation = rounding.Text.Equals("Round", StringComparison.OrdinalIgnoreCase) ? "Round" : "Trunc";
+        return $"{operation}({TranslateValueOperand(expression.Children[1], out _)})";
+    }
 
     if (TryTranslateDeclaredTypeCast(expression, out string declaredCast))
         return declaredCast;
