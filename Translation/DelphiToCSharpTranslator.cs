@@ -1604,6 +1604,10 @@ public sealed class DelphiToCSharpTranslator
                 _ => expression.Text
             };
 
+        if (op is "<<" or ">>" && !int.TryParse(right, out _) &&
+            MapType(rightType) is not ("int" or "byte" or "sbyte" or "short" or "ushort" or "char"))
+            right = $"unchecked((int)({right}))";
+
         if (expression.Text == "/" && IsOrdinalArithmetic(lhs) && IsOrdinalArithmetic(rhs))
             return $"(global::FireURQ.Runtime.Extended.FromInt64({left}) / global::FireURQ.Runtime.Extended.FromInt64({right}))";
 
