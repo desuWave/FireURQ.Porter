@@ -1087,6 +1087,15 @@ public sealed class DelphiToCSharpTranslator
             return;
         }
 
+        if (TryTranslateIndexedPropertyWrite(
+            statement.Assignment.Target,
+            statement.Assignment.Value,
+            out string indexedWrite))
+        {
+            AppendLine(builder, indent, indexedWrite);
+            return;
+        }
+
         if (statement.Assignment.Target is { Kind: ExpressionParser.ExpressionKind.IndexAccess } character &&
             character.Children.Count == 2 && IsManagedString(character.Children[0]))
         {
@@ -1094,15 +1103,6 @@ public sealed class DelphiToCSharpTranslator
             string index = TranslateValueOperand(character.Children[1], out _);
             string replacement = TranslateExpectedValue(statement.Assignment.Value, "Char");
             AppendLine(builder, indent, $"global::FireURQ.Runtime.DelphiStorage.SetChar(ref {storage}, {index}, {replacement});");
-            return;
-        }
-
-        if (TryTranslateIndexedPropertyWrite(
-            statement.Assignment.Target,
-            statement.Assignment.Value,
-            out string indexedWrite))
-        {
-            AppendLine(builder, indent, indexedWrite);
             return;
         }
 
@@ -2074,6 +2074,41 @@ public sealed class DelphiToCSharpTranslator
 
     private bool _translatingAssignmentTarget;
 
+    private SemanticMember? ResolveIndexedProperty(ExpressionParser.ExpressionNode index)
+    {
+        if (_resolver is null || index.Kind != ExpressionParser.ExpressionKind.IndexAccess ||
+            index.Children.Count < 2)
+            return null;
+        var target = index.Children[0];
+        string? owner;
+        string? context = _unitName;
+        string name;
+        if (target.Kind == ExpressionParser.ExpressionKind.MemberAccess && target.Children.Count == 2)
+        {
+            var receiver = target.Children[0];
+            owner = ResolveExpressionType(receiver);
+            if (owner is null && ResolveUnaryMemberType(receiver) is { } field)
+            {
+                owner = field.ResolvedName;
+                context = field.DeclaringUnitName ?? _unitName;
+            }
+            name = target.Children[1].Text;
+        }
+        else if (target.Kind == ExpressionParser.ExpressionKind.Identifier &&
+                 ResolveExpressionType(target) is null)
+        {
+            owner = _currentTypeContext?.OwnerClass;
+            name = target.Text;
+        }
+        else return null;
+
+        return owner is not null &&
+            _resolver.FindMember(owner, name, context, null) is { } found &&
+            found.Member.Kind == SemanticMemberKind.Property &&
+            found.Member.Parameters.Count == index.Children.Count - 1
+                ? found.Member : null;
+    }
+
     private bool TryTranslateIndexedPropertyWrite(
         ExpressionParser.ExpressionNode target,
         ExpressionParser.ExpressionNode value,
@@ -2087,26 +2122,11 @@ public sealed class DelphiToCSharpTranslator
             return false;
 
         var access = target.Children[0];
-
-        if (access.Kind != ExpressionParser.ExpressionKind.MemberAccess ||
-            access.Children.Count != 2 ||
-            access.Children[1].Kind != ExpressionParser.ExpressionKind.Identifier)
+        if (ResolveIndexedProperty(target) is not { } property || string.IsNullOrWhiteSpace(property.WriteAccessor))
             return false;
+        string receiver = access.Kind == ExpressionParser.ExpressionKind.MemberAccess
+            ? TranslateExpression(access.Children[0]) + "." : "";
 
-        string? receiverType =
-            ResolveExpressionType(access.Children[0]);
-
-        if (receiverType is null ||
-            !_resolver.TryResolveIndexedProperty(
-                receiverType,
-                access.Children[1].Text,
-                _unitName,
-                out SemanticMember property) ||
-            property.Parameters.Count != target.Children.Count - 1 ||
-            string.IsNullOrWhiteSpace(property.WriteAccessor))
-            return false;
-
-        string receiver = TranslateExpression(access.Children[0]);
 
         var arguments = target.Children
             .Skip(1)
@@ -2116,7 +2136,7 @@ public sealed class DelphiToCSharpTranslator
         arguments.Add(TranslateExpression(value));
 
         translated =
-            $"{receiver}.{property.WriteAccessor}(" +
+            $"{receiver}{property.WriteAccessor}(" +
             string.Join(", ", arguments) + ");";
 
         return true;
@@ -2134,32 +2154,17 @@ public sealed class DelphiToCSharpTranslator
             return false;
 
         var access = expression.Children[0];
-
-        if (access.Kind != ExpressionParser.ExpressionKind.MemberAccess ||
-            access.Children.Count != 2 ||
-            access.Children[1].Kind != ExpressionParser.ExpressionKind.Identifier)
+        if (ResolveIndexedProperty(expression) is not { } property || string.IsNullOrWhiteSpace(property.ReadAccessor))
             return false;
+        string receiver = access.Kind == ExpressionParser.ExpressionKind.MemberAccess
+            ? TranslateExpression(access.Children[0]) + "." : "";
 
-        string? receiverType =
-            ResolveExpressionType(access.Children[0]);
-
-        if (receiverType is null ||
-            !_resolver.TryResolveIndexedProperty(
-                receiverType,
-                access.Children[1].Text,
-                _unitName,
-                out SemanticMember property) ||
-            property.Parameters.Count != expression.Children.Count - 1 ||
-            string.IsNullOrWhiteSpace(property.ReadAccessor))
-            return false;
-
-        string receiver = TranslateExpression(access.Children[0]);
 
         string arguments = string.Join(", ",
             expression.Children.Skip(1).Select(TranslateExpression));
 
         translated =
-            $"{receiver}.{property.ReadAccessor}({arguments})";
+            $"{receiver}{property.ReadAccessor}({arguments})";
 
         return true;
     }
@@ -2170,6 +2175,9 @@ public sealed class DelphiToCSharpTranslator
             index.Kind != ExpressionParser.ExpressionKind.IndexAccess ||
             index.Children.Count < 2)
             return null;
+
+        if (ResolveIndexedProperty(index) is { } property)
+            return property.Type;
 
         ExpressionParser.ExpressionNode array = index.Children[0];
         string? arrayType =
