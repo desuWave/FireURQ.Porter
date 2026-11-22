@@ -4229,7 +4229,8 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
             _localFunctions = function.LocalFunctions;
             OwnerClass = ownerClass ?? parent?.OwnerClass;
             _depth = parent is null ? 0 : parent._depth + 1;
-            ResultName = _depth == 0 ? "result" : $"__localResult{_depth}";
+            ResultName = function.IsProcedure && parent is not null ? parent.ResultName :
+                _depth == 0 ? "result" : $"__localResult{_depth}";
             foreach (
                 SemanticParameter parameter
                 in function.Parameters)
@@ -4272,7 +4273,7 @@ private string TranslateAddressOf(ExpressionParser.ExpressionNode expression)
                     _useCapturedCopyInBody.Add(parameter.Name);
             }
 
-            _returnType = function.ReturnType;
+            _returnType = function.IsProcedure && parent is not null ? parent._returnType : function.ReturnType;
         }
 
         public void AddWithAlias(string name, string type) => _identifiers.Add(name, (name, type));
