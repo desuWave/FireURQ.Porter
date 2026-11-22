@@ -135,6 +135,9 @@ Check("Unsigned message value preserves all native bits",
 Check("UINT storage is four bytes",
     Marshal.SizeOf<uint>() == 4);
 
+if (OperatingSystem.IsWindows())
+    WindowLifecycle.Check();
+
 Console.WriteLine($"Process pointer size: {IntPtr.Size * 8} bits");
 Console.WriteLine($"Windows-scalar checks: {total - failed}/{total} passed.");
 return failed == 0 ? 0 : 1;

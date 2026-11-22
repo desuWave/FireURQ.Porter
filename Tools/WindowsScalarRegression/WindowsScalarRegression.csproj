@@ -4,8 +4,11 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="../../Standalone/FireURQ/src/Runtime/DelphiWindows.cs" />
+    <Compile Include="../../.fireurq-work/MS-03.9/translation-output/__runtime/Geometry.cs" />
     <ProjectReference Include="../../FireURQ.Porter.csproj" />
   </ItemGroup>
 </Project>

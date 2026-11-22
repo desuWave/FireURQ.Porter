@@ -1,0 +1,22 @@
+name: MS FireURQ Win32 window
+on:
+  push:
+    branches: [chan989/ms-fireurq-standalone]
+    paths:
+      - Standalone/FireURQ/src/Runtime/DelphiWindows.cs
+      - Tools/WindowsScalarRegression/**
+      - .github/workflows/ms-fireurq-window.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  window:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Exercise Win32 window lifecycle
+        run: dotnet run -c Release --project Tools/WindowsScalarRegression/WindowsScalarRegression.csproj
