@@ -22,6 +22,10 @@ try
         if (!expected.SequenceEqual(actual))
             throw new InvalidOperationException("Overlapping Move changed the wrong bytes.");
     }
+    var words = new uint[] { 0xAABBCCDD, 0x11223344 };
+    DelphiSystem.CopyToNative(words, ref DelphiSystem.ElementAt<uint>(memory, 1), 8);
+    if (Marshal.ReadInt32(memory, 4) != unchecked((int)words[0]) || Marshal.ReadInt32(memory, 8) != (int)words[1])
+        throw new InvalidOperationException("A multi-element copy lost part of the source array.");
     DelphiSystem.FillNative(IntPtr.Zero, 0, 1);
     DelphiSystem.MoveNative(IntPtr.Zero, IntPtr.Zero, 0);
 }

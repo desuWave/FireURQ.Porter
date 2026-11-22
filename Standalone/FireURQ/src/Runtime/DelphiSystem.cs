@@ -83,6 +83,14 @@ internal static class DelphiSystem
         new ReadOnlySpan<byte>((void*)source, count).CopyTo(new Span<byte>((void*)destination, count));
     }
 
+    public static unsafe void CopyToNative<T>(T[] source, ref T destination, int count) where T : unmanaged
+    {
+        if (count <= 0) return;
+        ReadOnlySpan<byte> bytes = System.Runtime.InteropServices.MemoryMarshal.AsBytes(source.AsSpan());
+        fixed (T* target = &destination)
+            bytes[..count].CopyTo(new Span<byte>(target, count));
+    }
+
     public static unsafe void FillNative(IntPtr destination, int count, byte value)
     {
         if (count > 0) new Span<byte>((void*)destination, count).Fill(value);

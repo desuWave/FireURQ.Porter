@@ -2830,7 +2830,12 @@ private string TranslateCall(
 
         ExpressionParser.ExpressionNode source = expression.Children[1];
         ExpressionParser.ExpressionNode destinationMove = expression.Children[2];
-        string sourceType = MapType(ResolveExpressionType(source));
+        string sourceType = MapType(ResolveExpressionType(source) ?? ResolveUnaryMemberType(source)?.ResolvedName);
+        if (sourceType.EndsWith("[]", StringComparison.Ordinal) &&
+            destinationMove.Kind == ExpressionParser.ExpressionKind.IndexAccess && destinationMove.Children.Count == 2 &&
+            PointerArrayElement(destinationMove.Children[0]) is string nativeElement &&
+            sourceType == nativeElement + "[]")
+            return $"global::FireURQ.Runtime.DelphiSystem.CopyToNative({TranslateExpression(source)}, ref {TranslateExpression(destinationMove)}, checked((int)({TranslateExpression(expression.Children[3])})))";
         string destinationTypeMove = MapType(ResolveExpressionType(destinationMove));
         string sourceArgument = sourceType.EndsWith("[]", StringComparison.Ordinal)
             ? TranslateExpression(source)
