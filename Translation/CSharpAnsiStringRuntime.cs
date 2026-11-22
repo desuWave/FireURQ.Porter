@@ -8,9 +8,7 @@ using System.Text;
 
 namespace FireURQ.Runtime;
 
-// Initial byte-value layer.
-// Text conversion requires an explicit Encoding.
-// Native pointers and implicit text conversions are not implemented yet.
+// Binary operations preserve bytes. Text boundaries select an encoding explicitly.
 public readonly struct AnsiString : IEquatable<AnsiString>
 {
     private readonly byte[]? data;
@@ -32,6 +30,12 @@ public readonly struct AnsiString : IEquatable<AnsiString>
 
     public static AnsiString FromText(string value, Encoding encoding) =>
         new(encoding.GetBytes(value));
+
+    private static readonly Encoding ProcessEncoding =
+        CodePagesEncodingProvider.Instance.GetEncoding(0) ?? Encoding.UTF8;
+
+    public static AnsiString FromSystemText(string? value) => FromText(value ?? string.Empty, ProcessEncoding);
+    public string ToSystemText() => Decode(ProcessEncoding);
 
     public string Decode(Encoding encoding) =>
         encoding.GetString(Bytes);

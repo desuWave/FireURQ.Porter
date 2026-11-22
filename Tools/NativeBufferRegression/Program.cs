@@ -1,6 +1,13 @@
 using System.Runtime.InteropServices;
 using FireURQ.Runtime;
 
+var processEncoding = System.Text.CodePagesEncodingProvider.Instance.GetEncoding(0) ?? System.Text.Encoding.UTF8;
+string sample = "Фурка\0quest";
+byte[] expectedBytes = processEncoding.GetBytes(sample);
+var encoded = AnsiString.FromSystemText(sample);
+if (!encoded.ToBytes().SequenceEqual(expectedBytes) || encoded.ToSystemText() != processEncoding.GetString(expectedBytes))
+    throw new InvalidOperationException("The ANSI text boundary lost the process encoding or the embedded NUL.");
+
 IntPtr memory = Marshal.AllocHGlobal(16);
 try
 {

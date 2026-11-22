@@ -39,6 +39,11 @@ internal static class DelphiFiles
         path?.EndsWith('\\') == true ? path : path + "\\";
 
     public static bool FileExists(string? path) => File.Exists(path);
+    public static bool FileExists(AnsiString path) => FileExists(path.ToSystemText());
+    public static bool DeleteFile(AnsiString path) => DeleteFile(path.ToSystemText());
+    public static string IncludeTrailingPathDelimiter(AnsiString path) => IncludeTrailingPathDelimiter(path.ToSystemText());
+    public static string ChangeFileExt(AnsiString path, string? extension) => ChangeFileExt(path.ToSystemText(), extension);
+    public static string ChangeFileExt(AnsiString path, AnsiString extension) => ChangeFileExt(path.ToSystemText(), extension.ToSystemText());
 
     [DllImport("kernel32.dll", EntryPoint = "DeleteFileW", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

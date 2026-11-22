@@ -1648,6 +1648,17 @@ public sealed class DelphiToCSharpTranslator
             return character;
 
         string mappedExpected = MapType(expectedType);
+        if (mappedExpected is "string" or "AnsiString")
+        {
+            string? declared = ResolveExpressionType(value) ?? ResolveUnaryMemberType(value)?.ResolvedName
+                ?? ResolveUnaryFunctionTarget(value, 0)?.Type.ResolvedName;
+            string source = MapType(declared);
+            if (mappedExpected == "string" && source == "AnsiString")
+                return $"({TranslateValueOperand(value, out _)}).ToSystemText()";
+            if (mappedExpected == "AnsiString" && (source == "string" ||
+                value.Kind == ExpressionParser.ExpressionKind.Literal && value.Text.StartsWith('\'')))
+                return $"global::FireURQ.Runtime.AnsiString.FromSystemText({TranslateValueOperand(value, out _)})";
+        }
         if (value.Kind == ExpressionParser.ExpressionKind.Set && expectedType is not null &&
             value.Children.All(item => item.Kind != ExpressionParser.ExpressionKind.Binary || item.Text != ".."))
         {
@@ -2010,7 +2021,7 @@ public sealed class DelphiToCSharpTranslator
         {
             var target = operand.Children[0];
             if (target.Kind == ExpressionParser.ExpressionKind.Identifier &&
-                target.Text.ToUpperInvariant() is ("VARISNUMERIC" or "VARISEMPTY" or "VARISNULL") &&
+                target.Text.ToUpperInvariant() is ("VARISNUMERIC" or "VARISEMPTY" or "VARISNULL" or "FILEEXISTS") &&
                 _currentTypeContext?.ResolveLocalFunction(target.Text, 1).Found != true &&
                 ResolveExpressionType(target) is null &&
                 (_unitName is null || _resolver?.HasVisibleNonTypeDeclaration(target.Text, _unitName) != true))
