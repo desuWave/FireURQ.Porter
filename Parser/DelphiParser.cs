@@ -1136,7 +1136,7 @@ if (MatchKeyword("interface"))
 // PACKED
 // ------------------------------------------------
 
-MatchKeyword("packed");
+bool packedRecord = MatchKeyword("packed");
 
             // ------------------------------------------------
             // RECORD
@@ -1241,7 +1241,7 @@ if (MatchKeyword("record"))
                 " ",
                 definition),
             fields,
-            variantPart));
+            variantPart) { IsPacked = packedRecord });
 
     continue;
 }

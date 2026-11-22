@@ -358,9 +358,9 @@ if (args.Length >= 2 &&
         translatedVariantType.Contains("[StructLayout(LayoutKind.Explicit)]", StringComparison.Ordinal) &&
         translatedVariantType.Contains("public unsafe struct TMD5Digest", StringComparison.Ordinal) &&
         translatedVariantType.Contains("[FieldOffset(0)] public int A;", StringComparison.Ordinal) &&
-        translatedVariantType.Contains("[FieldOffset(0)] public int B;", StringComparison.Ordinal) &&
-        translatedVariantType.Contains("[FieldOffset(0)] public int C;", StringComparison.Ordinal) &&
-        translatedVariantType.Contains("[FieldOffset(0)] public int D;", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(4)] public int B;", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(8)] public int C;", StringComparison.Ordinal) &&
+        translatedVariantType.Contains("[FieldOffset(12)] public int D;", StringComparison.Ordinal) &&
         translatedVariantType.Contains("[FieldOffset(0)] public fixed byte v[16];", StringComparison.Ordinal);
 
     Console.WriteLine($"C# VARIANT LAYOUT CHECK: {(translationValid ? "PASS" : "FAIL")}");
@@ -409,41 +409,26 @@ if (args.Length >= 2 &&
                         return 1;
                     }
 
-                    digest.A = 0x01020304;
-
-                    if (digest.B != digest.A || digest.C != digest.A || digest.D != digest.A)
-                    {
-                        Console.Error.WriteLine("FAIL: integer fields do not share the same storage.");
-                        return 1;
-                    }
-
-                    byte[] expectedBytes = BitConverter.GetBytes(digest.A);
+                    int[] words = { 0x01020304, 0x11223344, 0x55667700, -1 };
+                    digest.A = words[0];
+                    digest.B = words[1];
+                    digest.C = words[2];
+                    digest.D = words[3];
 
                     byte* bytes = digest.v;
-                    for (int i = 0; i < 4; i++)
+                    for (int word = 0; word < words.Length; word++)
                     {
-                        if (bytes[i] != expectedBytes[i])
-                        {
-                            Console.Error.WriteLine($"FAIL: byte overlay mismatch at index {i}; expected={expectedBytes[i]}, actual={bytes[i]}.");
-                            return 1;
-                        }
+                        byte[] expected = BitConverter.GetBytes(words[word]);
+                        for (int i = 0; i < expected.Length; i++)
+                            if (bytes[4 * word + i] != expected[i])
+                            {
+                                Console.Error.WriteLine($"FAIL: digest byte {4 * word + i}.");
+                                return 1;
+                            }
                     }
-
-                    bytes[0] = 0x78;
-                    bytes[1] = 0x56;
-                    bytes[2] = 0x34;
-                    bytes[3] = 0x12;
-
-                    int expectedInteger = BitConverter.ToInt32(new byte[] { 0x78, 0x56, 0x34, 0x12 }, 0);
-
-                    if (digest.A != expectedInteger ||
-                        digest.B != expectedInteger ||
-                        digest.C != expectedInteger ||
-                        digest.D != expectedInteger)
-                    {
-                        Console.Error.WriteLine($"FAIL: writing through v did not update overlaid integer fields; expected={expectedInteger}, A={digest.A}, B={digest.B}, C={digest.C}, D={digest.D}.");
+                    new Span<byte>(bytes + 4, 4).Clear();
+                    if (digest.B != 0 || digest.A != words[0] || digest.C != words[2] || digest.D != words[3])
                         return 1;
-                    }
 
                     Console.WriteLine("VARIANT MEMORY OVERLAY CHECK: PASS");
                     Console.WriteLine($"STRUCT SIZE CHECK: PASS (sizeof={sizeof(TMD5Digest)}, Marshal.SizeOf={Marshal.SizeOf<TMD5Digest>()})");

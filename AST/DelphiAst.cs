@@ -103,7 +103,10 @@ public sealed record DelphiType(
     string Definition,
     IReadOnlyList<DelphiField>? Fields = null,
     DelphiVariantPart? VariantPart = null
-) : DelphiNode;
+) : DelphiNode
+{
+    public bool IsPacked { get; init; }
+}
 
 public sealed record DelphiProcedureType(
     string Name,

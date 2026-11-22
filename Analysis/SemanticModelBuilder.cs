@@ -95,7 +95,7 @@ public static class SemanticModelBuilder
                                                             field.Name,
                                                             field.Type))
                                                     .ToList()))
-                                        .ToList())));
+                                        .ToList())) { IsPacked = value.IsPacked });
                     break;
 
                 case DelphiConst value:

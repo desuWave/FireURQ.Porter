@@ -50,6 +50,11 @@ jobs:
           grep -Eq '^Translation succeeded: +58$' translation.log
           test -s translation-output/d2dge-furq_2_2_4/SimpleXML.cs
 
+      - name: Verify MD5 digest layout against the Delphi source
+        env:
+          DOTNET_ROLL_FORWARD: LatestMajor
+        run: dotnet bin/Release/net8.0/FireURQ.Porter.dll --probe-variant-records .fireurq-work/fireurq-master/MD5.pas
+
       - name: Verify Extended arithmetic
         env:
           DOTNET_ROLL_FORWARD: LatestMajor

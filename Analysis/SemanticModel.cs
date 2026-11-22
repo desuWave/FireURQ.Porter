@@ -78,7 +78,10 @@ public sealed record SemanticType(
     string? UnitName = null,
     SemanticVariantPart? VariantPart = null,
     SemanticProcedureType? ProcedureType = null
-);
+)
+{
+    public bool IsPacked { get; init; }
+}
 
 public sealed record SemanticConstant(
     string Name,

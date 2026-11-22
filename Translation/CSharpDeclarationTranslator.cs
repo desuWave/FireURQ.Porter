@@ -1933,30 +1933,33 @@ public sealed class CSharpDeclarationTranslator
 
         var declarations = new List<string>();
 
-        foreach (SemanticField field in fields)
+        foreach (var alternative in variantPart.Variants)
         {
-            string fieldType = field.Type.Trim();
-
-            if (TryGetFixedBuffer(fieldType, out string elementType, out int length))
+            int offset = 0;
+            foreach (SemanticField field in alternative.Fields)
             {
-                declarations.Add(
-                    $"    [FieldOffset(0)] public fixed {elementType} {field.Name}[{length}];");
-                continue;
+                bool fixedBuffer = TryGetFixedBuffer(field.Type.Trim(), out string elementType, out int length);
+                string scalar = fixedBuffer ? elementType : MapType(field.Type);
+                int width = scalar switch
+                {
+                    "bool" or "byte" or "sbyte" => 1,
+                    "short" or "ushort" or "char" => 2,
+                    "int" or "uint" or "float" => 4,
+                    "long" or "ulong" or "double" => 8,
+                    _ => 0
+                };
+                if (width == 0)
+                    return $"// TODO: Variant record {type.Name} contains unsupported overlay field type '{field.Type}' ({field.Name}).";
+                if (!type.IsPacked)
+                    offset = checked((offset + width - 1) / width * width);
+                string declaration = fixedBuffer ? $"fixed {scalar} {field.Name}[{length}]" : $"{scalar} {field.Name}";
+                declarations.Add($"    [FieldOffset({offset})] public {declaration};");
+                offset = checked(offset + width * (fixedBuffer ? length : 1));
             }
-
-            string mappedType = MapType(fieldType);
-
-            if (!IsExplicitLayoutScalar(mappedType))
-            {
-                return $"// TODO: Variant record {type.Name} contains unsupported overlay field type '{field.Type}' ({field.Name}).";
-            }
-
-            declarations.Add(
-                $"    [FieldOffset(0)] public {mappedType} {field.Name};");
         }
 
         var builder = new StringBuilder();
-        builder.AppendLine("[StructLayout(LayoutKind.Explicit)]");
+        builder.AppendLine(type.IsPacked ? "[StructLayout(LayoutKind.Explicit, Pack = 1)]" : "[StructLayout(LayoutKind.Explicit)]");
         builder.AppendLine($"public unsafe struct {type.Name}");
         builder.AppendLine("{");
 
