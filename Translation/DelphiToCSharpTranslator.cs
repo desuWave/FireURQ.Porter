@@ -1832,7 +1832,7 @@ public sealed class DelphiToCSharpTranslator
 
         returnsBoolean = CSharpTypeMapper.Map(resolved.Type.ResolvedName) == "bool";
         string prefix = expression.Kind == ExpressionParser.ExpressionKind.MemberAccess
-            ? TranslateExpression(expression.Children[0]) + "."
+            ? TranslateValueOperand(expression.Children[0], out _) + "."
             : "";
         call = prefix + resolved.Name + "()";
         return true;
@@ -1995,6 +1995,11 @@ public sealed class DelphiToCSharpTranslator
             return null;
         }
 
+        if (expression.Kind == ExpressionParser.ExpressionKind.Call && expression.Children.Count > 0 &&
+            ResolveUnaryFunctionTarget(expression.Children[0], expression.Children.Count - 1) is { } routine &&
+            routine.Type.IsResolved && !routine.Type.IsPointer)
+            return routine.Type.ResolvedName;
+
         if (expression.Kind == ExpressionParser.ExpressionKind.IndexAccess)
             return ResolveArrayElement(expression);
 
@@ -2016,7 +2021,7 @@ public sealed class DelphiToCSharpTranslator
             return expression.Text;
 
         var instance = expression.Children[0];
-        string target = TranslateExpression(instance);
+        string target = TranslateValueOperand(instance, out _);
         string member = expression.Children[1].Text;
         string? receiver = ResolveExpressionType(instance);
         string? receiverUnit = _unitName;
@@ -3578,7 +3583,7 @@ private string TranslateCall(
         {
             formals = binding.Member.Parameters;
             target = targetExpression.Kind == ExpressionParser.ExpressionKind.MemberAccess
-                ? TranslateExpression(targetExpression.Children[0]) + "." + binding.Member.Name
+                ? TranslateValueOperand(targetExpression.Children[0], out _) + "." + binding.Member.Name
                 : binding.Member.Name;
         }
     }
@@ -3752,8 +3757,7 @@ private static bool IsBuiltInDelphiType(
             return expression.Text;
 
         string left =
-            TranslateExpression(
-                expression.Children[0]);
+            TranslateValueOperand(expression.Children[0], out _);
 
         string right =
             TranslateExpression(
@@ -3769,8 +3773,7 @@ private static bool IsBuiltInDelphiType(
             return expression.Text;
 
         string left =
-            TranslateExpression(
-                expression.Children[0]);
+            TranslateValueOperand(expression.Children[0], out _);
 
         string right =
             TranslateExpression(
