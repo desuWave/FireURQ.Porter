@@ -3985,10 +3985,15 @@ private static bool IsBuiltInDelphiType(
         if (set.Kind !=
             ExpressionParser.ExpressionKind.Set)
         {
-            // Named Pascal set types are translated to HashSet<int>
-            // aliases, so membership must call Contains rather than
-            // emitting the Pascal "in" operator into C#.
             string translatedSet = TranslateExpression(set);
+            var operand = expression.Children[0];
+            string? valueType = ResolveExpressionType(operand) ?? ResolveUnaryMemberType(operand)?.ResolvedName;
+            string mapped = MapType(valueType);
+            if (mapped is "byte" or "char" or "int")
+                return $"{translatedSet}.Contains({value})";
+            string? setType = ResolveExpressionType(set) ?? ResolveUnaryMemberType(set)?.ResolvedName;
+            if (setType is not null && MapType(setType) == $"HashSet<{mapped}>")
+                return $"{translatedSet}.Contains({value})";
             return $"{translatedSet}.Contains((int)({value}))";
         }
 
