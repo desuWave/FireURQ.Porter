@@ -1568,7 +1568,9 @@ public sealed class DelphiToCSharpTranslator
         }
 
         bool isBoolean =
-            leftBoolean || rightBoolean || IsBooleanType(leftType) || IsBooleanType(rightType);
+            leftBoolean || rightBoolean || IsBooleanType(leftType) || IsBooleanType(rightType) ||
+            (expression.Text.ToLowerInvariant() is "and" or "or" &&
+             (IsBooleanUnaryOperand(lhs) || IsBooleanUnaryOperand(rhs)));
 
         string op =
             expression.Text.ToLowerInvariant() switch
@@ -2175,6 +2177,9 @@ public sealed class DelphiToCSharpTranslator
             ResolveUnaryMemberType(array)?.ResolvedName;
         if (arrayType is null)
             return null;
+
+        if (index.Children.Count == 2 && MapType(arrayType) == "string")
+            return "Char";
 
         TypeResolution resolved = _resolver.Resolve(arrayType, _unitName);
         if (!resolved.IsResolved || resolved.IsPointer)
