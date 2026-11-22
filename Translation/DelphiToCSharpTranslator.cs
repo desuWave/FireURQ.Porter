@@ -2821,6 +2821,30 @@ private string TranslateCall(
     }
 
     if (_resolver is not null && _unitName is not null && expression.Children.Count == 2 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } boundFunction &&
+        boundFunction.Text.ToUpperInvariant() is "HIGH" or "LOW" &&
+        ResolveExpressionType(boundFunction) is null &&
+        !_resolver.HasVisibleValueDeclaration(boundFunction.Text, _unitName))
+    {
+        bool high = boundFunction.Text.Equals("High", StringComparison.OrdinalIgnoreCase);
+        var operand = expression.Children[1];
+        string? storageType = ResolveExpressionType(operand) ?? ResolveUnaryMemberType(operand)?.ResolvedName;
+        if (storageType is null && operand.Kind == ExpressionParser.ExpressionKind.Identifier)
+        {
+            int length = _resolver.GetEnumerationLength(operand.Text, _unitName);
+            if (length > 0)
+                return $"(({MapType(operand.Text)}){(high ? length - 1 : 0)})";
+        }
+        if (storageType is not null)
+        {
+            if (_resolver.TryGetCompositeDefinition(storageType, _unitName, out string definition, out _))
+                storageType = definition;
+            if (storageType.TrimStart().StartsWith("array of ", StringComparison.OrdinalIgnoreCase))
+                return high ? $"(({TranslateExpression(operand)}?.Length ?? 0) - 1)" : "0";
+        }
+    }
+
+    if (_resolver is not null && _unitName is not null && expression.Children.Count == 2 &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } intrinsic &&
         intrinsic.Text.Equals("SizeOf", StringComparison.OrdinalIgnoreCase) &&
         !_resolver.HasVisibleValueDeclaration(intrinsic.Text, _unitName) &&
