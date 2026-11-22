@@ -74,6 +74,20 @@ internal static class DelphiSystem
     public static unsafe ref T Dereference<T>(IntPtr pointer) where T : struct =>
         ref System.Runtime.CompilerServices.Unsafe.AsRef<T>(pointer.ToPointer());
 
+    public static unsafe ref T ElementAt<T>(IntPtr pointer, nint index) where T : unmanaged =>
+        ref ((T*)pointer)[index];
+
+    public static unsafe void MoveNative(IntPtr source, IntPtr destination, int count)
+    {
+        if (count <= 0) return;
+        new ReadOnlySpan<byte>((void*)source, count).CopyTo(new Span<byte>((void*)destination, count));
+    }
+
+    public static unsafe void FillNative(IntPtr destination, int count, byte value)
+    {
+        if (count > 0) new Span<byte>((void*)destination, count).Fill(value);
+    }
+
     public const int MaxInt = int.MaxValue;
     public const int varDate = 7;
     public const int rfReplaceAll = 1;

@@ -2242,6 +2242,26 @@ public sealed class DelphiToCSharpTranslator
         return true;
     }
 
+    private string? PointerArrayElement(ExpressionParser.ExpressionNode array)
+    {
+        if (_resolver is null) return null;
+        string? local = ResolveExpressionType(array);
+        var pointer = local is null ? ResolveUnaryMemberType(array) : _resolver.Resolve(local, _unitName);
+        if (pointer is not { IsResolved: true, PointerDepth: 1 }) return null;
+        string definition = pointer.ResolvedName;
+        string? context = pointer.DeclaringUnitName ?? _unitName;
+        if (_resolver.TryGetCompositeDefinition(definition, context, out string composite, out _))
+            definition = composite;
+        var match = System.Text.RegularExpressions.Regex.Match(definition,
+            @"^array\s*\[\s*0\s*\.\.\s*[^,\]]+\]\s*of\s+(\w+)$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!match.Success) return null;
+        string element = match.Groups[1].Value;
+        string mapped = CSharpTypeMapper.Map(element, _resolver, context);
+        return mapped is "byte" or "sbyte" or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "float" or "double"
+            || _resolver.FixedScalarRecordSize(element, context) > 0 ? mapped : null;
+    }
+
     private string? ResolveArrayElement(ExpressionParser.ExpressionNode index)
     {
         if (_resolver is null ||
@@ -2297,6 +2317,8 @@ public sealed class DelphiToCSharpTranslator
             return translated;
 
         string target = TranslateExpression(expression.Children[0]);
+        if (expression.Children.Count == 2 && PointerArrayElement(expression.Children[0]) is string element)
+            return $"global::FireURQ.Runtime.DelphiSystem.ElementAt<{element}>({target}, checked((nint)({TranslateValueOperand(expression.Children[1], out _)})))";
         if (expression.Children.Count == 2 && IsManagedString(expression.Children[0]))
             return $"{target}[({TranslateValueOperand(expression.Children[1], out _)}) - 1]";
 
@@ -2786,6 +2808,14 @@ private string TranslateCall(
         (_resolver is null || _unitName is null ||
          !_resolver.HasVisibleValueDeclaration(memoryOperation.Text, _unitName)))
     {
+        bool IsNativeDereference(ExpressionParser.ExpressionNode node) =>
+            node.Kind == ExpressionParser.ExpressionKind.Dereference && node.Children.Count == 1 &&
+            ResolveExpressionType(node.Children[0]) is string declared && _resolver?.Resolve(declared, _unitName).IsPointer == true;
+        if (memoryOperation.Text.Equals("Move", StringComparison.OrdinalIgnoreCase) &&
+            IsNativeDereference(expression.Children[1]) && IsNativeDereference(expression.Children[2]))
+            return $"global::FireURQ.Runtime.DelphiSystem.MoveNative({TranslateExpression(expression.Children[1].Children[0])}, {TranslateExpression(expression.Children[2].Children[0])}, checked((int)({TranslateExpression(expression.Children[3])})))";
+        if (memoryOperation.Text.Equals("FillChar", StringComparison.OrdinalIgnoreCase) && IsNativeDereference(expression.Children[1]))
+            return $"global::FireURQ.Runtime.DelphiSystem.FillNative({TranslateExpression(expression.Children[1].Children[0])}, checked((int)({TranslateExpression(expression.Children[2])})), unchecked((byte)({TranslateExpression(expression.Children[3])})))";
         if (memoryOperation.Text.Equals("FillChar", StringComparison.OrdinalIgnoreCase))
         {
             ExpressionParser.ExpressionNode destination = expression.Children[1];
