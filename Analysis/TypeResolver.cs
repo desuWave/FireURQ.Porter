@@ -407,6 +407,23 @@ public sealed class TypeResolver
     {
         var type = Resolve(receiver, unitName);
         string recordName = type.ResolvedName;
+        if (recordName.Equals("TWndClass", StringComparison.OrdinalIgnoreCase) && type.DeclaringUnitName is null)
+        {
+            return name.ToUpperInvariant() switch
+            {
+                "STYLE" => new SemanticField("style", "Cardinal"),
+                "LPFNWNDPROC" => new SemanticField("lpfnWndProc", "WindowProcedure"),
+                "CBCLSEXTRA" => new SemanticField("cbClsExtra", "Integer"),
+                "CBWNDEXTRA" => new SemanticField("cbWndExtra", "Integer"),
+                "HINSTANCE" => new SemanticField("hInstance", "THandle"),
+                "HICON" => new SemanticField("hIcon", "THandle"),
+                "HCURSOR" => new SemanticField("hCursor", "THandle"),
+                "HBRBACKGROUND" => new SemanticField("hbrBackground", "THandle"),
+                "LPSZMENUNAME" => new SemanticField("lpszMenuName", "String"),
+                "LPSZCLASSNAME" => new SemanticField("lpszClassName", "String"),
+                _ => null
+            };
+        }
         string? runtimeFieldType = recordName.ToUpperInvariant() switch
         {
             "TPOINT" when name.Equals("X", StringComparison.OrdinalIgnoreCase) ||

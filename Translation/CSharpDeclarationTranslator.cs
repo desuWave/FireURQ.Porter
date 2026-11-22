@@ -1570,8 +1570,13 @@ public sealed class CSharpDeclarationTranslator
                     if (!isInterface)
                     {
                         string visibility = MapVisibility(member.Visibility);
+                        // Delphi 7 stored this HINSTANCE in a 32-bit Cardinal.
+                        string fieldType = string.Equals(_unitName, "d2dCore", StringComparison.OrdinalIgnoreCase) &&
+                            ownerName.Equals("Td2dCore", StringComparison.OrdinalIgnoreCase) &&
+                            member.Name.Equals("f_Instance", StringComparison.OrdinalIgnoreCase) &&
+                            MapType(member.Type) == "uint" ? "IntPtr" : MapType(member.Type);
                         builder.AppendLine(
-                            $"    {visibility}{MapType(member.Type)} {member.Name}{EnumArrayInitializer(member.Type)};");
+                            $"    {visibility}{fieldType} {member.Name}{EnumArrayInitializer(member.Type)};");
                     }
                     break;
 

@@ -4,6 +4,7 @@ global using HICON = System.IntPtr;
 global using HRSRC = System.IntPtr;
 global using HGLOBAL = System.IntPtr;
 global using Windows = FireURQ.Runtime.DelphiWindows;
+global using SysInit = FireURQ.Runtime.DelphiWindows;
 
 using System.Runtime.InteropServices;
 
@@ -20,8 +21,60 @@ internal struct TLogFont
     public string lfFaceName;
 }
 
+[UnmanagedFunctionPointer(CallingConvention.Winapi)]
+internal delegate IntPtr WindowProcedure(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
+
+[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+internal struct TWndClass
+{
+    public uint style;
+    public WindowProcedure lpfnWndProc;
+    public int cbClsExtra, cbWndExtra;
+    public IntPtr hInstance, hIcon, hCursor, hbrBackground;
+    public string? lpszMenuName, lpszClassName;
+}
+
 internal static class DelphiWindows
 {
+    public const uint CS_VREDRAW = 1, CS_HREDRAW = 2, CS_DBLCLKS = 8, CS_OWNDC = 0x20;
+    public const int BLACK_BRUSH = 4;
+
+    // Windows retains the callback after RegisterClassW returns.
+    private static readonly Dictionary<(IntPtr, string), WindowProcedure> windowProcedures = new();
+
+    [DllImport("user32.dll", EntryPoint = "RegisterClassW", ExactSpelling = true, SetLastError = true)]
+    private static extern ushort RegisterClassNative(in TWndClass windowClass);
+
+    [DllImport("user32.dll", EntryPoint = "UnregisterClassW", ExactSpelling = true,
+        CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnregisterClassNative(string className, IntPtr instance);
+
+    public static ushort RegisterClass(TWndClass windowClass)
+    {
+        ArgumentNullException.ThrowIfNull(windowClass.lpszClassName);
+        lock (windowProcedures)
+        {
+            ushort atom = RegisterClassNative(in windowClass);
+            if (atom != 0)
+                windowProcedures[(windowClass.hInstance, windowClass.lpszClassName.ToUpperInvariant())] = windowClass.lpfnWndProc;
+            return atom;
+        }
+    }
+
+    public static bool UnregisterClass(string className, IntPtr instance)
+    {
+        lock (windowProcedures)
+        {
+            if (!UnregisterClassNative(className, instance)) return false;
+            windowProcedures.Remove((instance, className.ToUpperInvariant()));
+            return true;
+        }
+    }
+
+    [DllImport("gdi32.dll", ExactSpelling = true)]
+    public static extern IntPtr GetStockObject(int objectIndex);
+
     public const uint WM_CREATE = 0x0001;
     public const uint WM_DESTROY = 0x0002;
     public const uint WM_PAINT = 0x000F;
