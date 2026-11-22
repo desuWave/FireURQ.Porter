@@ -1068,6 +1068,13 @@ public sealed class DelphiToCSharpTranslator
             _resolver?.FindMember(ownerType, text, _unitName, null) is { } dataMember)
             return dataMember.Member.Name;
 
+        if (_unitName is not null && _resolver is not null &&
+            _currentTypeContext?.ResolveIdentifier(text) is null &&
+            _currentTypeContext?.ResolveLocalFunction(text, 0, valueOnly: false).Found != true &&
+            _resolver.TryResolveConstant(text, _unitName, out var constantDeclaration, out _) &&
+            constantDeclaration is not null)
+            return constantDeclaration.Name;
+
         return _currentTypeContext?.ResolveSpelling(text) ?? text;
     }
 
@@ -2827,7 +2834,13 @@ private string TranslateCall(
     {
         string factory = TranslateExpression(formatFactory);
         string format = TranslateExpression(expression.Children[1]);
-        string values = string.Join(", ", factoryValues.Children.Select(TranslateExpression));
+        string values = string.Join(", ", factoryValues.Children.Select(value => TranslateValueOperand(value, out _)));
+        if (formatFactory.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } exception &&
+            exception.Text.Equals("Exception", StringComparison.OrdinalIgnoreCase) &&
+            _resolver is not null && _unitName is not null && ResolveExpressionType(exception) is null &&
+            !_resolver.HasVisibleValueDeclaration(exception.Text, _unitName) &&
+            _resolver.ResolveDeclarationKind(exception.Text, _unitName) == "Unknown")
+            return $"new global::System.Exception(global::FireURQ.Runtime.DelphiText.Format({format}, new object[] {{ {values} }}))";
         return $"{factory}({format}, new object[] {{ {values} }})";
     }
 
