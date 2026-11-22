@@ -1,5 +1,9 @@
 global using static FireURQ.Runtime.DelphiWindows;
 global using TKeyboardState = System.Byte[];
+global using HICON = System.IntPtr;
+global using HRSRC = System.IntPtr;
+global using HGLOBAL = System.IntPtr;
+global using Windows = FireURQ.Runtime.DelphiWindows;
 
 using System.Runtime.InteropServices;
 
@@ -62,6 +66,13 @@ internal static class DelphiWindows
     public const byte DEFAULT_PITCH = 0;
     public const byte FF_DONTCARE = 0;
 
+    public const int SM_CXSCREEN = 0, SM_CYSCREEN = 1, SM_CYCAPTION = 4;
+    public const int SM_CXFIXEDFRAME = 7, SM_CYFIXEDFRAME = 8;
+    public const int WS_POPUP = unchecked((int)0x80000000), WS_VISIBLE = 0x10000000;
+    public const int WS_CAPTION = 0x00C00000, WS_SYSMENU = 0x00080000, WS_MINIMIZEBOX = 0x00020000;
+    public const int SW_SHOW = 5, GCL_HICON = -14;
+    public static readonly IntPtr IDI_APPLICATION = new(32512);
+
     public const int HTCLIENT = 1;
     public const int GWL_STYLE = -16;
     public const int GWL_EXSTYLE = -20;
@@ -73,6 +84,47 @@ internal static class DelphiWindows
 
     public static TRect Rect(int left, int top, int right, int bottom) =>
         new() { Left = left, Top = top, Right = right, Bottom = bottom };
+
+    [DllImport("kernel32.dll", EntryPoint = "GetModuleHandleW", ExactSpelling = true, CharSet = CharSet.Unicode)]
+    private static extern IntPtr GetModuleHandle(string? moduleName);
+
+    public static IntPtr MainInstance => GetModuleHandle(null);
+    public static IntPtr HInstance => MainInstance;
+
+    // Delphi 7 PChar arguments may be ANSI names or MAKEINTRESOURCE identifiers.
+    [DllImport("kernel32.dll", EntryPoint = "FindResourceA", ExactSpelling = true)]
+    public static extern IntPtr FindResource(IntPtr module, IntPtr name, IntPtr type);
+
+    [DllImport("kernel32.dll", ExactSpelling = true)]
+    public static extern IntPtr LoadResource(IntPtr module, IntPtr resource);
+
+    [DllImport("kernel32.dll", ExactSpelling = true)]
+    public static extern uint SizeofResource(IntPtr module, IntPtr resource);
+
+    [DllImport("kernel32.dll", ExactSpelling = true)]
+    public static extern IntPtr LockResource(IntPtr resource);
+
+    [DllImport("user32.dll", EntryPoint = "LoadIconW", ExactSpelling = true)]
+    public static extern IntPtr LoadIcon(IntPtr instance, IntPtr name);
+
+    [DllImport("user32.dll", EntryPoint = "LoadIconW", ExactSpelling = true, CharSet = CharSet.Unicode)]
+    public static extern IntPtr LoadIcon(IntPtr instance, string name);
+
+    [DllImport("user32.dll", ExactSpelling = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ShowWindow(IntPtr window, int command);
+
+    [DllImport("user32.dll", EntryPoint = "SendMessageW", ExactSpelling = true)]
+    public static extern IntPtr SendMessage(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll", EntryPoint = "SetClassLongPtrW", ExactSpelling = true)]
+    private static extern UIntPtr SetClassLongPtr64(IntPtr window, int index, IntPtr value);
+
+    [DllImport("user32.dll", EntryPoint = "SetClassLongW", ExactSpelling = true)]
+    private static extern uint SetClassLong32(IntPtr window, int index, int value);
+
+    public static UIntPtr SetClassLong(IntPtr window, int index, IntPtr value) =>
+        IntPtr.Size == 8 ? SetClassLongPtr64(window, index, value) : SetClassLong32(window, index, value.ToInt32());
 
     [DllImport("user32.dll", EntryPoint = "DefWindowProcW")]
     public static extern IntPtr DefWindowProc(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
