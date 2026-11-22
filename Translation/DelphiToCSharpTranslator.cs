@@ -1648,6 +1648,27 @@ public sealed class DelphiToCSharpTranslator
             return character;
 
         string mappedExpected = MapType(expectedType);
+        if (value.Kind == ExpressionParser.ExpressionKind.Set && expectedType is not null &&
+            value.Children.All(item => item.Kind != ExpressionParser.ExpressionKind.Binary || item.Text != ".."))
+        {
+            var array = System.Text.RegularExpressions.Regex.Match(expectedType.Trim(), @"^array\s+of\s+(.+)$",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (array.Success && mappedExpected.EndsWith("[]", StringComparison.Ordinal))
+            {
+                string elementType = array.Groups[1].Value.Trim();
+                string items = string.Join(", ", value.Children.Select(item => TranslateExpectedValue(item, elementType)));
+                return $"new {mappedExpected} {{ {items} }}";
+            }
+            if (mappedExpected.StartsWith("HashSet<", StringComparison.Ordinal) && mappedExpected.EndsWith('>'))
+            {
+                string elementType = mappedExpected[8..^1];
+                if (_resolver?.IsZeroBasedEnumeration(elementType, _unitName) == true)
+                {
+                    string items = string.Join(", ", value.Children.Select(TranslateExpression));
+                    return $"new {mappedExpected} {{ {items} }}";
+                }
+            }
+        }
         if (expectedType is not null && _resolver is not null &&
             (mappedExpected is "bool" or "char" or "string" or "AnsiString" or "byte" or "sbyte"
                 or "short" or "ushort" or "int" or "uint" or "long" or "ulong" or "float" or "double"
