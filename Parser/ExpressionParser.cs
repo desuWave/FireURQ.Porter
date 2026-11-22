@@ -530,36 +530,27 @@ public static class ExpressionParser
                 Array.Empty<ExpressionNode>());
         }
 
-        if (token.Kind == TokenKind.Character ||
-            token.Kind == TokenKind.String)
-        {
-            int literalStart = position;
+        // In primary position ^M is a control character. Postfix ^ stays a dereference.
+        static bool IsControlLetter(IReadOnlyList<LexerToken> source, int at, int limit) =>
+            at + 1 < limit && source[at].Text == "^" && source[at + 1].Text.Length == 1 &&
+            char.ToUpperInvariant(source[at + 1].Text[0]) is >= 'A' and <= 'Z';
 
+        if (token.Kind is TokenKind.Character or TokenKind.String || IsControlLetter(tokens, position, end))
+        {
+            var literal = new System.Text.StringBuilder();
             while (position < end)
             {
-                LexerToken current =
-                    tokens[position];
-
-                if (current.Kind != TokenKind.Character &&
-                    current.Kind != TokenKind.String)
+                if (tokens[position].Kind is TokenKind.String or TokenKind.Character)
+                    literal.Append(tokens[position++].Text);
+                else if (IsControlLetter(tokens, position, end))
                 {
-                    break;
+                    int code = char.ToUpperInvariant(tokens[position + 1].Text[0]) - 'A' + 1;
+                    literal.Append('#').Append(code);
+                    position += 2;
                 }
-
-                position++;
+                else break;
             }
-
-            string text =
-                string.Concat(
-                    tokens
-                        .Skip(literalStart)
-                        .Take(position - literalStart)
-                        .Select(token => token.Text));
-
-            return new ExpressionNode(
-                ExpressionKind.Literal,
-                text,
-                Array.Empty<ExpressionNode>());
+            return new ExpressionNode(ExpressionKind.Literal, literal.ToString(), Array.Empty<ExpressionNode>());
         }
 
         if (token.Kind == TokenKind.Number ||
