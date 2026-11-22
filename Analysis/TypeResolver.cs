@@ -550,7 +550,14 @@ public sealed class TypeResolver
                 unit.Functions.Any(value => value.Name.Equals(
                     name, StringComparison.OrdinalIgnoreCase)));
     }
-    internal IReadOnlyList<SemanticParameter>? FindUnitRoutineParameters(string name, string? unitName, int arity)
+    internal IReadOnlyList<SemanticParameter>? FindUnitRoutineParameters(string name, string? unitName, int arity) =>
+        FindUnitRoutine(name, unitName, arity)?.Function.Parameters;
+
+    internal (string Name, TypeResolution Type)? ResolveUnitFunction(string name, string? unitName, int arity) =>
+        FindUnitRoutine(name, unitName, arity) is { } match && !match.Function.IsProcedure
+            ? (match.Function.Name, Resolve(match.Function.ReturnType, match.UnitName)) : null;
+
+    private (SemanticFunction Function, string UnitName)? FindUnitRoutine(string name, string? unitName, int arity)
     {
         if (unitName is null || !_units.TryGetValue(unitName, out var unit))
             return null;
@@ -572,15 +579,18 @@ public sealed class TypeResolver
             function.Name.Equals(name, StringComparison.OrdinalIgnoreCase)).ToArray();
         if (matches.Length == 0)
             return null;
-        var parameters = matches
+        var selected = matches
             .OrderByDescending(match => match.Parameters.Count(parameter =>
                 !string.IsNullOrWhiteSpace(parameter.DefaultValue)))
-            .First().Parameters;
+            .First();
+        var parameters = selected.Parameters;
         // The interface declaration and implementation may both be present.
-        return matches.All(match => match.Parameters.Count == parameters.Count && match.Parameters.Zip(parameters).All(pair =>
+        return matches.All(match => match.IsProcedure == selected.IsProcedure &&
+            string.Equals(match.ReturnType, selected.ReturnType, StringComparison.OrdinalIgnoreCase) &&
+            match.Parameters.Count == parameters.Count && match.Parameters.Zip(parameters).All(pair =>
             pair.First.Kind.Equals(pair.Second.Kind, StringComparison.OrdinalIgnoreCase) &&
             pair.First.Type.Equals(pair.Second.Type, StringComparison.OrdinalIgnoreCase)))
-            ? parameters : null;
+            ? (selected, unit.Name) : null;
     }
 
     internal SemanticProcedureType? ResolveProcedureType(string typeName, string? unitName)

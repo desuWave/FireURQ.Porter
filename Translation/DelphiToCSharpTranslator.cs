@@ -1851,9 +1851,12 @@ public sealed class DelphiToCSharpTranslator
             if (found)
                 return local is null ? null : (local.Name, _resolver.Resolve(local.ReturnType, _unitName));
 
-            return ResolveExpressionType(target) is null && _currentTypeContext.OwnerClass is { } owner
-                ? _resolver.ResolveFunctionMember(owner, target.Text, _unitName, argumentCount)
-                : null;
+            if (ResolveExpressionType(target) is not null || ResolveUnaryMemberType(target) is not null)
+                return null;
+            if (_currentTypeContext.OwnerClass is { } owner &&
+                _resolver.ResolveFunctionMember(owner, target.Text, _unitName, argumentCount) is { } method)
+                return method;
+            return _resolver.ResolveUnitFunction(target.Text, _unitName, argumentCount);
         }
 
         if (target.Kind != ExpressionParser.ExpressionKind.MemberAccess || target.Children.Count != 2)
@@ -3180,7 +3183,7 @@ private string TranslateCall(
         _resolver is not null && !string.IsNullOrEmpty(_unitName) &&
         !_resolver.HasVisibleValueDeclaration(targetExpression.Text, _unitName) &&
         ResolveExpressionType(targetExpression) is null &&
-        string.Equals(MapType(ResolveExpressionType(expression.Children[2])), "TRect", StringComparison.OrdinalIgnoreCase))
+        string.Equals(MapType(ResolveExpressionType(expression.Children[2]) ?? ResolveUnaryMemberType(expression.Children[2])?.ResolvedName), "TRect", StringComparison.OrdinalIgnoreCase))
     {
         string window = TranslateExpression(expression.Children[1]);
         string rectangle = TranslateExpression(expression.Children[2]);
