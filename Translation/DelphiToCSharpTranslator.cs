@@ -387,6 +387,16 @@ public sealed class DelphiToCSharpTranslator
              (_currentTypeContext.OwnerClass is { } owner &&
               _resolver?.FindMember(owner, receiver.Text, _unitName, null)?.Member.Kind == SemanticMemberKind.Field));
         AppendLine(builder, indent, "{");
+        if (receiver.Kind == ExpressionParser.ExpressionKind.Dereference && receiver.Children.Count == 1 &&
+            _resolver is not null &&
+            (ResolveExpressionType(receiver.Children[0]) ?? ResolveUnaryMemberType(receiver.Children[0])?.ResolvedName) is string pointerName &&
+            _resolver.Resolve(pointerName, _unitName) is { IsResolved: true, PointerDepth: 1 } pointer &&
+            _resolver.FixedScalarRecordSize(pointer.ResolvedName, pointer.DeclaringUnitName) > 0)
+        {
+            type = pointer.ResolvedName;
+            target = $"global::FireURQ.Runtime.DelphiSystem.Dereference<{type}>({target})";
+            recordVariable = true;
+        }
         AppendLine(builder, indent + 1, recordVariable ? $"ref var {alias} = ref {target};" : $"var {alias} = {target};");
         _currentTypeContext.AddWithAlias(alias, type ?? "object");
         _withScopes.Push((alias, type ?? "object"));
@@ -2901,6 +2911,9 @@ private string TranslateCall(
     {
         // SizeOf uses the declared Delphi storage type and does not evaluate its operand.
         string typeName = ResolveExpressionType(sizeOperand) ?? sizeOperand.Text;
+        int recordSize = _resolver.FixedScalarRecordSize(typeName, _unitName);
+        if (recordSize > 0)
+            return recordSize.ToString(System.Globalization.CultureInfo.InvariantCulture);
         var type = _resolver.Resolve(typeName, _unitName);
         if (type.IsResolved && !type.IsPointer && type.DeclaringUnitName is null)
         {

@@ -373,6 +373,36 @@ public sealed class TypeResolver
         return false;
     }
 
+    // Equal-width scalar fields have the same offsets in aligned and packed records.
+    internal int FixedScalarRecordSize(string name, string? unitName)
+    {
+        var type = Resolve(name, unitName);
+        if (!type.IsResolved || type.IsPointer || type.DeclaringUnitName is null)
+            return 0;
+        var record = Find(type.ResolvedName, type.DeclaringUnitName, out _)?.Type;
+        if (record?.Fields is not { Count: > 0 } fields || record.VariantPart is not null)
+            return 0;
+        int width = 0;
+        foreach (var field in fields)
+        {
+            var scalar = Resolve(field.Type, type.DeclaringUnitName);
+            if (!scalar.IsResolved || scalar.IsPointer || scalar.DeclaringUnitName is not null)
+                return 0;
+            int next = scalar.ResolvedName.ToLowerInvariant() switch
+            {
+                "byte" or "shortint" => 1,
+                "word" or "smallint" => 2,
+                "integer" or "longint" or "longword" or "cardinal" or "single" => 4,
+                "double" or "int64" or "uint64" => 8,
+                _ => 0
+            };
+            if (next == 0 || width != 0 && next != width)
+                return 0;
+            width = next;
+        }
+        return checked(width * fields.Count);
+    }
+
     internal SemanticField? FindRecordField(string receiver, string name, string? unitName)
     {
         var type = Resolve(receiver, unitName);
