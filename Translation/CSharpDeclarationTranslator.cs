@@ -112,8 +112,16 @@ public sealed class CSharpDeclarationTranslator
         if (unit.Variables.Count > 0)
             builder.AppendLine();
 
+        if (unit.Constants.Any(value => value.IsResourceString))
+            builder.AppendLine($"private static readonly global::System.Resources.ResourceManager __resourceStrings = new(\"FireURQ.{unit.Name}\", typeof({unit.Name}Module).Assembly);");
+
         foreach (SemanticConstant constant in unit.Constants)
         {
+            if (constant.IsResourceString)
+            {
+                builder.AppendLine($"public static string {constant.Name} => __resourceStrings.GetString(\"{constant.Name}\")!;");
+                continue;
+            }
             // Delphi 7 allows this typed constant to be assigned at runtime.
             if (unit.Name.Equals("f2LinkParser", StringComparison.OrdinalIgnoreCase) &&
                 constant.Name.Equals("gLinkRegEx", StringComparison.OrdinalIgnoreCase) &&

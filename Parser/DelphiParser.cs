@@ -93,6 +93,12 @@ public sealed class DelphiParser
                 return;
             }
 
+            if (MatchKeyword("resourcestring"))
+            {
+                ParseConstSection(declarations, resourceStrings: true);
+                continue;
+            }
+
             if (MatchKeyword("const"))
             {
                 ParseConstSection(
@@ -349,11 +355,11 @@ public sealed class DelphiParser
     // ========================================================
 
     private void ParseConstSection(
-        List<DelphiNode> declarations)
+        List<DelphiNode> declarations, bool resourceStrings = false)
     {
         while (!IsEnd())
         {
-            if (PeekKeyword("type") ||
+            if (PeekKeyword("const") || PeekKeyword("resourcestring") || PeekKeyword("type") ||
                 PeekKeyword("var") ||
                 PeekKeyword("function") ||
                 PeekKeyword("procedure") ||
@@ -398,8 +404,8 @@ if (string.IsNullOrWhiteSpace(type))
             declarations.Add(
                 new DelphiConst(
                     name,
-                    type,
-                    value));
+                    resourceStrings ? "String" : type,
+                    value) { IsResourceString = resourceStrings });
 
             MatchSymbol(";");
         }
@@ -410,7 +416,7 @@ if (string.IsNullOrWhiteSpace(type))
     {
         while (!IsEnd())
         {
-            if (PeekKeyword("const") ||
+            if (PeekKeyword("resourcestring") || PeekKeyword("const") ||
                 PeekKeyword("type") ||
                 PeekKeyword("function") ||
                 PeekKeyword("procedure") ||
@@ -488,7 +494,7 @@ if (string.IsNullOrWhiteSpace(type))
     {
         while (!IsEnd())
         {
-            if (PeekKeyword("const") ||
+            if (PeekKeyword("resourcestring") || PeekKeyword("const") ||
                 PeekKeyword("var") ||
                 PeekKeyword("function") ||
                 PeekKeyword("procedure") ||

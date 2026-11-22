@@ -49,6 +49,7 @@ public sealed class DelphiLexer
             "implementation",
             "uses",
             "const",
+            "resourcestring",
             "type",
             "var",
             "function",

@@ -103,7 +103,7 @@ public static class SemanticModelBuilder
                         new SemanticConstant(
                             value.Name,
                             value.Type,
-                            value.Value));
+                            value.Value) { IsResourceString = value.IsResourceString });
                     break;
 
                 case DelphiVariable value:

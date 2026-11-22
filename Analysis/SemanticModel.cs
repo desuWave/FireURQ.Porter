@@ -84,7 +84,10 @@ public sealed record SemanticConstant(
     string Name,
     string Type,
     string Value
-);
+)
+{
+    public bool IsResourceString { get; init; }
+}
 
 public sealed record SemanticVariable(
     string Name,

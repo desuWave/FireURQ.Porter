@@ -123,7 +123,10 @@ public sealed record DelphiConst(
     string Name,
     string Type,
     string Value
-) : DelphiNode;
+) : DelphiNode
+{
+    public bool IsResourceString { get; init; }
+}
 
 public enum DelphiParameterKind
 {

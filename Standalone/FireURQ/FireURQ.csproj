@@ -17,6 +17,7 @@
     <FireURQSource Include="$(FireURQSourceRoot)/**/*.cs"
                    Exclude="$(FireURQSourceRoot)/**/furqWinMain.cs;$(FireURQSourceRoot)/**/furqAbout.cs;$(FireURQSourceRoot)/**/d2dStorage.cs" />
     <Compile Include="@(FireURQSource)" />
+    <EmbeddedResource Include="$(FireURQSourceRoot)/**/FireURQ.*.resources" LogicalName="%(Filename)%(Extension)" />
   </ItemGroup>
 
   <Target Name="CheckFireURQSources" BeforeTargets="CoreCompile">

@@ -360,6 +360,62 @@ public sealed class ProjectTranslator
         input.Bodies.Any(body => body.Body.OwnerKind == BodyTokenAnalyzer.BodyOwnerKind.TopLevel &&
             body.Body.BodyTokens.Count > 0);
 
+    private static void WriteResourceStrings(SemanticUnit unit, string outputFile)
+    {
+        var resources = unit.Constants.Where(item => item.IsResourceString).ToArray();
+        string file = Path.Combine(Path.GetDirectoryName(outputFile)!, $"FireURQ.{unit.Name}.resources");
+        if (resources.Length == 0)
+        {
+            File.Delete(file);
+            return;
+        }
+        using var writer = new System.Resources.ResourceWriter(file);
+        foreach (var resource in resources)
+            writer.AddResource(resource.Name, DecodeResourceLiteral(resource.Value));
+    }
+
+    private static string DecodeResourceLiteral(string source)
+    {
+        var value = new StringBuilder();
+        int i = 0;
+        while (i < source.Length)
+        {
+            char c = source[i++];
+            if (char.IsWhiteSpace(c) || c == '+') continue;
+            if (c == '\'')
+            {
+                for (;;)
+                {
+                    if (i == source.Length) throw new FormatException("Unterminated resource string.");
+                    char next = source[i++];
+                    if (next != '\'') { value.Append(next); continue; }
+                    if (i == source.Length || source[i] != '\'') break;
+                    value.Append(source[i++]);
+                }
+                continue;
+            }
+            if (c == '^')
+            {
+                while (i < source.Length && char.IsWhiteSpace(source[i])) i++;
+                if (i == source.Length || char.ToUpperInvariant(source[i]) is < 'A' or > 'Z')
+                    throw new FormatException("Invalid control character in resource string.");
+                value.Append((char)(char.ToUpperInvariant(source[i++]) - 'A' + 1));
+                continue;
+            }
+            if (c == '#')
+            {
+                bool hex = i < source.Length && source[i] == '$';
+                if (hex) i++;
+                int start = i;
+                while (i < source.Length && (hex ? Uri.IsHexDigit(source[i]) : char.IsAsciiDigit(source[i]))) i++;
+                value.Append(checked((char)Convert.ToInt32(source[start..i], hex ? 16 : 10)));
+                continue;
+            }
+            throw new FormatException($"Unsupported resource string expression at '{source[(i - 1)..]}'.");
+        }
+        return value.ToString();
+    }
+
     private TranslationResult TranslateUnit(
         ProjectTranslationInput input,
         string outputDirectory, IReadOnlySet<string> moduleNames)
@@ -414,6 +470,7 @@ public sealed class ProjectTranslator
                 builder.AppendLine("using static global::FireURQ.Runtime.DelphiStreamConstants;");
             builder.AppendLine();
 
+            WriteResourceStrings(input.SemanticModel, outputFile);
             var declarationModel = input.SemanticModel with
             {
                 Classes = input.SemanticModel.Classes.Where(owner =>
