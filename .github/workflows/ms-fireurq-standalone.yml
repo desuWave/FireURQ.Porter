@@ -55,6 +55,11 @@ jobs:
           DOTNET_ROLL_FORWARD: LatestMajor
         run: dotnet run -c Release --project Tools/ExtendedArithmeticRegression/ExtendedArithmeticRegression.csproj
 
+      - name: Verify native buffer access
+        env:
+          DOTNET_ROLL_FORWARD: LatestMajor
+        run: dotnet run -c Release --project Tools/NativeBufferRegression/NativeBufferRegression.csproj
+
       - name: Build generated standalone
         id: standalone
         shell: bash
