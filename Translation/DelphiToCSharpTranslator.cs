@@ -3326,11 +3326,10 @@ private string TranslateCall(
 
         if (method.Equals("CreateVertexBuffer", StringComparison.OrdinalIgnoreCase) &&
             destination.Equals("f_VB", StringComparison.OrdinalIgnoreCase) &&
-            bufferCall.Children[3].Text.Equals("D3DFVF_D2DVERTEX", StringComparison.OrdinalIgnoreCase) &&
-            length == "(VertexBufferSize * SizeOf(Td2dVertex))")
+            bufferCall.Children[3].Text.Equals("D3DFVF_D2DVERTEX", StringComparison.OrdinalIgnoreCase))
         {
             return "(f_D3DDevice.CreateVertexBuffer(" +
-                "checked((uint)(VertexBufferSize * global::System.Runtime.InteropServices.Marshal.SizeOf<Td2dVertex>())), " +
+                $"checked((uint)({length})), " +
                 "0x08u, 0x0142u, 0, out f_VB) < 0)";
         }
 
@@ -3429,14 +3428,13 @@ private string TranslateCall(
         }
 
         if (streamMethod.Equals("SetStreamSource", StringComparison.OrdinalIgnoreCase) &&
-            expression.Children.Count == 4 &&
-            TranslateExpression(expression.Children[3]) == "SizeOf(Td2dVertex)")
+            expression.Children.Count == 4)
         {
             string streamNumber = TranslateExpression(expression.Children[1]);
             string vertexBuffer = TranslateExpression(expression.Children[2]);
             return "global::FireURQ.Runtime.D3D8.SetStreamSource(f_D3DDevice, " +
                 $"checked((uint)({streamNumber})), {vertexBuffer}, " +
-                "checked((uint)global::System.Runtime.InteropServices.Marshal.SizeOf<Td2dVertex>()))";
+                $"checked((uint)({TranslateExpression(expression.Children[3])})))";
         }
 
         if (streamMethod.Equals("SetIndices", StringComparison.OrdinalIgnoreCase) &&
