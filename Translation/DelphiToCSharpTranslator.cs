@@ -2109,6 +2109,8 @@ public sealed class DelphiToCSharpTranslator
             }
             else if (_resolver.FindMember(receiver, member, receiverUnit, null) is { } binding)
                 member = binding.Member.Name;
+            else if (_resolver.FindRecordField(receiver, member, receiverUnit) is { } recordField)
+                member = recordField.Name;
         }
 
         // A read of LongRec exposes the low or high Word of a 32-bit value.
@@ -2678,6 +2680,21 @@ private bool TryTranslateStreamCall(
 private string TranslateCall(
     ExpressionParser.ExpressionNode expression)
 {
+    if (_unitName is not null && _resolver is not null && expression.Children.Count == 13 &&
+        expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } createWindow &&
+        createWindow.Text.Equals("CreateWindowEx", StringComparison.OrdinalIgnoreCase) &&
+        !_resolver.HasVisibleValueDeclaration(createWindow.Text, _unitName) &&
+        expression.Children[3] is { Kind: ExpressionParser.ExpressionKind.Call } title &&
+        title.Children.Count == 2 && title.Children[0].Text.Equals("PChar", StringComparison.OrdinalIgnoreCase) &&
+        IsManagedString(title.Children[1]))
+    {
+        var windowArguments = expression.Children.Skip(1).Select(TranslateExpression).ToArray();
+        windowArguments[2] = TranslateExpression(title.Children[1]);
+        for (int i = 8; i < windowArguments.Length; i++)
+            if (IsNilLiteral(expression.Children[i + 1])) windowArguments[i] = "global::System.IntPtr.Zero";
+        return $"global::FireURQ.Runtime.DelphiWindows.CreateWindowEx({string.Join(", ", windowArguments)})";
+    }
+
     // The Delphi PChar cast borrows the command string for this call only.
     if (expression.Children.Count == 5 && _unitName is not null && _resolver is not null &&
         expression.Children[0] is { Kind: ExpressionParser.ExpressionKind.Identifier } mci &&

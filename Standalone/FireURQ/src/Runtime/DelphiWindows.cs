@@ -72,6 +72,15 @@ internal static class DelphiWindows
         }
     }
 
+    [DllImport("user32.dll", EntryPoint = "CreateWindowExW", ExactSpelling = true,
+        CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr CreateWindowEx(uint extendedStyle, string className, string title, uint style,
+        int x, int y, int width, int height, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr parameter);
+
+    [DllImport("user32.dll", ExactSpelling = true, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DestroyWindow(IntPtr window);
+
     [DllImport("gdi32.dll", ExactSpelling = true)]
     public static extern IntPtr GetStockObject(int objectIndex);
 

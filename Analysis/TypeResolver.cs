@@ -454,7 +454,15 @@ public sealed class TypeResolver
             _ => null
         };
         if (runtimeFieldType is not null)
+        {
+            if (recordName.Equals("TRect", StringComparison.OrdinalIgnoreCase))
+                name = name.ToUpperInvariant() switch
+                {
+                    "LEFT" => "Left", "RIGHT" => "Right", "TOP" => "Top", "BOTTOM" => "Bottom",
+                    "TOPLEFT" => "TopLeft", "BOTTOMRIGHT" => "BottomRight", _ => name
+                };
             return new SemanticField(name, runtimeFieldType);
+        }
 
         if (type.DeclaringUnitName is null)
             return null;
